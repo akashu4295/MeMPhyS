@@ -1,13 +1,20 @@
 // Author :  Akash Unnikrishnan
 // Affiliation : Indian Institute of Technology Gandhinagar
+
+#ifndef MATH_LIBRARY_H
+#define MATH_LIBRARY_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>  
 
+////////////////////////////////////////////////////////////////////////
+// Function Declarations
+////////////////////////////////////////////////////////////////////////
+
 void create_matrix(double ***A, int n_rows, int n_cols);
 void create_matrix_int(int ***A, int n_rows, int n_cols);
-// double** create_matrix(int n_rows, int n_cols);
-// int** create_matrix_int(int n_rows, int n_cols);
+double** create_matrix1(int n_rows, int n_cols);
 double* create_vector(int n_rows);
 void free_matrix(double **A, int n_rows);
 void free_matrix_int(int **A, int n_rows);
@@ -15,20 +22,23 @@ void free_vector(double *A);
 void print_matrix(double **A, int n_rows, int n_cols);
 void multiply_matrices(double **A, double **B, double **C, int n_rows_A, int n_cols_A, int n_cols_B);
 void multiply_matrix_vector(double **A, double *B, double *C, int n_rows_A, int n_cols_A);
+void multiply_vector_matrix(double *B, double **A, double **C, int n_rows_A, int n_cols_A);
 void multiply_scalar_matrix(double scalar, double **A, double **B, int n_rows_A, int n_cols_A);
 void multiply_scalar_vector(double scalar, double *A, double *B, int n_rows_A);
+void multiply_vector_matrix_columnwise(double *B, double **A, double *C, int n_rows_A, int n_cols_A);
 void add_matrices(double **A, double **B, double **C, int n_rows_A, int n_cols_A);
+void add_matrices_to_first(double **A, double **B, int n_rows_A, int n_cols_A);
 void add_vectors(double *A, double *B, double *C, int n_rows_A);
 void subtract_matrices(double **A, double **B, double **C, int n_rows_A, int n_cols_A);
 void subtract_vectors(double *A, double *B, double *C, int n_rows_A);
 void transpose_matrix(double **A, double **B, int n_rows_A, int n_cols_A);
 void copy_matrix(double **A, double **B, int n_rows_A, int n_cols_A);
 void copy_vector(double *A, double *B, int n_rows_A);
+void swap_vectors(double *A, double *B, int n_rows_A);
 void vector_outer_product(double *A, double *B, double **C, int n_rows_A, int n_rows_B);
 double vector_inner_product(double *A, double *B, int n_rows_A);
 double vector_norm(double *A, int n_rows_A);
 double** identity_matrix(int n_rows);
-// double** InverseOfMatrix_Gauss_Jordan(double** matrix, int order);
 void matrixInverse_Gauss_Jordan(double** matrix1, double** matrix, int order);
 void luDecomposition(double **A, int n, int *P);
 void forwardSubstitution(double **L, double *y, double *b, int n, int *P);
@@ -37,6 +47,58 @@ void matrixInverse_LU(double **A, double **A_inv, int n);
 void printMatrix(double **A, int n);
 void matrixInverse_Gauss_Jordan2(double** matrix1, double** inverse, int order);
 void write_matrix_to_file(double **A, int n_rows, int n_cols, char *filename);
+double l2_norm(double *A, double *B, int n_rows_A);
+void linear_system_solver(double** A, double* x, double* b, int n);
+void linear_system_solver_jacobi(double** A, double* x, double* b, int n);
+
+void multiply_sparse_matrix_vector(double** D_coeff, double* f, double* dfdx, int** cloud, bool* tag, int n_rows_D, int n_cols_D);
+void multiply_sparse_vector_matrix(double* f, double** D_coeff, double** ftimesD, int n_rows_D, int n_cols_D);
+
+////////////////////////////////////////////////////////////////////////
+// Function Definitions
+////////////////////////////////////////////////////////////////////////
+void multiply_sparse_matrix_vector(double** D_coeff, double* f, double* dfdx, int** cloud, bool* tag, int n_rows_D, int n_cols_D){
+    // dfdx = create_matrix1(n_rows_D, n_cols_D);
+    double results = 0.0;
+    for (int i = 0; i < n_rows_D; i++){
+        if (tag[i]==false){
+            for (int j = 0; j < n_cols_D; j++){
+                results += D_coeff[i][j] * f[cloud[i][j]];
+            }
+        }
+        dfdx[i] = results;
+        results = 0;
+    }
+}
+
+void multiply_sparse_vector_matrix(double* f, double** D_coeff, double** ftimesD, int n_rows_D, int n_cols_D){
+    for (int i = 0; i < n_rows_D; i++){
+            for (int j = 0; j < n_cols_D; j++){
+                ftimesD[i][j] = f[i] * D_coeff[i][j];
+            }
+        }
+    }
+
+
+
+double** create_matrix1(int n_rows, int n_cols)
+{
+    int i;
+    double **A;
+    A = (double **)malloc(n_rows * sizeof(double *));
+    for (i = 0; i < n_rows; i++)
+    {
+        A[i] = (double *)malloc(n_cols * sizeof(double));
+    }
+    for (i = 0; i < n_rows; i++)
+    {
+        for (int j = 0; j < n_cols; j++)
+        {
+            A[i][j] = 0;
+        }
+    }
+    return A;
+}
 
 void create_matrix(double ***A, int n_rows, int n_cols)
 {
@@ -65,34 +127,14 @@ void create_matrix_int(int ***A, int n_rows, int n_cols)
     }
 }
 
-// double** create_matrix(int n_rows, int n_cols)
-// {
-//     int i;
-//     double **A;
-//     A = (double **)malloc(n_rows * sizeof(double *));
-//     for (i = 0; i < n_rows; i++)
-//     {
-//         A[i] = (double *)malloc(n_cols * sizeof(double));
-//     }
-//     return A;
-// }
-
-// int** create_matrix_int(int n_rows, int n_cols)
-// {
-//     int i;
-//     int **A;
-//     A = (int **)malloc(n_rows * sizeof(int *));
-//     for (i = 0; i < n_rows; i++)
-//     {
-//         A[i] = (int *)malloc(n_cols * sizeof(int));
-//     }
-//     return A;
-// }
-
 double* create_vector(int n_rows)
 {
     double *A;
     A = (double *)malloc(n_rows * sizeof(double));
+    for (int i = 0; i < n_rows; i++)
+    {
+        A[i] = 0;
+    }
     return A;
 }
 
@@ -183,6 +225,18 @@ void multiply_matrix_vector(double **A, double *B, double *C, int n_rows_A, int 
     }
 }
 
+void multiply_vector_matrix(double *B, double **A, double **C, int n_rows_A, int n_cols_A)
+{
+    int i, j;
+    for (i = 0; i < n_rows_A; i++)
+    {
+        for (j = 0; j < n_cols_A; j++)
+        {
+            C[i][j] = B[i] * A[i][j];
+        }
+    }
+}
+
 void multiply_scalar_matrix(double scalar, double **A, double **B, int n_rows_A, int n_cols_A)
 {
     int i, j;
@@ -212,6 +266,18 @@ void add_matrices(double **A, double **B, double **C, int n_rows_A, int n_cols_A
         for (j = 0; j < n_cols_A; j++)
         {
             C[i][j] = A[i][j] + B[i][j];
+        }
+    }
+}
+
+void add_matrices_to_first(double **A, double **B, int n_rows_A, int n_cols_A)
+{
+    int i, j;
+    for (i = 0; i < n_rows_A; i++)
+    {
+        for (j = 0; j < n_cols_A; j++)
+        {
+            A[i][j] += B[i][j];
         }
     }
 }
@@ -605,3 +671,48 @@ void matrixInverse_Gauss_Jordan2(double** matrix1, double** inverse, int order)
     }
     free_matrix(matrix, order);
 }
+
+double l2_norm(double *A, double *B, int n_rows_A)
+{
+    int i;
+    double result = 0;
+    for (i = 0; i < n_rows_A; i++)
+    {
+        result += (A[i] - B[i]) * (A[i] - B[i]);
+    }
+    return sqrt(result/n_rows_A);
+}
+
+void linear_system_solver(double** A, double* x, double* b, int n)
+{
+    double** A_inv = create_matrix1(n, n);
+    matrixInverse_Gauss_Jordan(A, A_inv, n);
+    multiply_matrix_vector(A_inv, b, x, n, n);
+    free_matrix(A_inv, n);
+}
+
+void swap_vectors(double *A, double *B, int n_rows_A)
+{
+    double temp;
+    for (int i = 0; i < n_rows_A; i++)
+    {
+        temp = A[i];
+        A[i] = B[i];
+        B[i] = temp;
+    }
+}
+
+void multiply_vector_matrix_columnwise(double *B, double **A, double *C, int n_rows_A, int n_cols_A){
+    int i, j;
+    for (i = 0; i < n_cols_A; i++)
+    {
+        C[i] = 0;
+        for (j = 0; j < n_rows_A; j++)
+        {
+            C[i] += B[j] * A[j][i];
+        }
+    }
+}
+
+
+#endif

@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-
 //////////////////////////////////////////////////////////////////////////////////
 // Function declarations
 //////////////////////////////////////////////////////////////////////////////////
@@ -20,7 +19,7 @@ int* find_neighbours(double* p, void* ptree, double radius, int num_cloud_points
 void* create_kdtree(PointStructure* myPointStruct);
 void* create_kdtree_without_boundarynodes(PointStructure* myPointStruct);
 void free_kdtree(void* ptree);
-void find_cloud_index(PointStructure* myPointStruct1, PointStructure* myPointStruct2);
+void find_cloud_index(PointStructure* myPointStruct1);
 int* find_nearest_point(PointStructure* myPointStruct1, PointStructure* myPointStruct2, int num_cloud_points);
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -111,10 +110,13 @@ int* find_neighbours(double* p, void* ptree, double radius, int num_cloud_points
     }
 }
 
-void find_cloud_index(PointStructure* myPointStruct1, PointStructure* myPointStruct2){
+void find_cloud_index(PointStructure* myPointStruct1){
     // Create a kdtree for the cloud points
-    void* ptree = create_kdtree(myPointStruct2);
-    double radius = (myPointStruct2->d_avg) * (myPointStruct2->num_cloud_points) ; // Initial radius for the search
+    myPointStruct1->cloud_index = (int**)malloc(myPointStruct1->num_nodes * sizeof(int*)); // Allocate memory for the cloud index
+    for (int i = 0; i < myPointStruct1->num_nodes; i++) 
+        myPointStruct1->cloud_index[i] = (int*)malloc(myPointStruct1->num_cloud_points * sizeof(int));
+    void* ptree = create_kdtree(myPointStruct1);
+    double radius = (myPointStruct1->d_avg) * (myPointStruct1->num_cloud_points) ; // Initial radius for the search
     
     double pt[3]; // Array to store the coordinates of the search point
 
@@ -134,14 +136,15 @@ void find_cloud_index(PointStructure* myPointStruct1, PointStructure* myPointStr
     }
     free_kdtree(ptree);
 
-    void* ptree2 = create_kdtree_without_boundarynodes(myPointStruct2);
+    void* ptree2 = create_kdtree_without_boundarynodes(myPointStruct1);
     
     for (int i = 0; i < myPointStruct1->num_boundary_nodes; i++) {
         int* neighbours; // Array to store the indices of the nearest neighbours
         pt[0] = myPointStruct1->x[i]; pt[1] = myPointStruct1->y[i]; pt[2] = myPointStruct1->z[i];
         neighbours = find_neighbours(pt, ptree2, radius, myPointStruct1->num_cloud_points);
-        for (int j = 0; j < myPointStruct1->num_cloud_points; j++) 
-            myPointStruct1->cloud_index[i][j] = neighbours[j];
+        myPointStruct1->cloud_index[i][0] = i;
+        for (int j = 1; j < myPointStruct1->num_cloud_points; j++) 
+            myPointStruct1->cloud_index[i][j] = neighbours[j-1];
         free(neighbours);
     }
     free_kdtree(ptree2);
@@ -150,7 +153,7 @@ void find_cloud_index(PointStructure* myPointStruct1, PointStructure* myPointStr
 int* find_nearest_point(PointStructure* myPointStruct1, PointStructure* myPointStruct2, int num_cloud_points){
     // Create a kdtree for the cloud points
     void* ptree = create_kdtree(myPointStruct2);
-
+  
     double radius = (myPointStruct2->d_avg) * 10; // Initial radius for the search
     int* neighbour; // Array to store the indices of the nearest neighbours
     int* temp; // Temporary array to store the indices of the nearest neighbours
@@ -160,8 +163,8 @@ int* find_nearest_point(PointStructure* myPointStruct1, PointStructure* myPointS
     for (int i = 0; i < myPointStruct1->num_nodes; i++) {
         if (myPointStruct1->corner_tag[i] == false) {
             pt[0] = myPointStruct1->x[i]; pt[1] = myPointStruct1->y[i]; pt[2] = myPointStruct1->z[i];
-            temp = find_neighbours(pt, ptree, radius, 10);
-            neighbour[i] = temp[1];
+            temp = find_neighbours(pt, ptree, radius, 3);
+            neighbour[i] = temp[0];
         }
         else
             neighbour[i] = 0;
@@ -170,5 +173,6 @@ int* find_nearest_point(PointStructure* myPointStruct1, PointStructure* myPointS
     free(temp);
     return neighbour;
 }
+
 
 #endif

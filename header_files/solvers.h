@@ -12,34 +12,40 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "../init.c"
 
 /////////////////////////////////////////////////////////////////////////////
 // Function Declarations
 ////////////////////////////////////////////////////////////////////////////
 
 // Fractional Step Explicit Solver Modules
-void calculate_intermediate_velocity(PointStructure* myPointStruct, double* u_intermediate, double* v_intermediate, double* w_intermediate, double* u_n, double* v_n, double* w_n, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian);
-void calculate_mass_residual(PointStructure* myPointStruct, double* u_intermediate, double* v_intermediate, double* w_intermediate, double** Dx, double** Dy, double** Dz, double rho, double dt, double* mass_residual);
-void calculate_pressure(PointStructure* myPointStruct, double* p, double* u_intermediate, double* v_intermediate, double* w_intermediate, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian, double* mass_residual);
 void update_velocity(PointStructure* myPointStruct, double* u_n, double* v_n, double* w_n, double* u_intermediate, double* v_intermediate, double* w_intermediate, double* p, double rho, double dt, double** Dx, double** Dy, double** Dz);
-void fractional_step_explicit(PointStructure* myPointStruct, FieldVariables* myFieldVariables_n, double dt);
-void calculate_intermediate_velocity_update(PointStructure* myPointStruct, double* u_intermediate, double* v_intermediate, double* w_intermediate,double* u_n, double* v_n, double* w_n, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian);
-
-// Time-Implicit Solver Modules
-void calculate_intermediate_velocity_implicit(PointStructure* myPointStruct, double* u_new, double* v_new, double* w_new, double* u_old, double* v_old, double* w_old, double* u_n, double* v_n, double* w_n, double* p_n, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian, int iter_momentum);
-void calculate_mass_residual_implicit(PointStructure* myPointStruct, double* u_new, double* v_new, double* w_new, double** Dx, double** Dy, double** Dz, double rho, double dt, double* mass_residual);
-void calculate_pressure_correction_implicit(PointStructure* myPointStruct, double* p, double* u_new, double* v_new, double* w_new, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian, double* mass_residual, int iter_pressure);
-void update_velocity_implicit(PointStructure* myPointStruct, double* u_old, double* v_old, double* w_old, double* p, double* u_new, double* v_new, double* w_new, double* pprime, double rho, double dt, double** Dx, double** Dy, double** Dz);
-void time_implicit_solver(PointStructure* myPointStruct, FieldVariables* myFieldVariables_n, double dt, int iter_momentum, int iter_pressure, int iter_timple);
+void fractional_step_explicit(PointStructure* myPointStruct, FieldVariables* myFieldVariables_n, double dt, int iter_pressure, double omega, bool neumann_flag_boundary);
+void calculate_intermediate_velocity(PointStructure* myPointStruct, double* u_intermediate, double* v_intermediate, double* w_intermediate,double* u_n, double* v_n, double* w_n, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian);
 
 // Poisson solver
-void Poisson_solver(double* p, double* rhs, double** lhs, int** cloud_index, int num_nodes, int num_cloud_points, int num_boundary_points, int num_iter);
+void solve_poisson_equation(PointStructure* myPointStruct, double* P, double* source, double* dpdn, int iter_pressure, double omega, bool neumann_flag_boundary);
+void dpdn_from_momentum_equation(double* dpdn, PointStructure* myPointStruct, double* u_n, double* v_n, double* w_n, double* u_intermediate, double* v_intermediate, double* w_intermediate, double rho, double dt);
+void dpdn_from_complete_momentum_equation(double* dpdn, PointStructure* myPointStruct, FieldVariables* field, double* u_intermediate, double* v_intermediate, double* w_intermediate, double dt);
+void calculate_mass_residual(PointStructure* myPointStruct, double* u_new, double* v_new, double* w_new, double rho, double dt, double* mass_residual);
 
 // Heat Conduction Solver
 void restrict_residuals(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, double* res_f, double* res_c);
 void prolongate_correction(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, double* corr_f, double* corr_c);
 void calculate_residual(PointStructure* myPointStruct, double* T, double* source, double* res);
-void relax_vcycle(PointStructure* myPointStruct, double* T, double* source, int num_iter, double omega);
+void relax_vcycle(PointStructure* myPointStruct, double* T, double* source, int num_iter, double omega, bool neumann_flag_boundary);
+
+// Time-Implicit Solver Modules
+void calculate_intermediate_velocity_implicit(PointStructure* myPointStruct, double* u_new, double* v_new, double* w_new, double* u_old, double* v_old, double* w_old, double* u_n, double* v_n, double* w_n, double* p_n, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian, int iter_momentum);
+void update_velocity_implicit(PointStructure* myPointStruct, double* u_old, double* v_old, double* w_old, double* p, double* u_new, double* v_new, double* w_new, double* pprime, double rho, double dt, double** Dx, double** Dy, double** Dz);
+void time_implicit_solver(PointStructure* myPointStruct, FieldVariables* myFieldVariables_n, double dt, int iter_momentum, int iter_pressure, int iter_timple, double omega, bool neumann_flag_boundary);
+
+// Temporary
+// void calculate_intermediate_velocity(PointStructure* myPointStruct, double* u_intermediate, double* v_intermediate, double* w_intermediate, double* u_n, double* v_n, double* w_n, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian);
+// void calculate_mass_residual(PointStructure* myPointStruct, double* u_intermediate, double* v_intermediate, double* w_intermediate, double** Dx, double** Dy, double** Dz, double rho, double dt, double* mass_residual);
+// void calculate_pressure(PointStructure* myPointStruct, double* p, double* u_intermediate, double* v_intermediate, double* w_intermediate, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian, double* mass_residual);
+// void calculate_pressure_correction_implicit(PointStructure* myPointStruct, double* p, double* u_new, double* v_new, double* w_new, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian, double* mass_residual, int iter_pressure, double omega);
+// void Poisson_solver(double* p, double* rhs, double** lhs, int** cloud_index, int num_nodes, int num_cloud_points, int num_boundary_points, int num_iter);
 
 /////////////////////////////////////////////////////////////////////////////
 // Function Definitions
@@ -48,214 +54,191 @@ void relax_vcycle(PointStructure* myPointStruct, double* T, double* source, int 
 /////////////////////////////////////////////////////////////////////////////
 // Fractional Step Explicit Solver Modules
 /////////////////////////////////////////////////////////////////////////////
-void calculate_intermediate_velocity_update(PointStructure* myPointStruct, double* u_intermediate, double* v_intermediate, double* w_intermediate,double* u_n, double* v_n, double* w_n, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian)
+void fractional_step_explicit(PointStructure* myPointStruct, FieldVariables* field, double dt, int iter_pressure, double omega, bool neumann_flag_boundary)
+{   
+    double* u_intermediate = create_vector(myPointStruct->num_nodes);
+    double* v_intermediate = create_vector(myPointStruct->num_nodes);
+    double* w_intermediate = create_vector(myPointStruct->num_nodes);
+    double* mass_residual = create_vector(myPointStruct->num_nodes);
+    double* dpdn = create_vector(myPointStruct->num_boundary_nodes);
+
+    calculate_intermediate_velocity(myPointStruct, u_intermediate, v_intermediate, w_intermediate, field->u, field->v, field->w, field->rho, field->mu, dt, myPointStruct->Dx, myPointStruct->Dy, myPointStruct->Dz, myPointStruct->lap);
+    calculate_mass_residual(myPointStruct, u_intermediate, v_intermediate, w_intermediate, field->rho, dt, mass_residual);
+    dpdn_from_momentum_equation(dpdn, myPointStruct, field->u, field->v, field->w, u_intermediate, v_intermediate, w_intermediate, field->rho, dt);
+    // dpdn_from_complete_momentum_equation(dpdn, myPointStruct, field, u_intermediate, v_intermediate, w_intermediate, dt);
+    solve_poisson_equation(myPointStruct, field->p, mass_residual, dpdn, iter_pressure, omega, neumann_flag_boundary);
+    update_velocity(myPointStruct, field->u, field->v, field->w, u_intermediate, v_intermediate, w_intermediate, field->p, field->rho, dt, myPointStruct->Dx, myPointStruct->Dy, myPointStruct->Dz);
+    
+    free(u_intermediate);
+    free(v_intermediate);
+    free(w_intermediate);
+    free(mass_residual);
+    free(dpdn);
+}
+
+void calculate_intermediate_velocity(PointStructure* myPointStruct, double* u_intermediate, double* v_intermediate, double* w_intermediate,double* u_n, double* v_n, double* w_n, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian)
 {
     // Calculate the intermediate velocity
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
     int num_boundary_points = myPointStruct->num_boundary_nodes;
-    double* diffusion = create_vector(num_nodes);
-    double* advection = create_vector(num_nodes);
     double *temp1 = create_vector(num_nodes);
     double *temp2 = create_vector(num_nodes);
     double *temp3 = create_vector(num_nodes);
+    double *temp4 = create_vector(num_nodes);
     double nu = mu/rho;
 
+// x-momentum
     multiply_sparse_matrix_vector(Dx, u_n, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
     multiply_sparse_matrix_vector(Dy, u_n, temp2, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    if (parameters.dimension == 3){
+    if (parameters.dimension == 3)
         multiply_sparse_matrix_vector(Dz, u_n, temp3, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    }
-    for (int i = num_boundary_points; i < num_nodes; i++){
-        if (!myPointStruct->boundary_tag[i]) 
-            u_intermediate[i] = u_n[i] - dt * (u_n[i] * temp1[i] + v_n[i] * temp2[i] + w_n[i] * temp3[i]);
-    }
+    multiply_sparse_matrix_vector(laplacian, u_n, temp4, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
+    for (int i = 0; i < num_nodes; i++)
+        u_intermediate[i] = u_n[i] - dt * (u_n[i] * temp1[i] + v_n[i] * temp2[i] + w_n[i] * temp3[i] - nu *temp4[i]);
 
-    multiply_sparse_matrix_vector(laplacian, u_n, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    for (int i = num_boundary_points; i < num_nodes; i++){
-        if (!myPointStruct->boundary_tag[i])
-            u_intermediate[i] = u_intermediate[i] + dt*nu* temp1[i];
-    }
-
-//        v velocity
-
+// y-momentum
     multiply_sparse_matrix_vector(Dx, v_n, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
     multiply_sparse_matrix_vector(Dy, v_n, temp2, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    if (parameters.dimension == 3){
+    if (parameters.dimension == 3)
         multiply_sparse_matrix_vector(Dz, v_n, temp3, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    }
-    for (int i = num_boundary_points; i < num_nodes; i++){
-        if (!myPointStruct->boundary_tag[i]) 
-            v_intermediate[i] = v_n[i] - dt * (u_n[i] * temp1[i] + v_n[i] * temp2[i] + w_n[i] * temp3[i]);
-    }
+    multiply_sparse_matrix_vector(laplacian, v_n, temp4, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes,num_cloud_points);
+    for (int i = 0; i < num_nodes; i++)
+        v_intermediate[i] = v_n[i] - dt * (u_n[i] * temp1[i] + v_n[i] * temp2[i] + w_n[i] * temp3[i] - nu * temp4[i]);
 
-    multiply_sparse_matrix_vector(laplacian, v_n, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes,num_cloud_points);
-    for (int i = num_boundary_points; i < num_nodes; i++){
-        if (!myPointStruct->boundary_tag[i])
-            v_intermediate[i] = v_intermediate[i] + dt * nu* temp1[i];
-    }
-
-//           w-velocity
-
+//  z-momentum
     if (parameters.dimension == 3){
         multiply_sparse_matrix_vector(Dx, w_n, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
         multiply_sparse_matrix_vector(Dy, w_n, temp2, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
         multiply_sparse_matrix_vector(Dz, w_n, temp3, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    }
-    for (int i = num_boundary_points; i < num_nodes; i++){
-        if (!myPointStruct->boundary_tag[i]) 
-            w_intermediate[i] = w_n[i] - dt * (u_n[i] * temp1[i] + v_n[i] * temp2[i] + w_n[i] * temp3[i]);
-    }
-
-    multiply_sparse_matrix_vector(laplacian, w_n, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes,num_cloud_points);
-    for (int i = num_boundary_points; i < num_nodes; i++){
-        if (!myPointStruct->boundary_tag[i])
-            w_intermediate[i] = w_intermediate[i] + dt * nu* temp1[i];
+        multiply_sparse_matrix_vector(laplacian, w_n, temp4, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes,num_cloud_points);
+        for (int i = 0; i < num_nodes; i++)
+            w_intermediate[i] = w_n[i] - dt * (u_n[i] * temp1[i] + v_n[i] * temp2[i] + w_n[i] * temp3[i] -nu * temp4[i]);
     }
  
     free_vector(temp1);
     free_vector(temp2);
     free_vector(temp3);
-    // for (int i = 0; i < num_nodes; i++){
-    //     printf("%lf %lf %lf %lf\n", u_intermediate[i], v_intermediate[i], u_n[i], v_n[i]);
-    // }
+    free_vector(temp4);
 }
 
-void calculate_intermediate_velocity(PointStructure* myPointStruct, double* u_intermediate, double* v_intermediate, double* w_intermediate, double* u_n, double* v_n, double* w_n, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian)
-{
-    // Calculate the intermediate velocity
-    int num_nodes = myPointStruct->num_nodes;
-    int num_cloud_points = myPointStruct->num_cloud_points;
-    int num_boundary_points = myPointStruct->num_boundary_nodes;
-    double** advection_operator = create_matrix1(num_nodes, myPointStruct->num_cloud_points);
-    double* diffusion = create_vector(num_nodes);
-    double** temp1 = create_matrix1(num_nodes, myPointStruct->num_cloud_points);
-    double* advection = create_vector(num_nodes);
-
-    multiply_sparse_vector_matrix(u_n, Dx, temp1, num_nodes, num_cloud_points);
-    add_matrices_to_first(advection_operator, temp1, num_nodes, num_cloud_points);
-    multiply_sparse_vector_matrix(v_n, Dy, temp1, num_nodes, num_cloud_points);
-    add_matrices_to_first(advection_operator, temp1, num_nodes, num_cloud_points);
-    if (parameters.dimension == 3){
-        multiply_sparse_vector_matrix(w_n, Dz, temp1, num_nodes, num_cloud_points);
-        add_matrices_to_first(advection_operator, temp1, num_nodes, num_cloud_points);
-    }
-    double nu = mu/rho;
-    
-    multiply_sparse_matrix_vector(advection_operator, u_n, advection, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector(laplacian, u_n, diffusion, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    for (int i = num_boundary_points; i < num_nodes; i++){
-        u_intermediate[i] = u_n[i] + dt * (-advection[i] + nu* diffusion[i]);
-    }
-
-    multiply_sparse_matrix_vector(advection_operator, v_n, advection, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector(laplacian, v_n, diffusion, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    for (int i = num_boundary_points; i < num_nodes; i++){
-        v_intermediate[i] = v_n[i] + dt * (-advection[i] + nu* diffusion[i]);
-    }
-
-    if (parameters.dimension == 3){
-        multiply_sparse_matrix_vector(advection_operator, w_n, advection, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector(laplacian, w_n, diffusion, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-        for (int i = num_boundary_points; i < num_nodes; i++){
-            w_intermediate[i] = w_n[i] + dt * (-advection[i] + nu* diffusion[i]);
-        }
-    }
-    
-    free_matrix(advection_operator, num_nodes);
-    free_vector(diffusion);
-    free_matrix(temp1, num_nodes);
-    free_vector(advection);
-
-    // for (int i = 0; i < num_nodes; i++){
-    //     printf("%lf %lf %lf %lf\n", u_intermediate[i], v_intermediate[i], u_n[i], v_n[i]);
-    // }
-}
-
-void calculate_mass_residual(PointStructure* myPointStruct, double* u_intermediate, double*v_intermediate, double* w_intermediate, double** Dx, double** Dy, double** Dz, double rho, double dt, double* mass_residual)
-{
+void calculate_mass_residual(PointStructure* myPointStruct, double* u_new, 
+            double* v_new, double* w_new, double rho, double dt, double* mass_residual){
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
     int num_boundary_points = myPointStruct->num_boundary_nodes;
     double* temp1 = create_vector(num_nodes);
     double* temp2 = create_vector(num_nodes);
-    multiply_sparse_matrix_vector(Dx, u_intermediate, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector(Dy, v_intermediate, temp2, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    add_vectors(temp1, temp2, mass_residual, num_nodes);
+    double* temp3 = create_vector(num_nodes);
+    multiply_sparse_matrix_vector(myPointStruct->Dx, u_new, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector(myPointStruct->Dy, v_new, temp2, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
     if (parameters.dimension == 3){
-        multiply_sparse_matrix_vector(Dz, w_intermediate, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-        add_vectors(mass_residual, temp1, mass_residual, num_nodes);
-    }
-    for (int i = 0; i < num_boundary_points; i++){
-        mass_residual[i] = 0;
+        multiply_sparse_matrix_vector(myPointStruct->Dz, w_new, temp3, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
     }
     for (int i = num_boundary_points; i < num_nodes; i++){
-        mass_residual[i] = rho*mass_residual[i]/dt;
+        mass_residual[i] = rho*(temp1[i]+temp2[i]+temp3[i])/dt;
     }
-    free_vector(temp1);
-    free_vector(temp2);
+    free(temp1);
+    free(temp2);
+    free(temp3);
 }
 
-void calculate_pressure(PointStructure* myPointStruct, double* p, double* u_intermediate, double* v_intermediate, double* w_intermediate, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian, double* mass_residual)
-{
+void dpdn_from_momentum_equation(double* dpdn, PointStructure* myPointStruct, double* u_n, double* v_n, double* w_n, double* u_intermediate, double* v_intermediate, double* w_intermediate, double rho, double dt){
+    double dpdx, dpdy, dpdz;
+    for(int i = 0; i < myPointStruct->num_boundary_nodes; i++){
+        dpdx = (u_intermediate[i] - u_n[i]) * rho/dt; 
+        dpdy = (v_intermediate[i] - v_n[i]) * rho/dt;
+        dpdn[i] = 0; 
+        if (parameters.dimension == 3){
+            dpdz = (w_intermediate[i] - w_n[i]) * rho/dt; 
+            dpdn[i] += dpdz*myPointStruct->z_normal[i];
+        }
+        dpdn[i] += dpdx*myPointStruct->x_normal[i] + dpdy*myPointStruct->y_normal[i];
+    }
+}
+
+void dpdn_from_complete_momentum_equation(double* dpdn, PointStructure* myPointStruct, FieldVariables* field, double* u_intermediate, double* v_intermediate, double* w_intermediate, double dt){
+    // double rho = rho;
+    double temp1, temp2, temp3, temp4;
+    double nu = field->mu / field->rho;
+    for(int i = 0; i < myPointStruct->num_boundary_nodes; i++){
+        temp1 = 0; temp2 = 0; temp3 = 0; temp4 = 0;
+        for(int j = 0; j<myPointStruct->num_cloud_points; j++){
+            temp1 = nu * myPointStruct->lap[i][j] * field->u[myPointStruct->cloud_index[i][j]];
+            temp1 -= field->u[i]* field->u[myPointStruct->cloud_index[i][j]] * myPointStruct->Dx[i][j];
+            temp1 -= field->v[i]* field->u[myPointStruct->cloud_index[i][j]] * myPointStruct->Dy[i][j];
+            if (parameters.dimension == 3){
+                temp1 -= field->w[i]* field->u[myPointStruct->cloud_index[i][j]] * myPointStruct->Dz[i][j];
+            }
+            
+            temp2 = nu* myPointStruct->lap[i][j] * field->v[myPointStruct->cloud_index[i][j]];
+            temp2 -= field->u[i]* field->v[myPointStruct->cloud_index[i][j]] * myPointStruct->Dx[i][j];
+            temp2 -= field->v[i]* field->v[myPointStruct->cloud_index[i][j]] * myPointStruct->Dy[i][j];
+            if (parameters.dimension == 3){
+                temp2 -= field->w[i]* field->v[myPointStruct->cloud_index[i][j]] * myPointStruct->Dz[i][j];
+            }
+            
+            if (parameters.dimension == 3){
+                temp3 = nu* myPointStruct->lap[i][j] * field->w[myPointStruct->cloud_index[i][j]];
+                temp3 -= field->u[i]* field->w[myPointStruct->cloud_index[i][j]] * myPointStruct->Dx[i][j];
+                temp3 -= field->v[i]* field->w[myPointStruct->cloud_index[i][j]] * myPointStruct->Dy[i][j];
+                temp3 -= field->w[i]* field->w[myPointStruct->cloud_index[i][j]] * myPointStruct->Dz[i][j];
+            }
+        }
+        dpdn[i] = field->rho * (temp1*myPointStruct->x_normal[i] + temp2*myPointStruct->y_normal[i] + temp3*myPointStruct->z_normal[i]);
+        // printf("%e, %e, %e, %e\n", temp1, temp2, temp3, dpdn[i]);
+    }
+}
+
+void solve_poisson_equation(PointStructure* myPointStruct, double* P, double* source, double* dpdn, int iter_pressure, double omega, bool neumann_flag_boundary){
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
     int num_boundary_points = myPointStruct->num_boundary_nodes;
 
     double* ptemp = create_vector(num_nodes);
-    double* temp1 = create_vector(num_nodes);
-    double* temp2 = create_vector(num_nodes);
-    
-    // Solve the system of equations
-    double sum = 0, Ap = 0;
-    calculate_mass_residual(myPointStruct, u_intermediate, v_intermediate, w_intermediate, Dx, Dy, Dz, rho, dt, mass_residual);
 
-    for (int iter = 0; iter < 100; iter++)
+    // Solve the system of equations
+    double sum, sumx, sumy, sumz, Ap, pref;// dpdn = 0;
+    
+    for (int iter = 0; iter < iter_pressure; iter++)
     {       
         for (int i = 0; i < num_nodes; i++){
-            ptemp[i] = p[i];
+            ptemp[i] = P[i]; // for L2 norm calculation
         }
     // Loop over interior nodes
-        for (int i = num_boundary_points; i < num_nodes; i++)
-        {
+        for (int i = num_boundary_points; i < num_nodes; i++){
             sum = 0;
             for (int j = 1; j < num_cloud_points; j++){
-                sum += laplacian[i][j]*p[myPointStruct->cloud_index[i][j]];
+                sum += myPointStruct->lap[i][j]*P[myPointStruct->cloud_index[i][j]];
             }
-            p[i] = 1.0*((mass_residual[i]-sum)/laplacian[i][0]) - 0.0*p[i];
+            P[i] = omega*((source[i]-sum)/myPointStruct->lap[i][0]) - (1-omega)*P[i];
         }
-        printf("L2_norm = %E\n", l2_norm(ptemp, p, num_nodes));
     
         // Loop over boundary nodes, set the Neumann Boundary conditions: dpdn = 0
-        for (int i = myPointStruct->num_corners; i < num_boundary_points; i++)
-        {
-            sum = 0; Ap = 0;
-            for (int j = 1; j < num_cloud_points; j++){
-                sum += Dx[i][j]*p[myPointStruct->cloud_index[i][j]]*myPointStruct->x_normal[i];
-                sum += Dy[i][j]*p[myPointStruct->cloud_index[i][j]]*myPointStruct->y_normal[i];
-                if (parameters.dimension == 3){
-                    sum += Dz[i][j]*p[myPointStruct->cloud_index[i][j]]*myPointStruct->z_normal[i];
+        if (neumann_flag_boundary){
+            for (int i = myPointStruct->num_corners; i < num_boundary_points; i++){
+                sumx = 0; sumy = 0; sumz = 0; Ap = 0;
+                for (int j = 1; j < num_cloud_points; j++){
+                    sumx += myPointStruct->Dx[i][j]*P[myPointStruct->cloud_index[i][j]];
+                    sumy += myPointStruct->Dy[i][j]*P[myPointStruct->cloud_index[i][j]];
+                    if (parameters.dimension == 3){
+                        sumz += myPointStruct->Dz[i][j]*P[myPointStruct->cloud_index[i][j]];
+                    }
                 }
+                Ap += myPointStruct->Dx[i][0]*myPointStruct->x_normal[i];
+                Ap += myPointStruct->Dy[i][0]*myPointStruct->y_normal[i];
+                if (parameters.dimension == 3){
+                    Ap += myPointStruct->Dz[i][0]*myPointStruct->z_normal[i];
+                }
+                P[i] = (dpdn[i]-sumx*myPointStruct->x_normal[i] -sumy*myPointStruct->y_normal[i] -sumz*myPointStruct->z_normal[i])/Ap;
             }
-            Ap += Dx[i][0]*myPointStruct->x_normal[i];
-            Ap += Dy[i][0]*myPointStruct->y_normal[i];
-            if (parameters.dimension == 3){
-                Ap += Dz[i][0]*myPointStruct->z_normal[i];
+            pref = P[0];
+            for (int i = 0; i < num_nodes; i++){
+                P[i] = P[i] - pref;
             }
-            p[i] = -sum/Ap;
-            // p[i] = p[i];
-            // printf("%lf %lf %lf\n", sum, Ap, ptemp[i]);
-        
-        // Update the pressure
-        // printf("L2_norm = %E\n", l2_norm(ptemp, p, num_nodes));
-        // for (int i = 0; i < num_nodes; i++){
-        //     p[i] = ptemp[i];
         }
     }
-    
     free(ptemp);
-    free(temp1);
-    free(temp2);
 }
 
 void update_velocity(PointStructure* myPointStruct, double* u_n, double* v_n, double* w_n, double* u_intermediate, double* v_intermediate, double* w_intermediate, double* p, double rho, double dt, double** Dx, double** Dy, double** Dz)
@@ -279,34 +262,64 @@ void update_velocity(PointStructure* myPointStruct, double* u_n, double* v_n, do
             w_n[i] = w_intermediate[i] - dt * dpdz[i]/rho;
         }
     }
-    // Update Boundary nodes.. Needs to determine the boundary conditions depending on the problem
-
-}
-
-void fractional_step_explicit(PointStructure* myPointStruct, FieldVariables* myFieldVariables_n, double dt)
-{   
-    double* u_intermediate = create_vector(myPointStruct->num_nodes);
-    double* v_intermediate = create_vector(myPointStruct->num_nodes);
-    double* w_intermediate = create_vector(myPointStruct->num_nodes);
-    double* mass_residual = create_vector(myPointStruct->num_nodes);
-    calculate_intermediate_velocity(myPointStruct, u_intermediate, v_intermediate, w_intermediate, myFieldVariables_n->u, myFieldVariables_n->v, myFieldVariables_n->w, myFieldVariables_n->rho, myFieldVariables_n->mu, dt, myPointStruct->Dx, myPointStruct->Dy, myPointStruct->Dz, myPointStruct->lap);
-
-    calculate_pressure(myPointStruct, myFieldVariables_n->p, u_intermediate, v_intermediate, w_intermediate, myFieldVariables_n->rho, myFieldVariables_n->mu, dt, myPointStruct->Dx, myPointStruct->Dy, myPointStruct->Dz, myPointStruct->lap, mass_residual);
-
-    update_velocity(myPointStruct, myFieldVariables_n->u, myFieldVariables_n->v, myFieldVariables_n->w, u_intermediate, v_intermediate, w_intermediate, myFieldVariables_n->p, myFieldVariables_n->rho, dt, myPointStruct->Dx, myPointStruct->Dy, myPointStruct->Dz);
-    free(u_intermediate);
-    free(v_intermediate);
-    free(w_intermediate);
-    free(mass_residual);
+    
+    free(dpdx);
+    free(dpdy);
+    free(dpdz);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Time-Implicit Solver Modules
 ////////////////////////////////////////////////////////////////////////////////////
+void time_implicit_solver(PointStructure* myPointStruct, FieldVariables* field, double dt, int iter_momentum, int iter_pressure, int iter_timple, double omega, bool neumann_flag_boundary){
+    double* u_new = create_vector(myPointStruct->num_nodes);
+    double* v_new = create_vector(myPointStruct->num_nodes);
+    double* w_new = create_vector(myPointStruct->num_nodes);
+    double* u_old = create_vector(myPointStruct->num_nodes);
+    double* v_old = create_vector(myPointStruct->num_nodes);
+    double* w_old = create_vector(myPointStruct->num_nodes);
+    double* pprime = create_vector(myPointStruct->num_nodes);
+    double* dpdn = create_vector(myPointStruct->num_boundary_nodes);
+    double* mass_residual = create_vector(myPointStruct->num_nodes);
+
+    for (int i = 0; i < myPointStruct->num_nodes; i++){
+        u_old[i] = field->u[i]; u_new[i] = field->u[i];
+        v_old[i] = field->v[i]; v_new[i] = field->v[i];
+        w_old[i] = field->w[i]; w_new[i] = field->w[i];
+    }
+    
+    for (int iter = 0; iter<iter_timple; iter++){
+        calculate_intermediate_velocity_implicit(myPointStruct, u_new, v_new, w_new, 
+                        u_old, v_old, w_old, field->u, field->v, field->w, field->p, 
+                        field->rho, field->mu, dt, myPointStruct->Dx, myPointStruct->Dy, 
+                        myPointStruct->Dz, myPointStruct->lap, iter_momentum);
+        calculate_mass_residual(myPointStruct, u_new, v_new, w_new, field->rho, dt, mass_residual);
+        // dpdn_from_momentum_equation(dpdn, myPointStruct, u_old, v_old, w_old, u_new, v_new, w_new, field->rho, dt);
+        solve_poisson_equation(myPointStruct, pprime, mass_residual, dpdn, iter_pressure, omega, neumann_flag_boundary);
+        update_velocity_implicit(myPointStruct, u_old, v_old, w_old, field->p, u_new, v_new, w_new, pprime, field->rho, dt, myPointStruct->Dx, myPointStruct->Dy, myPointStruct->Dz);
+    }
+    for (int i = 0; i < myPointStruct->num_nodes; i++){
+        field->u[i] = u_new[i];
+        field->v[i] = v_new[i];
+        field->w[i] = w_new[i];
+    }
+
+    free(u_new);
+    free(v_new);
+    free(w_new);
+    free(mass_residual);
+    free(u_old);
+    free(v_old);
+    free(w_old);
+    free(pprime);
+    free(dpdn);
+}
+
 void calculate_intermediate_velocity_implicit(PointStructure* myPointStruct, 
-double* u_new, double* v_new, double* w_new, double* u_old, double* v_old, 
-double* w_old, double *u_n, double *v_n, double *w_n,double* p_n, 
-double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian, int iter_momentum){
+            double* u_new, double* v_new, double* w_new, double* u_old, double* v_old, 
+            double* w_old, double *u_n, double *v_n, double *w_n,double* p_n, 
+            double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, 
+            double** laplacian, int iter_momentum){
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
     int num_boundary_points = myPointStruct->num_boundary_nodes;
@@ -341,7 +354,7 @@ double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double*
                 denom += rho * w_old[i] * Dz[i][0];
                 for (int j = 1; j < num_cloud_points; j++){
                     temp3 += Dz[i][j] * u_new[myPointStruct->cloud_index[i][j]];
-                    temp4 += laplacian[i][j] * u_new[myPointStruct->cloud_index[i][j]];
+                    // temp4 += laplacian[i][j] * u_new[myPointStruct->cloud_index[i][j]];
                 }
             }
             
@@ -362,7 +375,7 @@ double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double*
                 denom += rho * w_old[i] * Dz[i][0];
                 for (int j = 1; j < num_cloud_points; j++){
                     temp3 += Dz[i][j] * v_new[myPointStruct->cloud_index[i][j]];
-                    temp4 += laplacian[i][j] * v_new[myPointStruct->cloud_index[i][j]];
+                    // temp4 += laplacian[i][j] * v_new[myPointStruct->cloud_index[i][j]];
                 }
             }
 
@@ -393,91 +406,10 @@ double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double*
     }
 }
 
-
-void calculate_mass_residual_implicit(PointStructure* myPointStruct, 
-            double* u_new, double* v_new, double* w_new, double** Dx, double** Dy, double** Dz,
-            double rho, double dt, double* mass_residual){
-    int num_nodes = myPointStruct->num_nodes;
-    int num_cloud_points = myPointStruct->num_cloud_points;
-    int num_boundary_points = myPointStruct->num_boundary_nodes;
-    double* temp1 = create_vector(num_nodes);
-    double* temp2 = create_vector(num_nodes);
-    multiply_sparse_matrix_vector(Dx, u_new, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector(Dy, v_new, temp2, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-    add_vectors(temp1, temp2, mass_residual, num_nodes);
-    if (parameters.dimension == 3){
-        multiply_sparse_matrix_vector(Dz, w_new, temp1, myPointStruct->cloud_index, myPointStruct->boundary_tag, num_nodes, num_cloud_points);
-        add_vectors(mass_residual, temp1, mass_residual, num_nodes);
-    }
-    for (int i = 0; i < num_boundary_points; i++){
-        mass_residual[i] = 0;
-    }
-    for (int i = num_boundary_points; i < num_nodes; i++){
-        mass_residual[i] = rho*mass_residual[i]/dt;
-    }
-    free(temp1);
-    free(temp2);
-}
-
-void calculate_pressure_correction_implicit(PointStructure* myPointStruct, double* pprime, double* u_new, double* v_new, double* w_new, double rho, double mu, double dt, double** Dx, double** Dy, double** Dz, double** laplacian, double* mass_residual, int iter_pressure){
-    int num_nodes = myPointStruct->num_nodes;
-    int num_cloud_points = myPointStruct->num_cloud_points;
-    int num_boundary_points = myPointStruct->num_boundary_nodes;
-
-    double* ptemp = create_vector(num_nodes);
-    double* temp1 = create_vector(num_nodes);
-    double* temp2 = create_vector(num_nodes);
-    
-    // Solve the system of equations
-    double sum = 0, Ap = 0;
-    
-    calculate_mass_residual_implicit(myPointStruct, u_new, v_new, w_new, Dx, Dy, Dz, rho, dt, mass_residual);
-
-    for (int iter = 0; iter < iter_pressure; iter++)
-    {       
-        for (int i = 0; i < num_nodes; i++){
-            ptemp[i] = pprime[i]; // for L2 norm calculation
-        }
-    // Loop over interior nodes
-        for (int i = num_boundary_points; i < num_nodes; i++)
-        {
-            sum = 0;
-            for (int j = 1; j < num_cloud_points; j++){
-                sum += laplacian[i][j]*pprime[myPointStruct->cloud_index[i][j]];
-            }
-            pprime[i] = 1.0*((mass_residual[i]-sum)/laplacian[i][0]) - 0.0*pprime[i];
-        }
-        printf("L2_norm = %E\n", l2_norm(ptemp, pprime, num_nodes));
-    
-        // Loop over boundary nodes, set the Neumann Boundary conditions: dpdn = 0
-        for (int i = myPointStruct->num_corners; i < num_boundary_points; i++)
-        {
-            sum = 0; Ap = 0;
-            for (int j = 1; j < num_cloud_points; j++){
-                sum += Dx[i][j]*pprime[myPointStruct->cloud_index[i][j]]*myPointStruct->x_normal[i];
-                sum += Dy[i][j]*pprime[myPointStruct->cloud_index[i][j]]*myPointStruct->y_normal[i];
-                if (parameters.dimension == 3){
-                    sum += Dz[i][j]*pprime[myPointStruct->cloud_index[i][j]]*myPointStruct->z_normal[i];
-                }
-            }
-            Ap += Dx[i][0]*myPointStruct->x_normal[i];
-            Ap += Dy[i][0]*myPointStruct->y_normal[i];
-            if (parameters.dimension == 3){
-                Ap += Dz[i][0]*myPointStruct->z_normal[i];
-            }
-            pprime[i] = -sum/Ap;
-        }
-    }
-
-    free(ptemp);
-    free(temp1);
-    free(temp2);
-}
-
 void update_velocity_implicit(PointStructure* myPointStruct,
- double* u_old, double* v_old, double* w_old, double* p, 
- double* u_new, double* v_new, double* w_new, double* pprime, 
- double rho, double dt, double** Dx, double** Dy, double** Dz){
+        double* u_old, double* v_old, double* w_old, double* p, 
+        double* u_new, double* v_new, double* w_new, double* pprime, 
+        double rho, double dt, double** Dx, double** Dy, double** Dz){
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
     int num_boundary_points = myPointStruct->num_boundary_nodes;
@@ -491,16 +423,16 @@ void update_velocity_implicit(PointStructure* myPointStruct,
     }
     // Update Interior nodes
     for (int i = num_boundary_points; i < num_nodes; i++){
-        u_old[i] = u_new[i] - dt * dpdx[i]/rho;
-        v_old[i] = v_new[i] - dt * dpdy[i]/rho;
+        u_new[i] = u_new[i] - dt * dpdx[i]/rho;
+        v_new[i] = v_new[i] - dt * dpdy[i]/rho;
         if (parameters.dimension == 3){
-            w_old[i] = w_new[i] - dt * dpdz[i]/rho;
+            w_new[i] = w_new[i] - dt * dpdz[i]/rho;
         }
         p[i] = p[i] + pprime[i];
-        u_new[i] = u_old[i];
-        v_new[i] = v_old[i];
+        u_old[i] = u_new[i];
+        v_old[i] = v_new[i];
         if (parameters.dimension == 3){
-            w_new[i] = w_old[i];
+            w_old[i] = w_new[i];
         }
     }
     for (int i = 0; i < num_boundary_points; i++){
@@ -509,62 +441,9 @@ void update_velocity_implicit(PointStructure* myPointStruct,
 }
 
 
-void time_implicit_solver(PointStructure* myPointStruct, FieldVariables* myFieldVariables_n, double dt, int iter_momentum, int iter_pressure, int iter_timple){
-    double* u_new = create_vector(myPointStruct->num_nodes);
-    double* v_new = create_vector(myPointStruct->num_nodes);
-    double* w_new = create_vector(myPointStruct->num_nodes);
-    double* u_old = create_vector(myPointStruct->num_nodes);
-    double* v_old = create_vector(myPointStruct->num_nodes);
-    double* w_old = create_vector(myPointStruct->num_nodes);
-    double* pprime = create_vector(myPointStruct->num_nodes);
-    double* mass_residual = create_vector(myPointStruct->num_nodes);
-    
-    for (int iter = 0; iter<iter_timple; iter++){
-        calculate_intermediate_velocity_implicit(myPointStruct, u_new, v_new, w_new, 
-                        u_old, v_old, w_old, myFieldVariables_n->u, 
-                        myFieldVariables_n->v, myFieldVariables_n->w, 
-                        myFieldVariables_n->p, myFieldVariables_n->rho, 
-                        myFieldVariables_n->mu, dt, myPointStruct->Dx, 
-                        myPointStruct->Dy, myPointStruct->Dz, myPointStruct->lap, 
-                        iter_momentum);
-        calculate_pressure_correction_implicit(myPointStruct, pprime, u_new, v_new, w_new, myFieldVariables_n->rho, myFieldVariables_n->mu, dt, myPointStruct->Dx, myPointStruct->Dy, myPointStruct->Dz, myPointStruct->lap, mass_residual, iter_pressure);
-        update_velocity_implicit(myPointStruct, u_old, v_old, w_old, myFieldVariables_n->p, u_new, v_new, w_new, pprime, myFieldVariables_n->rho, dt, myPointStruct->Dx, myPointStruct->Dy, myPointStruct->Dz);
-    }
-    copy_vector(u_old, myFieldVariables_n->u, myPointStruct->num_nodes);
-    copy_vector(v_old, myFieldVariables_n->v, myPointStruct->num_nodes);
-    copy_vector(w_old, myFieldVariables_n->w, myPointStruct->num_nodes);
-
-    free(u_new);
-    free(v_new);
-    free(w_new);
-    free(mass_residual);
-    free(u_old);
-    free(v_old);
-    free(w_old);
-    free(pprime);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void Poisson_solver(double* p, double* rhs, double** lhs, int** cloud_index, int num_nodes, int num_cloud_points, int num_boundary_points, int num_iter){
-    double* ptemp = create_vector(num_nodes);
-    double* temp = create_vector(num_nodes);
-    double sum = 0;
-    for (int iter = 0; iter < num_iter; iter++){
-        for (int i = 0; i < num_nodes; i++){
-            ptemp[i] = p[i];
-        }
-        for (int i = num_boundary_points; i < num_nodes; i++){
-            sum = 0;
-            for (int j = 1; j < num_cloud_points; j++){
-                sum += lhs[i][j]*p[cloud_index[i][j]];
-            }
-            p[i] = 1.6*((rhs[i]-sum)/lhs[i][0]) - 0.6*p[i];
-        }
-    }
-    free(ptemp);
-    free(temp);
-}
+/////////////////////////////////////////////////////////////////////////////
+// Test Heat conduction V-Cycle Solver Modules
+/////////////////////////////////////////////////////////////////////////////
 
 void restrict_residuals(PointStructure* mypointStruct_f, PointStructure* mypointStruct_c, 
                                                     double *res_f, double* res_c){
@@ -617,12 +496,13 @@ void calculate_residual(PointStructure* mypointStruct, double* res, double* p, d
     }
 }
 
-void relax_vcycle(PointStructure* mypointstruct, double* T, double* rhs, int num_iter, double omega){
+void relax_vcycle(PointStructure* mypointstruct, double* T, double* rhs, int num_iter, double omega, bool neumann_flag_boundary){
     int num_nodes = mypointstruct->num_nodes;
     int num_cloud_points = mypointstruct->num_cloud_points;
     int num_boundary_points = mypointstruct->num_boundary_nodes;
     double* Ttemp = create_vector(num_nodes);
-    double sum = 0;
+    double sum = 0, Ap = 0, dpdn = 0;
+    double k = 1.0;
 
     for (int iter = 0; iter < num_iter; iter++){
         for (int i = 0; i < num_nodes; i++){
@@ -635,7 +515,31 @@ void relax_vcycle(PointStructure* mypointstruct, double* T, double* rhs, int num
             }
             T[i] = omega*((rhs[i]-sum)/mypointstruct->lap[i][0]) + (1-omega)*T[i];
         }
+        if (neumann_flag_boundary){// && (iter%5 == 0)){
+            for (int i = 0; i < num_boundary_points; i++)
+            {
+                sum = 0; Ap = 0;
+                for (int j = 1; j < num_cloud_points; j++){
+                    sum += mypointstruct->Dx[i][j]*T[mypointstruct->cloud_index[i][j]]*mypointstruct->x_normal[i];
+                    sum += mypointstruct->Dy[i][j]*T[mypointstruct->cloud_index[i][j]]*mypointstruct->y_normal[i];
+                    if (parameters.dimension == 3){
+                        sum += mypointstruct->Dz[i][j]*T[mypointstruct->cloud_index[i][j]]*mypointstruct->z_normal[i];
+                    }
+                }
+                Ap += mypointstruct->Dx[i][0]*mypointstruct->x_normal[i];
+                Ap += mypointstruct->Dy[i][0]*mypointstruct->y_normal[i];
+                if (parameters.dimension == 3){
+                    Ap += mypointstruct->Dz[i][0]*mypointstruct->z_normal[i];
+                }
+                dpdn = 2*3.14*k*(cos(2*3.14*k*mypointstruct->x[i])*sin(2*3.14*k*mypointstruct->y[i])*mypointstruct->x_normal[i]
+                        +cos(2*3.14*k*mypointstruct->y[i])*sin(2*3.14*k*mypointstruct->x[i])*mypointstruct->y_normal[i]);
+                T[i] = (dpdn-sum)/Ap;
+            }
+        }
     }
     free(Ttemp);
 }
+
+
+
 #endif

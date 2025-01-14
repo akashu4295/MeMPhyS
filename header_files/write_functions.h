@@ -8,13 +8,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include "structures.h"
 
 //////////////////////////////////////////////////////////////////////
 // Function Declarations
 //////////////////////////////////////////////////////////////////////
-void make_directory(const char* name);
+
 void write_normals(PointStructure* myPointStruct, char* filename);
 void write_boundary_tags(PointStructure* myPointStruct, char* filename);
 void write_corner_tags(PointStructure* myPointStruct, char* filename);
@@ -22,8 +20,7 @@ void write_coordinates(PointStructure* myPointStruct, char* filename);
 void write_cloud_index(PointStructure* myPointStruct, char* filename);
 void write_prolongation_and_restriction_points(PointStructure* myPointStruct, char* filename);
 void write_test_files(double* f, double* fx, double* fy, double* fz, double* lapf, double* fxx, double* fyy, double* fzz, int num_nodes, char* folder1);
-void write_grid_filenames(PointStructure* myPointStruct, int num_levels);
-
+void write_processed_grid_data(PointStructure* myPointStruct, int num_levels);
 
 //////////////////////////////////////////////////////////////////////
 // Function Definitions
@@ -186,17 +183,8 @@ void write_test_files(double* f, double* fx, double* fy, double* fz, double* lap
     printf("Files written\n");
 }
 
-void make_directory(const char* name) {
-   #ifdef __linux__
-       mkdir(name, 777); 
-   #else
-       mkdir(name);
-   #endif
-}
-
-void write_grid_filenames(PointStructure* myPointStruct, int ii)
+void write_processed_grid_data(PointStructure* myPointStruct, int ii)
 {   
-    FILE *file;
     char filename[50];
     sprintf(filename, "normals_%d.csv", ii);
     write_normals(myPointStruct, filename); // Write normals of all points
@@ -208,6 +196,8 @@ void write_grid_filenames(PointStructure* myPointStruct, int ii)
     write_coordinates(myPointStruct, filename); // Write coordinates of all points
     sprintf(filename, "cloud_index_%d.csv", ii);
     write_cloud_index(myPointStruct, filename); // Write coordinates of all points
+    sprintf(filename, "prolongation_and_restriction_%d.csv", ii);
+    write_prolongation_and_restriction_points(myPointStruct, filename);
     printf("\n\n");
 }
 

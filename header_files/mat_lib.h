@@ -49,34 +49,49 @@ void matrixInverse_Gauss_Jordan2(double** matrix1, double** inverse, int order);
 void write_matrix_to_file(double **A, int n_rows, int n_cols, char *filename);
 double l2_norm(double *A, double *B, int n_rows_A);
 void linear_system_solver(double** A, double* x, double* b, int n);
-void linear_system_solver_jacobi(double** A, double* x, double* b, int n);
+double min3(double a, double b, double c);
 
-void multiply_sparse_matrix_vector(double** D_coeff, double* f, double* dfdx, int** cloud, bool* tag, int n_rows_D, int n_cols_D);
+
+void multiply_sparse_matrix_vector(double** D_coeff, double* f, double* dfdx, int** cloud, int n_rows_D, int n_cols_D);
 void multiply_sparse_vector_matrix(double* f, double** D_coeff, double** ftimesD, int n_rows_D, int n_cols_D);
+void multiply_sparse_matrix_vector_gpu(double** D_coeff, double* f, double* dfdx, int** cloud, int n_rows_D, int n_cols_D);
 
 ////////////////////////////////////////////////////////////////////////
 // Function Definitions
 ////////////////////////////////////////////////////////////////////////
-void multiply_sparse_matrix_vector(double** D_coeff, double* f, double* dfdx, int** cloud, bool* tag, int n_rows_D, int n_cols_D){
-    // dfdx = create_matrix1(n_rows_D, n_cols_D);
-    double results = 0.0;
+double min3(double a, double b, double c){
+    double min = a;
+    if (b < min)
+        min = b;
+    if (c < min)
+        min = c;
+    return min;
+}
+void multiply_sparse_matrix_vector(double** D_coeff, double* f, double* dfdx, int** cloud, int n_rows_D, int n_cols_D){
     for (int i = 0; i < n_rows_D; i++){
-        if (tag[i]==false){
-            for (int j = 0; j < n_cols_D; j++){
-                results += D_coeff[i][j] * f[cloud[i][j]];
-            }
+        double results = 0.0;
+        for (int j = 0; j < n_cols_D; j++){
+            results += D_coeff[i][j] * f[cloud[i][j]];
         }
         dfdx[i] = results;
-        results = 0;
+    }
+}
+
+void multiply_sparse_matrix_vector_gpu(double** D_coeff, double* f, double* dfdx, int** cloud, int n_rows_D, int n_cols_D){
+    # pragma acc parallel loop present(D_coeff[0:n_rows_D][0:n_cols_D], f[0:n_rows_D], dfdx[0:n_rows_D], cloud[0:n_rows_D][0:n_cols_D])
+    for (int i = 0; i < n_rows_D; i++){
+        double results = 0.0;
+        for (int j = 0; j < n_cols_D; j++){
+            results += D_coeff[i][j] * f[cloud[i][j]];
+        }
+        dfdx[i] = results;
     }
 }
 
 void multiply_sparse_vector_matrix(double* f, double** D_coeff, double** ftimesD, int n_rows_D, int n_cols_D){
-    for (int i = 0; i < n_rows_D; i++){
-            for (int j = 0; j < n_cols_D; j++){
+    for (int i = 0; i < n_rows_D; i++)
+            for (int j = 0; j < n_cols_D; j++)
                 ftimesD[i][j] = f[i] * D_coeff[i][j];
-            }
-        }
     }
 
 
@@ -133,7 +148,7 @@ double* create_vector(int n_rows)
     A = (double *)malloc(n_rows * sizeof(double));
     for (int i = 0; i < n_rows; i++)
     {
-        A[i] = 0;
+        A[i] = 0.0;
     }
     return A;
 }
@@ -537,15 +552,15 @@ void backwardSubstitution(double **U, double *x, double *y, int n) {
 
 // Function to perform matrix inversion using LU decomposition
 void matrixInverse_LU(double **A, double **A_inv, int n) {
-    int *P = malloc(n * sizeof(int));
+    int* P = (int*) malloc(n * sizeof(int));
 
     luDecomposition(A, n, P);
 
-    double **L = malloc(n * sizeof(double *));
-    double **U = malloc(n * sizeof(double *));
+    double **L = (double**) malloc(n * sizeof(double *));
+    double **U = (double**) malloc(n * sizeof(double *));
     for (int i = 0; i < n; i++) {
-        L[i] = malloc(n * sizeof(double));
-        U[i] = malloc(n * sizeof(double));
+        L[i] = (double*) malloc(n * sizeof(double));
+        U[i] = (double*) malloc(n * sizeof(double));
     }
 
     // Extract L and U matrices
@@ -566,8 +581,8 @@ void matrixInverse_LU(double **A, double **A_inv, int n) {
     }
 
     // Solve Ly = b for each column of inverse
-    double *y = malloc(n * sizeof(double));
-    double *b = malloc(n * sizeof(double));
+    double *y = (double*) malloc(n * sizeof(double));
+    double *b = (double*) malloc(n * sizeof(double));
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             if (i == j)
@@ -703,14 +718,10 @@ void swap_vectors(double *A, double *B, int n_rows_A)
 }
 
 void multiply_vector_matrix_columnwise(double *B, double **A, double *C, int n_rows_A, int n_cols_A){
-    int i, j;
-    for (i = 0; i < n_cols_A; i++)
-    {
+    for (int i = 0; i < n_cols_A; i++) {
         C[i] = 0;
-        for (j = 0; j < n_rows_A; j++)
-        {
+        for (int j = 0; j < n_rows_A; j++) 
             C[i] += B[j] * A[j][i];
-        }
     }
 }
 

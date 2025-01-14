@@ -10,6 +10,7 @@ At Present:
 6. Heat conduction equations solved for Neumann boundary condition
 7. Navier Stokes Solver implemented with Fractional Step
 8. Navier Stokes Solver implemented with Time Implicit solver
+9. Multigrided Poisson solver
 
 To run the code use a terminal and compile with gcc compiler:
 command: gcc multigrid_heat_conduction.c -lm

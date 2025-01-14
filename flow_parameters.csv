@@ -2,7 +2,22 @@ domain_dimensions,2
 poly_deg,3
 phs_deg,3
 cloud_size_multiplier,2
-test,1
+test_derivative,0
+courant_number,0.3
+steady_tolerance,1e-8
+poisson_solver_tolerance,1e-8
+sor_parameter,1.6
+num_vcycles,10
+num_relax,5
+num_time_steps,1
+write_interval,10000
+neumann_flag_boundary,1
+time_step,0.1
+iter_momentum,5
+iter_timple,1
+Re,10
+facRe,1.0
+facdt,1.0
 
 
 
@@ -19,14 +34,8 @@ nt: No. of timesteps: positive integer
 
 Courant: [dt=2*Courant/lambda] where, lambda: sum of largest magnitude convection and diffusion eigen values
 
-solver_type: options: hypre_ilu_gmres, eigen_direct, eigen_ilu_bicgstab
-
 steady_tolerance: solved to steady state till [avg(abs(phi_new - phi_old))/dt < steady_tolerance] for all variables
 
 solver_tolerance: used in iterative solvers for absolute and relative residuals (recommended: less than steady_tolerance)
-
-gmres_kdim: dimension of Krylov subspace in GMRES solver
-
-precond_droptol: Drop tolerance for ILU or Euclid (in HYPRE) preconditioner
 
 n_iter: no. of iterations of the solver

@@ -7,11 +7,9 @@ At Present:
 3. Local Interpolation with point clouds identified through a kd-tree algorithm
 4. Heat conduction problem added with multigrid implementation and for Dirchlet boundary conditions
 5. SOR solver used for Pressure Poisson and Heat conduction equations
-
-In work
-1. Heat conduction equations to be solved for Neumann boundary condition
-2. Navier Stokes Solver to be implemented
-
+6. Heat conduction equations solved for Neumann boundary condition
+7. Navier Stokes Solver implemented with Fractional Step
+8. Navier Stokes Solver implemented with Time Implicit solver
 
 To run the code use a terminal and compile with gcc compiler:
 command: gcc multigrid_heat_conduction.c -lm

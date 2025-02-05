@@ -396,11 +396,6 @@ void create_laplacian_for_Poisson(PointStructure* myPointStruct) {
             }
         }
     }
-    // for (int i = 0; i < myPointStruct->num_nodes; i++) {
-    //     for (int j = 0; j < myPointStruct->num_cloud_points; j++) {
-    //         myPointStruct->lap_Poison[i][j] = myPointStruct->lap_Poison[i][j]/myPointStruct->lap_Poison[i][0];
-    //     }
-    // }
 }
 
 void create_derivative_matrices(PointStructure* myPointStruct){

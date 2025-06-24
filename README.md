@@ -4,7 +4,7 @@ This repository contains a C-based implementation of a **Meshless Method** for s
 
 ---
 
-## Quick Note
+### Quick Notes on status of the code
 
 ### IN-WORK
 1. A multigrid (multi-level) accelerated Navier Stokes solver to achieve steady state using TIMPLE a meshless framework

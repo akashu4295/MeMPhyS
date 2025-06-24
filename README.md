@@ -21,8 +21,6 @@ grid_filenames.csv has the mesh filenames in the order from finest grid to coars
 flow_parameters.csv has the details like polynomial degree, phs degree, cloud_size_multiplier and others**
 
 
-### 📄 `README.md`
-
 ````markdown
 # Meshless Method Navier-Stokes Solver (C Code)
 

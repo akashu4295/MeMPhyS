@@ -21,7 +21,6 @@ grid_filenames.csv has the mesh filenames in the order from finest grid to coars
 flow_parameters.csv has the details like polynomial degree, phs degree, cloud_size_multiplier and others**
 
 
-````markdown
 # Meshless Method Navier-Stokes Solver (C Code)
 
 This repository contains a C-based implementation of a **Meshless Method** for solving the Navier-Stokes equations. The solver utilizes a radial basis function (RBF) based meshless approach with optional GPU or multicore CPU acceleration using OpenACC.

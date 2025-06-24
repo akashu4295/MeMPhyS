@@ -1,8 +1,16 @@
-## IN-WORK
+# Meshless Method Navier-Stokes Solver (C Code)
+
+This repository contains a C-based implementation of a **Meshless Method** for solving the Navier-Stokes equations. The solver utilizes a radial basis function (RBF) based meshless approach with optional GPU or multicore CPU acceleration using OpenACC.
+
+---
+
+## Quick Note
+
+### IN-WORK
 1. A multigrid (multi-level) accelerated Navier Stokes solver to achieve steady state using TIMPLE a meshless framework
 2. A compressible flow solver
    
-## Current Status: 
+### Current Status: 
 1. The meshless (first and second derivative matrices) Dx, Dy, Dz, and Laplacian matrices for a Gmsh ASCII (version 2) .msh file implemented.
 2. Poly Harmonic Spline Radial Basis Function with appended polynomials implemented. (  MULTIQUADRICS AND GAUSSIAN IN-WORK )
 3. Local Interpolation with point clouds identified through a kd-tree algorithm
@@ -16,11 +24,6 @@
 **Make necessary changes in the grid_filenames.csv and flow_parameters.csv
 grid_filenames.csv has the mesh filenames in the order from finest grid to coarse grid
 flow_parameters.csv has the details like polynomial degree, phs degree, cloud_size_multiplier and others**
-
-
-# Meshless Method Navier-Stokes Solver (C Code)
-
-This repository contains a C-based implementation of a **Meshless Method** for solving the Navier-Stokes equations. The solver utilizes a radial basis function (RBF) based meshless approach with optional GPU or multicore CPU acceleration using OpenACC.
 
 ---
 

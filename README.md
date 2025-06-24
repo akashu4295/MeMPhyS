@@ -27,7 +27,7 @@ flow_parameters.csv has the details like polynomial degree, phs degree, cloud_si
 
 ---
 
-## 🔧 Compilation
+### 🔧 Compilation
 
 To compile the code for different hardware architectures:
 
@@ -50,7 +50,7 @@ nvc -acc -gpu=managed mg_NS_solver.c
 
 ---
 
-## ▶️ Running the Code
+### ▶️ Running the Code
 
 After compiling:
 
@@ -60,7 +60,7 @@ After compiling:
 
 ---
 
-## 📁 Folder Structure
+### 📁 Folder Structure
 
 * `header_files/`: Contains all the custom C header files used in the solver.
 * `init/`: Holds sample initialization scripts.
@@ -69,7 +69,7 @@ After compiling:
 
 ---
 
-## 📄 `flow_parameters.csv`
+### 📄 `flow_parameters.csv`
 
 This file defines the core physical and numerical parameters for the simulation. Each line is of the format `parameter_name,value`. Here are some key parameters:
 
@@ -91,12 +91,12 @@ You can customize these settings to suit your problem configuration.
 
 ---
 
-## 📄 `grid_filenames.csv`
+### 📄 `grid_filenames.csv`
 
 * First line: `num_levels` – Number of mesh refinement levels or hierarchies.
 * Following lines: Paths to `.msh` mesh files generated using Gmsh from fine grid to coarse grid.
 
-### 🛠 Using Custom Mesh Files
+#### 🛠 Using Custom Mesh Files
 
 To use your own mesh:
 
@@ -107,14 +107,14 @@ To use your own mesh:
 
 ---
 
-## 🧠 Notes
+### 🧠 Notes
 
 * Ensure all headers in `header_files/` are correctly referenced in your code.
 * Modify `flow_parameters.csv` as needed before compilation.
 
 ---
 
-## 🧪 Sample Cases
+### 🧪 Sample Cases
 
 Several mesh cases are included under the paths:
 
@@ -125,5 +125,5 @@ Several mesh cases are included under the paths:
 
 ---
 
-## ✍️ Author
+### ✍️ Author
 

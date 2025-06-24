@@ -126,4 +126,4 @@ Several 2d and 3d mesh cases are included under the paths:
 
 ### ✍️ Author
 
-Dr. Akash Unnikrishnan developed this code as part of his PhD work with the guidance of Prof. Surya Pratap Vanka from University of Illinois at Urbana Champaign and Prof. Vinod Narayanan at Indian Institute of Technology Gandhinagar.
+Dr. Akash Unnikrishnan developed this code as part of his PhD work with the guidance of Prof. Surya Pratap Vanka from University of Illinois at Urbana Champaign and Prof. Vinod Narayanan at Indian Institute of Technology Gandhinagar. Special mention has to go for Dr. Shantanu Shahane, who developed the first version of memphys which is available here: ttps://github.com/shahaneshantanu/memphys

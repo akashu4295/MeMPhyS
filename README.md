@@ -76,7 +76,7 @@ This file defines the core physical and numerical parameters for the simulation.
 * `domain_dimensions`: Dimensionality of the domain (2 or 3).
 * `poly_deg`: Degree of the appended polynomial (recommended: \[2–15]).
 * `phs_deg`: Degree of the polyharmonic spline (odd integers: 3, 5, 7, 9...).
-* `cloud_size_multiplier`: Controls the local stencil size; typically between 1.5 and 2.5.
+* `cloud_size_multiplier`: Controls the local stencil size; typically between 1.5 and 2.5 for 2d cases and between 3 to 4 for 3d cases.
 * `courant_number`: CFL condition; controls the time step size.
 * `steady_tolerance`: Tolerance for steady-state convergence.
 * `poisson_solver_tolerance`: Tolerance for pressure Poisson solver.
@@ -109,14 +109,13 @@ To use your own mesh:
 
 ### 🧠 Notes
 
-* Ensure all headers in `header_files/` are correctly referenced in your code.
 * Modify `flow_parameters.csv` as needed before compilation.
 
 ---
 
 ### 🧪 Sample Cases
 
-Several mesh cases are included under the paths:
+Several 2d and 3d mesh cases are included under the paths:
 
 * `mesh/2d/TC/`
 * `mesh/2d/SQ/`
@@ -127,3 +126,4 @@ Several mesh cases are included under the paths:
 
 ### ✍️ Author
 
+Dr. Akash Unnikrishnan developed this code as part of his PhD work with the guidance of Prof. Surya Pratap Vanka from University of Illinois at Urbana Champaign and Prof. Vinod Narayanan at Indian Institute of Technology Gandhinagar.

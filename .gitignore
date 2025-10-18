@@ -1,6 +1,5 @@
 Backup/
 linear_stability.c
-gui.py
 gui_updated.py
 *.jpg
 *.jpeg
@@ -9,3 +8,4 @@ gui_updated.py
 *.out
 Solution.csv
 Convergence.csv
+test_grid_files.csv

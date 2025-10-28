@@ -1,2 +1,11 @@
 Backup/
 linear_stability.c
+gui_updated.py
+*.jpg
+*.jpeg
+*.png
+*.exe
+*.out
+Solution.csv
+Convergence.csv
+test_grid_files.csv

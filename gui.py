@@ -6,7 +6,6 @@ import pandas as pd
 import dearpygui.dearpygui as dpg
 import json
 import csv
-import sys
 import subprocess
 import platform
 # import glob
@@ -101,13 +100,13 @@ def write_grid_csv():
     #     if path:
     #         mesh_paths.append(path)
 
-    with open("test_grid_files.csv", "w", newline="") as f:
+    with open("grid_filenames.csv", "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["num_levels", num_levels])
         for path in mesh_paths:
             writer.writerow([path])
 
-    dpg.set_value("log_window", "test_grid_files.csv written successfully.\n")
+    dpg.set_value("log_window", "grid_filesnames.csv written successfully.\n")
 
 # =============================================================
 # Function to compile and run the C solver, streaming logs to GUI
@@ -359,34 +358,19 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                     show_initial = (i == 0)
 
                     with dpg.group(horizontal=True, show=show_initial, tag=f"mesh_group_{idx}"):
-                        dpg.add_input_text(
-                            tag=f"mesh_file_{idx}",
-                            hint=f"Mesh file {idx} (choose or type path)",
-                            width=300,
-                            show=show_initial
-                        )
+                        dpg.add_input_text(tag=f"mesh_file_{idx}", hint=f"Mesh file {idx} (choose or type path)",width=300,show=show_initial)
 
                         # Pass index as user_data
-                        dpg.add_button(
-                            label="Browse",
-                            tag=f"browse_{idx}",
-                            callback=open_file_dialog,
-                            user_data=idx,
-                            show=show_initial
-                        )
+                        dpg.add_button(label="Browse", tag=f"browse_{idx}", callback=open_file_dialog, user_data=idx, show=show_initial)
 
                 # --- File dialogs (defined *after* so they exist when we call show_item) ---
                 for i in range(10):
-                    dpg.add_file_dialog(
-                        directory_selector=False,
-                        tag=f"file_dialog_{i+1}",
-                        callback=select_mesh_file,
-                        user_data=f"mesh_file_{i+1}",
-                        show=False,
-                        width=600,
-                        height=400
-                    )
+                    dialog_tag = f"file_dialog_{i+1}"
+                    input_tag = f"mesh_file_{i+1}"
 
+                    dpg.add_file_dialog(directory_selector=False, tag=dialog_tag, user_data=input_tag, callback=select_mesh_file, show=False, width=600, height=400)
+                    dpg.add_file_extension(".msh", parent=dialog_tag)
+                        
             # Write button and spacer
             dpg.add_spacer(height=30)
             dpg.add_button(label="Save Parameters and mesh details", callback=on_write_callback)
@@ -424,8 +408,6 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
 
             dpg.add_separator()
             dpg.add_text("Logs")
-            # with dpg.child_window(tag="log_child", autosize_x=True, height=150, horizontal_scrollbar=True):
-            #     dpg.add_input_text(label="Logs", tag="log_window", multiline=True, readonly=True, height=150, width=-1, default_value="Ready.\n")
 
             with dpg.group(horizontal=True):  # Put button next to label if you prefer
                 dpg.add_button(label="Clear Logs", callback=clear_logs)

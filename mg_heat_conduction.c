@@ -10,7 +10,7 @@
 
 ////////////// Header files
 
-#include "header_files/heat_conduction.h"
+#include "header_files/heat_conduction_vectors.h"
 #include "header_files/openACC_functions.h"
 #include "init/init_heat_conduction.c"
 
@@ -36,7 +36,7 @@ int main()
 ///// Create and/or test derivative matrices
     clock_start = clock();    // Start the clock
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
-        create_derivative_matrices(&myPointStruct[ii]);
+        create_derivative_matrices_vectorised(&myPointStruct[ii]);
     double time_create_derivatives = (double)(clock()-clock_start)/CLOCKS_PER_SEC;
     clock_start = clock();    // Start the clock
     if(parameters.test>0)

@@ -4,7 +4,7 @@
 #ifndef INIT_C
 #define INIT_C
 
-#include "../header_files/structures.h"
+#include "../header_files/structures_vectors.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -48,14 +48,17 @@ void initial_conditions(PointStructure* myPointStruct, FieldVariables* field, in
 }
 
 void set_boundary_rhs(PointStructure* myPointStruct, FieldVariables* field, int numlevels, int k){
+    int n =myPointStruct->num_cloud_points;
     for (int i = 0; i < myPointStruct->num_nodes; i++){
         if (myPointStruct->boundary_tag[i] == true){
             if (myPointStruct->x[i] == 0){
                 field[0].source[i] = 1.0;
-                for (int j = 0; j< myPointStruct->num_cloud_points; j++){
-                    myPointStruct[0].lap_Poison[i][j] = 0.0;
+                int k = i*n;
+                for (int j = 0; j< n; j++){
+                    myPointStruct[0].lap_Poison[k] = 0.0;
+                    k +=1;
                 }
-                myPointStruct[0].lap_Poison[i][0] = 1.0;
+                myPointStruct[0].lap_Poison[i*n] = 1.0;
             }
             else
                 field[0].source[i] = 2*3.14*k*(sin(2*3.14*k*myPointStruct->x[i])*cos(2*3.14*k*myPointStruct->y[i])*myPointStruct->y_normal[i] +

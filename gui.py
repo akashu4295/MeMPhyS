@@ -6,10 +6,9 @@ import pandas as pd
 import dearpygui.dearpygui as dpg
 import json
 import csv
-import sys
 import subprocess
 import platform
-# import glob
+import glob
 
 # ============================================================
 # Default parameters for the GUI
@@ -82,7 +81,7 @@ def write_params_csv(filename="flow_parameters.csv"):
     rows.append(["fractional_step", 1 if dpg.get_value("solver_method") == "Fractional Step" else 0])
 
     pd.DataFrame(rows, columns=["Parameter", "Value"]).to_csv(filename, index=False, header=False)
-    dpg.set_value("log_window", f"Parameters written to {filename}\n")
+    append_log("Parameters written to flow_parameters.csv\n")
 
 def write_grid_csv():
     """Writes mesh file paths to test_grid_files.csv"""
@@ -101,13 +100,13 @@ def write_grid_csv():
     #     if path:
     #         mesh_paths.append(path)
 
-    with open("test_grid_files.csv", "w", newline="") as f:
+    with open("grid_filenames.csv", "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["num_levels", num_levels])
         for path in mesh_paths:
             writer.writerow([path])
 
-    dpg.set_value("log_window", "test_grid_files.csv written successfully.\n")
+    append_log("Grid details written to grid_filesnames.csv\n")
 
 # =============================================================
 # Function to compile and run the C solver, streaming logs to GUI
@@ -115,32 +114,50 @@ def write_grid_csv():
 def append_log(msg):
     current = dpg.get_value("log_window") or ""
     dpg.set_value("log_window", current + msg + "\n")
-
-    # Scroll the parent child_window instead
+    dpg.split_frame()
     try:
-        dpg.set_y_scroll("log_child", 999999)
+        # Scroll parent child window (replace 'log_child' with your actual ID)
+        max_scroll = dpg.get_y_scroll_max("log_child")
+        current_scroll = dpg.get_y_scroll("log_child")
+        if abs(max_scroll - current_scroll) < 5:
+            dpg.set_y_scroll("log_child", max_scroll)
     except Exception:
-        pass  # just in case it's not created yet
+        pass
 
 def clear_logs():
     dpg.set_value("log_window", "")
     dpg.set_y_scroll("log_child", 0)
         
-def run_solver():
+def run_solver(sender):
     """Compile and run the C solver, streaming logs into the GUI."""
-    dpg.set_value("log_window", "Starting new run...\n")
+    # disable button while running
+    write_grid_csv()
+    write_params_csv()
+    dpg.disable_item(sender)
+    dpg.configure_item(sender, label="Compiling and Running...")
     
+    dpg.set_value("log_window", "Starting new run...\n")
+    append_log("Saving Meshfile details and parameters...\n")
+    write_grid_csv()
     # Detect OS
     system_type = platform.system()
     compiler_cmd = []
     run_cmd = []
 
-    # --- Build compile command based on OS ---
+    # Path to the init .c file
+    init_path = dpg.get_value("init_path")    #"init/init_TC.c"
+    print(init_path)
+
+    # Collect all .c files in the 'header_files' directory
+    header_dir = "header_files"
+    header_c_files = glob.glob(os.path.join(header_dir, "*.c"))
+
+    # Build the compile command
     if system_type == "Windows":
-        compiler_cmd = ["gcc", "mg_NS_solver.c", "-lm", "-o", "solver.exe"]
+        compiler_cmd = ["gcc"] + header_c_files + [init_path, "mg_NS_solver.c", "-lm", "-o", "solver.exe"]
         run_cmd = ["solver.exe"]
     else:
-        compiler_cmd = ["gcc", "mg_NS_solver.c", "-lm", "-o", "solver"]
+        compiler_cmd = ["gcc"] + header_c_files + [init_path, "mg_NS_solver.c", "-lm", "-o", "solver"]
         run_cmd = ["./solver"]
 
     append_log("Compiling solver...")
@@ -177,9 +194,12 @@ def run_solver():
         process.wait()
 
         if process.returncode == 0:
-            append_log("Solver completed successfully.")
+            append_log("Solver completed successfully.\n Solution file saved as Solution.csv")
         else:
             append_log(f"Solver exited with code {process.returncode}.")
+        
+        dpg.configure_item(sender, label="Done! Run Again")
+        dpg.enable_item(sender)
 
     threading.Thread(target=solver_thread, daemon=True).start()
 
@@ -311,6 +331,18 @@ def open_file_dialog(sender, app_data, user_data):
 
 dpg.create_context()
 
+# ----------------------------
+# Define a custom button theme
+# ----------------------------
+with dpg.theme() as button_theme:
+    with dpg.theme_component(dpg.mvButton):
+        dpg.add_theme_color(dpg.mvThemeCol_Button, (40, 120, 200))          # normal
+        dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (60, 140, 230))   # hover
+        dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (30, 100, 180))    # pressed
+        dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 10)               # rounded corners
+        dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 12, 6)             # inner padding
+        dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, 10, 10)
+
 # ---------- Main Window ----------
 with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
     with dpg.group(horizontal=True):
@@ -359,39 +391,38 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                     show_initial = (i == 0)
 
                     with dpg.group(horizontal=True, show=show_initial, tag=f"mesh_group_{idx}"):
-                        dpg.add_input_text(
-                            tag=f"mesh_file_{idx}",
-                            hint=f"Mesh file {idx} (choose or type path)",
-                            width=300,
-                            show=show_initial
-                        )
+                        dpg.add_input_text(tag=f"mesh_file_{idx}", hint=f"Mesh file {idx} (choose or type path)",width=300,show=show_initial)
 
                         # Pass index as user_data
-                        dpg.add_button(
-                            label="Browse",
-                            tag=f"browse_{idx}",
-                            callback=open_file_dialog,
-                            user_data=idx,
-                            show=show_initial
-                        )
+                        dpg.add_button(label="Browse", tag=f"browse_{idx}", callback=open_file_dialog, user_data=idx, show=show_initial)
 
                 # --- File dialogs (defined *after* so they exist when we call show_item) ---
                 for i in range(10):
-                    dpg.add_file_dialog(
-                        directory_selector=False,
-                        tag=f"file_dialog_{i+1}",
-                        callback=select_mesh_file,
-                        user_data=f"mesh_file_{i+1}",
-                        show=False,
-                        width=600,
-                        height=400
-                    )
+                    dialog_tag = f"file_dialog_{i+1}"
+                    input_tag = f"mesh_file_{i+1}"
 
+                    dpg.add_file_dialog(directory_selector=False, tag=dialog_tag, user_data=input_tag, callback=select_mesh_file, show=False, width=600, height=400)
+                    dpg.add_file_extension(".msh", parent=dialog_tag)
+            
+            dpg.add_separator()               
+            dpg.add_text("Choose the initialisation file", color=(255, 220, 160))     
+            with dpg.group(horizontal=True, show=True, tag="init_group"):
+                dpg.add_input_text(hint="Path to Initialisation file", tag="init_path",width = 300, show = True)
+                dpg.add_button(label="Browse", tag="init_browse", callback=open_file_dialog, user_data="init", show=True)
+                dpg.add_file_dialog(directory_selector=False, tag="file_dialog_init", user_data="init_path", callback=select_mesh_file, show=False, width=600, height=400)
+                dpg.add_file_extension(".c", parent="file_dialog_init")
+                        
             # Write button and spacer
-            dpg.add_spacer(height=30)
-            dpg.add_button(label="Save Parameters and mesh details", callback=on_write_callback)
-            dpg.add_spacer(height=30)
-            dpg.add_button(label="Compile and Run Solver", callback=run_solver)
+            # dpg.add_spacer(height=10)
+            # dpg.add_button(label="Save Parameters and mesh details", callback=on_write_callback)
+            dpg.add_spacer(height=10)
+            # dpg.add_button(label="Compile and Run Solver", callback=run_solver)
+            compile_btn = dpg.add_button(label="Compile and Run Solver", width=250, height=45, callback=run_solver)
+            with dpg.tooltip(compile_btn):
+                dpg.add_text("Click to compile and execute the solver", color=(220, 230, 255))
+                dpg.add_separator()
+                dpg.add_text("This recompiles all .c files and runs the solver executable.")
+            dpg.bind_item_theme(compile_btn, button_theme)
 
         # ===== Right Column =====
         with dpg.child_window(width=-1, border=True):
@@ -402,40 +433,32 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 # dpg.add_plot_axis(dpg.mvYAxis, label="Total Steady-State Error", tag="y_axis_conv", scale=dpg.mvScale_Log10)
                 dpg.add_line_series([], [], parent="y_axis_conv", tag="conv_series", label="Convergence")
 
-            # dpg.add_text("Convergence Plot", color=(200, 255, 200))
-            # with dpg.plot(label="Residual", height=300, width=-1):
-            #     dpg.add_plot_axis(dpg.mvXAxis, label="Timestep")
-            #     y_axis = dpg.add_plot_axis(dpg.mvYAxis, label="Total Steady-State Error", log_scale=True)
-            #     dpg.add_line_series([], [], parent=y_axis, tag="conv_series", label="Convergence")
+            # dpg.add_separator()
+            # dpg.add_text("Flow Contour (|U| with streamlines)", color=(200, 255, 255))
+            # # Placeholder image (light gray texture)
+            # w0, h0 = 200, 150
+            # empty = np.zeros((h0, w0, 4), dtype=np.float32) + 0.8  # light gray RGBA
+            # empty[:, :, 3] = 1.0
 
-            dpg.add_separator()
-            dpg.add_text("Flow Contour (|U| with streamlines)", color=(200, 255, 255))
-            # Placeholder image (light gray texture)
-            w0, h0 = 200, 150
-            empty = np.zeros((h0, w0, 4), dtype=np.float32) + 0.8  # light gray RGBA
-            empty[:, :, 3] = 1.0
+            # # Register the texture before using it
+            # with dpg.texture_registry(show=False):
+            #     dpg.add_static_texture(w0, h0, empty.flatten().tolist(), tag="contour_placeholder")
 
-            # Register the texture before using it
-            with dpg.texture_registry(show=False):
-                dpg.add_static_texture(w0, h0, empty.flatten().tolist(), tag="contour_placeholder")
-
-            # Now add the image referring to that texture
-            dpg.add_image("contour_placeholder", tag="contour_image")
+            # # Now add the image referring to that texture
+            # dpg.add_image("contour_placeholder", tag="contour_image")
 
             dpg.add_separator()
             dpg.add_text("Logs")
-            # with dpg.child_window(tag="log_child", autosize_x=True, height=150, horizontal_scrollbar=True):
-            #     dpg.add_input_text(label="Logs", tag="log_window", multiline=True, readonly=True, height=150, width=-1, default_value="Ready.\n")
 
             with dpg.group(horizontal=True):  # Put button next to label if you prefer
                 dpg.add_button(label="Clear Logs", callback=clear_logs)
 
-            with dpg.child_window(tag="log_child", autosize_x=True, height=150, horizontal_scrollbar=True):
+            with dpg.child_window(tag="log_child", autosize_x=True, height=350, horizontal_scrollbar=True):
                 dpg.add_input_text(
                     tag="log_window",
                     multiline=True,
                     readonly=True,
-                    width=-1,
+                    width=-1, height = 330,
                     default_value="Ready.\n"
                 )
 

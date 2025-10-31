@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "timple_solver.h": "c",
-        "openacc_functions.h": "c"
+        "openacc_functions.h": "c",
+        "test_functions_vectors.h": "c"
     }
 }

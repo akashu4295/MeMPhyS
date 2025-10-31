@@ -5,9 +5,7 @@
 #define OPENACC_FUNCTIONS_H
 
 #include "structures.h"
-#include "general_functions.h"
-#include "mesh_functions.h"
-#include "kdtree_functions.h"
+#include "functions.h"
 #include "mat_lib.h"
 #include <time.h>
 #include <math.h>

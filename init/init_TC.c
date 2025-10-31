@@ -1,18 +1,10 @@
 // Author :  Akash Unnikrishnan and Prof. Surya Pratap Vanka
 // Affiliation : Indian Institute of Technology Gandhinagar and University of Illinois at Urbana Champaign
 
-#ifndef INIT_C
-#define INIT_C
-
 #include "../header_files/structures.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-
-
-void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
-void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
-void analytical_solution(PointStructure myPointStruct, double* u_ana, double* v_ana, double* p_ana);
 
 void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels){
     for (int ii = 0; ii < numlevels; ii++){
@@ -52,5 +44,3 @@ void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldv
         }
     }
 }
-
-#endif

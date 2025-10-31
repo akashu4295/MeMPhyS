@@ -36,6 +36,10 @@ OF SUCH DAMAGE.
 #include <math.h>
 #include "kdtree.h"
 
+
+/* Modifications made by Akash to make it work on MeMhyS code */
+#include "structures.h"
+
 #if defined(WIN32) || defined(__WIN32__)
 #include <malloc.h>
 #endif

@@ -18,12 +18,14 @@
 
 ////////////// Header files
 
-#include "header_files/fractional_step_solver.h"
-#include "header_files/timple_solver.h"
+#include "header_files/functions.h"
+#include "header_files/functions_supplementary.h"
+#include "header_files/solvers.h"
 #include "header_files/openACC_functions.h"
-#include "init/init_TC.c"
 
 ////////////// Main Program
+
+struct parameters parameters;
 
 int main()
 {
@@ -44,7 +46,7 @@ int main()
 
     clock_start = clock();    // Start the clock
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
-        create_derivative_matrices(&myPointStruct[ii]);
+        create_derivative_matrices_vectorised(&myPointStruct[ii]);
     printf("Time taken to create derivative matrices: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
 
     clock_start = clock();    // Start the clock
@@ -76,7 +78,7 @@ int main()
     if (parameters.fractional_step)
         for (int it = 0; it<parameters.num_time_steps; it++ ) 
         {
-            steady_state_error = fractional_step_explicit(myPointStruct, field);
+            steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
             printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
             # pragma acc update host(field[0])
             fprintf(file2,"%d, %e\n", it, steady_state_error);
@@ -96,7 +98,7 @@ int main()
     else
         for (int it = 0; it<parameters.num_time_steps; it++ ) 
         {
-            steady_state_error = time_implicit_solver(myPointStruct, field);
+            steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
             printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
             # pragma acc update host(field[0])
             fprintf(file2,"%d, %e\n", it, steady_state_error);
@@ -115,6 +117,7 @@ int main()
         } 
     fclose(file2); 
 
+    write_vtk(myPointStruct,field);
 ////////////// Time stepping loop end ///////////// 
     printf("Time_step, dt : %lf\n",parameters.dt);
     printf("Polynomial degree: %d\n",myPointStruct[0].poly_degree);

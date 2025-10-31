@@ -26,14 +26,13 @@ OF SUCH DAMAGE.
 */
 #ifndef _KDTREE_H_
 #define _KDTREE_H_
-
+#include "structures.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct kdtree;
 struct kdres;
-
 
 /* create a kd-tree for "k"-dimensional data */
 struct kdtree *kd_create(int k);
@@ -120,6 +119,15 @@ void *kd_res_item3f(struct kdres *set, float *x, float *y, float *z);
 
 /* equivalent to kd_res_item(set, 0) */
 void *kd_res_item_data(struct kdres *set);
+
+
+/* Modifications by Akash*/
+int* find_neighbours(double* p, void* ptree, double radius, int num_cloud_points);
+void* create_kdtree(PointStructure* myPointStruct);
+void* create_kdtree_without_boundarynodes(PointStructure* myPointStruct);
+void free_kdtree(void* ptree);
+void find_cloud_index(PointStructure* myPointStruct1);
+int* find_nearest_point(PointStructure* myPointStruct1, PointStructure* myPointStruct2, int num_cloud_points);
 
 
 #ifdef __cplusplus

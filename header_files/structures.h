@@ -57,6 +57,7 @@ typedef struct PointStructure {
     double* x;  // x coordinates of the nodes
     double* y;  // y coordinates of the nodes
     double* z;  // z coordinates of the nodes
+    int* rcm_order; // to get original order of data after rcm_reordering
     int* point_index; // index of the point in the original dataset
     double* x_normal; // x component of the normal vector
     double* y_normal; // y component of the normal vector

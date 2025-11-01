@@ -452,13 +452,13 @@ void read_PointStructure(PointStructure* myPointStruct)
     }
     myPointStruct->num_nodes = new_size;
     myPointStruct->num_boundary_nodes = myPointStruct->num_boundary_nodes - myPointStruct->num_corners;
-    myPointStruct->num_corners = 0;
+    // myPointStruct->num_corners = 0;
 
     for(int i = 0; i<new_size; i++){
         myPointStruct->point_index[i] = myPointStruct->point_index[i]-remove_count;
     }
     printf("No of nodes = %d \nNo of elements = %d \n", myPointStruct->num_nodes, myPointStruct->num_elem);
-    printf("No of boundary nodes = %d \nNo of corner nodes = %d \n", myPointStruct->num_boundary_nodes, myPointStruct->num_corners);
+    printf("No of boundary nodes = %d \nNo of corner nodes removed = %d \n", myPointStruct->num_boundary_nodes, remove_count);
 }
 
 void correct_normal_directions(PointStructure *myPointStruct)
@@ -800,7 +800,7 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
         myPointstruct->x[i] = temp_x[i];
         myPointstruct->y[i] = temp_y[i];
         myPointstruct->z[i] = temp_z[i];
-
+        myPointstruct->rcm_order[i] = queue2[i];
         for (int j = 0; j < n; j++) {
             myPointstruct->cloud_index[i*n +j] = temp_cloud_index[i*n+j];
         }

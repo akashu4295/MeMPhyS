@@ -32,6 +32,6 @@ void write_prolongation_and_restriction_points(PointStructure* myPointStruct, ch
 void write_test_files(double* f, double* fx, double* fy, double* fz, double* lapf, double* fxx, double* fyy, double* fzz, int num_nodes, char* folder1);
 void write_processed_grid_data(PointStructure* myPointStruct, int num_levels);
 void make_directory(const char* name);
-void write_vtk(PointStructure* myPointStruct, FieldVariables* field);
+int write_vtk(char* filename, FieldVariables* field, PointStructure* myPointStruct);
 
 #endif

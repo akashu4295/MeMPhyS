@@ -117,7 +117,7 @@ int main()
         } 
     fclose(file2); 
 
-    write_vtk(myPointStruct,field);
+    write_vtk(myPointStruct[0].mesh_filename,field,myPointStruct);
 ////////////// Time stepping loop end ///////////// 
     printf("Time_step, dt : %lf\n",parameters.dt);
     printf("Polynomial degree: %d\n",myPointStruct[0].poly_degree);

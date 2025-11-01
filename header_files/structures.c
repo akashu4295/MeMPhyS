@@ -14,6 +14,7 @@ void AllocateMemoryPointStructure(PointStructure* myPointStruct, int nodes) {
     myPointStruct->corner_tag = (bool*)malloc(nodes * sizeof(bool));
     myPointStruct->num_nodes = nodes;
     myPointStruct->num_elem = 0;
+    myPointStruct->rcm_order = (int*)malloc(nodes*sizeof(int));
 }
 
 void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPointStruct, int num_levels) {

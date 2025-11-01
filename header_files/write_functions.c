@@ -188,43 +188,192 @@ void write_processed_grid_data(PointStructure* myPointStruct, int ii)
     printf("\n\n");
 }
 
-void write_vtk(PointStructure* myPointStruct, FieldVariables* field)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Structure to hold field data (velocities and pressure)
+typedef struct {
+    double *u;  // x-velocity
+    double *v;  // y-velocity
+    double *w;  // z-velocity
+    double *p;  // pressure
+} Field;
+
+// Function to convert Gmsh mesh to VTK with field data
+int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS) 
 {
-    FILE *fp = fopen("solution.vtk", "w");
-    int n_nodes = myPointStruct[0].num_nodes;
-    int n_elems = myPointStruct[0].num_elem;
-    fprintf(fp, "# vtk DataFile Version 3.0\n");
-    fprintf(fp, "Meshless solver output\n");
-    fprintf(fp, "ASCII\n");
-    fprintf(fp, "DATASET UNSTRUCTURED_GRID\n");
-
-    // --- Write points ---
-    fprintf(fp, "POINTS %d float\n", n_nodes);
-    for (int i = 0; i < n_nodes; i++)
-        fprintf(fp, "%f %f %f\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i]);
-
-    // --- Write cells ---
-    int nodes_per_elem = 3; // for triangle
-    fprintf(fp, "CELLS %d %d\n", n_elems, n_elems*(nodes_per_elem+1));
-    for (int i = 0; i < n_elems; i++) {
-        fprintf(fp, "%d", nodes_per_elem);
-        for (int j = 0; j < nodes_per_elem; j++) {
-            fprintf(fp, " %d", elem_conn[i*nodes_per_elem + j] - 1); // convert 1-based -> 0-based
-        }
-        fprintf(fp, "\n");
+    FILE *fp_in, *fp_out;
+    char line[256];
+    char vtk_filename[256] = "Solution.vtk";
+    int num_nodes = 0, num_elements = 0;
+    int i, node_id;
+    double x, y, z;
+    
+    // Open Gmsh file
+    fp_in = fopen(gmsh_filename, "r");
+    if (!fp_in) {
+        fprintf(stderr, "Error: Cannot open file %s\n", gmsh_filename);
+        return -1;
     }
 
-    // --- Write cell types ---
-    fprintf(fp, "CELL_TYPES %d\n", n_elems);
-    for (int i = 0; i < n_elems; i++)
-        fprintf(fp, "5\n");  // VTK_TRIANGLE
-
-    // --- Write point data (e.g., pressure) ---
-    fprintf(fp, "POINT_DATA %d\n", n_nodes);
-    fprintf(fp, "SCALARS pressure float 1\nLOOKUP_TABLE default\n");
-    for (int i = 0; i < n_nodes; i++)
-        fprintf(fp, "%f\n", field[0].p[i]);
-
-    fclose(fp);
-
+    // First pass: count nodes and elements
+    while (fgets(line, sizeof(line), fp_in)) {
+        if (strstr(line, "$Nodes")) {
+            if (fscanf(fp_in, "%d", &num_nodes) != 1) {
+                fprintf(stderr, "Error reading number of nodes\n");
+                fclose(fp_in);
+                return -1;
+            }
+            break;
+        }
+    }
+    
+    // Allocate memory for node coordinates
+    double *nodes_x = (double*)malloc(num_nodes * sizeof(double));
+    double *nodes_y = (double*)malloc(num_nodes * sizeof(double));
+    double *nodes_z = (double*)malloc(num_nodes * sizeof(double));
+    
+    if (!nodes_x || !nodes_y || !nodes_z) {
+        fprintf(stderr, "Error: Memory allocation failed\n");
+        fclose(fp_in);
+        return -1;
+    }
+    
+    // Read node coordinates
+    for (i = 0; i < num_nodes; i++) {
+        if (fscanf(fp_in, "%d %lf %lf %lf", &node_id, &x, &y, &z) != 4) {
+            fprintf(stderr, "Error reading node %d\n", i);
+            free(nodes_x); free(nodes_y); free(nodes_z);
+            fclose(fp_in);
+            return -1;
+        }
+        nodes_x[node_id - 1] = x;
+        nodes_y[node_id - 1] = y;
+        nodes_z[node_id - 1] = z;
+    }
+    
+    // Find $Elements section
+    while (fgets(line, sizeof(line), fp_in)) {
+        if (strstr(line, "$Elements")) {
+            if (fscanf(fp_in, "%d", &num_elements) != 1) {
+                fprintf(stderr, "Error reading number of elements\n");
+                free(nodes_x); free(nodes_y); free(nodes_z);
+                fclose(fp_in);
+                return -1;
+            }
+            break;
+        }
+    }
+    
+    // Count triangular elements (type 2)
+    int num_triangles = 0;
+    int *triangle_conn = (int*)malloc(num_elements * 3 * sizeof(int));
+    long elements_pos = ftell(fp_in);
+    
+    for (i = 0; i < num_elements; i++) {
+        int elem_id, elem_type, num_tags, tag1, tag2, n1, n2, n3;
+        if (fscanf(fp_in, "%d %d %d", &elem_id, &elem_type, &num_tags) != 3) {
+            fprintf(stderr, "Error reading element %d\n", i);
+            free(nodes_x); free(nodes_y); free(nodes_z); free(triangle_conn);
+            fclose(fp_in);
+            return -1;
+        }
+        
+        // Skip tags
+        for (int j = 0; j < num_tags; j++) {
+            fscanf(fp_in, "%d", &tag1);
+        }
+        
+        if (elem_type == 2) {  // Triangle
+            if (fscanf(fp_in, "%d %d %d", &n1, &n2, &n3) != 3) {
+                fprintf(stderr, "Error reading triangle nodes\n");
+                free(nodes_x); free(nodes_y); free(nodes_z); free(triangle_conn);
+                fclose(fp_in);
+                return -1;
+            }
+            triangle_conn[num_triangles * 3 + 0] = n1 - 1;
+            triangle_conn[num_triangles * 3 + 1] = n2 - 1;
+            triangle_conn[num_triangles * 3 + 2] = n3 - 1;
+            num_triangles++;
+        } else {
+            // Skip other element types
+            fgets(line, sizeof(line), fp_in);
+        }
+    }
+    
+    fclose(fp_in);
+    
+    int num_corner = myPS->num_corners;
+    // Write VTK file
+    fp_out = fopen(vtk_filename, "w");
+    if (!fp_out) {
+        fprintf(stderr, "Error: Cannot create file %s\n", vtk_filename);
+        free(nodes_x); free(nodes_y); free(nodes_z); free(triangle_conn);
+        return -1;
+    }
+    
+    // Write VTK header
+    fprintf(fp_out, "# vtk DataFile Version 3.0\n");
+    fprintf(fp_out, "Gmsh mesh with velocity and pressure fields\n");
+    fprintf(fp_out, "ASCII\n");
+    fprintf(fp_out, "DATASET UNSTRUCTURED_GRID\n");
+    
+    // Write points
+    fprintf(fp_out, "POINTS %d double\n", num_nodes);
+    for (i = 0; i < num_nodes; i++) {
+        fprintf(fp_out, "%.16e %.16e %.16e\n", nodes_x[i], nodes_y[i], nodes_z[i]);
+    }
+    
+    // Write cells (triangles)
+    fprintf(fp_out, "\nCELLS %d %d\n", num_triangles, num_triangles * 4);
+    for (i = 0; i < num_triangles; i++) {
+        fprintf(fp_out, "3 %d %d %d\n", 
+                triangle_conn[i * 3 + 0],
+                triangle_conn[i * 3 + 1],
+                triangle_conn[i * 3 + 2]);
+    }
+    
+    // Write cell types (5 = triangle)
+    fprintf(fp_out, "\nCELL_TYPES %d\n", num_triangles);
+    for (i = 0; i < num_triangles; i++) {
+        fprintf(fp_out, "5\n");
+    }
+    
+    // Write point data
+    fprintf(fp_out, "\nPOINT_DATA %d\n", num_nodes);
+    
+    // Write velocity vector field
+    fprintf(fp_out, "VECTORS velocity double\n");
+    for (i = 0; i < num_corner; i++) {
+        fprintf(fp_out, "%.16e %.16e %.16e\n", 0.0, 0.0, 0.0);
+    }
+    for (i = num_corner; i < num_nodes; i++) {
+        int k = myPS[0].rcm_order[i-num_corner];
+        fprintf(fp_out, "%.16e %.16e %.16e\n", field->u[k], field->v[k], field->w[k]);
+    }
+    
+    // Write pressure scalar field
+    fprintf(fp_out, "\nSCALARS pressure double 1\n");
+    fprintf(fp_out, "LOOKUP_TABLE default\n");
+    for (i = 0; i < num_corner; i++) {
+        fprintf(fp_out, "%.16e\n", 0.0);
+    }
+    for (i = num_corner; i < num_nodes; i++) {
+        int k = myPS[0].rcm_order[i-num_corner];
+        fprintf(fp_out, "%.16e\n", field->p[k]);
+    }
+    
+    fclose(fp_out);
+    
+    // Cleanup
+    free(nodes_x);
+    free(nodes_y);
+    free(nodes_z);
+    free(triangle_conn);
+    
+    printf("Successfully converted %s to %s\n", gmsh_filename, vtk_filename);
+    printf("Nodes: %d, Triangles: %d\n", num_nodes, num_triangles);
+    
+    return 0;
 }

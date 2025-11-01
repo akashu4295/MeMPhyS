@@ -9,4 +9,5 @@ header_files/rbf.c
 header_files/test_functions.c
 header_files/timple_solver.c
 header_files/fractional_step_solver.c
+header_files/write_functions.c
 -lm

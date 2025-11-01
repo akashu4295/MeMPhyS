@@ -6,7 +6,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 // NOTES: This code is work in progress for parallelization using OpenACC directives.
 //        However it runs on cpu as well.
-//        compile command: gcc multigrid_heat_conduction.c -lm
+//        compile command: gcc @sources.txt -o a.out  (Linux/MacOS)
+//        compile command: gcc @sources.txt -o a.exe  (Windows)
 //        Run command: ./a.out or ./a.exe (depending on the OS)
 //        The code solves the incompressible Navier-Stokes equations using a fractional step method or time implicit method.
 //        The spatial discretization is done using polyharmonic spline radial basis functions (PHS-RBF) with appended polynomial basis functions.

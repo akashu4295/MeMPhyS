@@ -1,14 +1,16 @@
 # Meshless Method Navier-Stokes Solver (C Code)
 
-This repository contains a C-based implementation of a **Meshless Method** for solving the Navier-Stokes equations. The solver utilizes a radial basis function (RBF) based meshless approach with optional GPU or multicore CPU acceleration using OpenACC.
+This repository contains a C-based implementation of a **Meshless Method** for solving the Navier-Stokes equations. The solver utilizes a radial basis function (RBF) based meshless approach with optional multicore CPU acceleration using OpenACC.
 
 ---
 
 ### Quick Notes on status of the code
 
-### IN-WORK
-1. A multigrid (multi-level) accelerated Navier Stokes solver to achieve steady state using TIMPLE a meshless framework
-2. A compressible flow solver
+### IN-WORK/ TODO
+1. Implementing various boundary conditions
+2. Extending OpenACC pragmas to implement GPU acceleration.
+3. A multigrid (multi-level) accelerated Navier Stokes solver to achieve steady state using TIMPLE in meshless framework
+4. A compressible flow solver
    
 ### Current Status: 
 1. The meshless (first and second derivative matrices) Dx, Dy, Dz, and Laplacian matrices for a Gmsh ASCII (version 2) .msh file implemented.
@@ -33,19 +35,19 @@ To compile the code for different hardware architectures:
 
 **Single-core CPU:**
 ```bash
-gcc mg_NS_solver.c -lm
-````
+gcc @sources.txt -lm
+```
 
 **Multi-core CPU:**
 
 ```bash
-nvc -acc -ta=multicore mg_NS_solver.c
+nvc -acc -ta=multicore @sources.txt
 ```
 
 **GPU (NVIDIA):**
 
 ```bash
-nvc -acc -gpu=managed mg_NS_solver.c
+nvc -acc -gpu=managed @sources.txt
 ```
 
 ---

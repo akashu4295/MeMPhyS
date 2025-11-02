@@ -593,7 +593,8 @@ def do_plot_async(sender=None):
                 arr, name = get_scalar_field(mesh, "velocity")
                 scalar = (arr, name)
             else:
-                scalar = get_scalar_field(mesh, var_choice)
+                arr, name = get_scalar_field(mesh, var_choice)
+                scalar = (arr, name)
 
             cmap = dpg.get_value("contour_cmap") or "viridis"
             n_levels = int(dpg.get_value("contour_levels") or 10)

@@ -16,6 +16,15 @@
 /////////////////////////////////////////////////////////////////////////////
 // Fractional Step Explicit Solver Modules
 /////////////////////////////////////////////////////////////////////////////
+double calculate_dt(PointStructure* myPointStruct){
+    double dt = 1e10;
+    double d = myPointStruct->d_avg;
+    double termd =    2*parameters.nu/(d*d);
+    double termc =    1/d;
+    dt = 0.5/(termd + termc);
+    return (dt*parameters.courant_number);
+}
+
 double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldVariables* field){   
     double steady_state_error = 0.0;
     # pragma acc parallel loop present(field, myPointStruct)

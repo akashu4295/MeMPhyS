@@ -32,13 +32,9 @@ void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldv
             if (fabs(r-r_i)<1e-9){
                 myfieldvariables[ii].u[i] = -y/r;
                 myfieldvariables[ii].v[i] = x/r;
-                myfieldvariables[ii].u_new[i] = -y/r;
-                myfieldvariables[ii].v_new[i] = x/r;
                 myfieldvariables[ii].p[i] = 0.0;
-                myfieldvariables[ii].pprime[i] = 0.0;
                 if(parameters.dimension==3){
                     myfieldvariables[ii].w[i] = 0;
-                    myfieldvariables[ii].w_new[i] = 0;
                 }
             }
         }

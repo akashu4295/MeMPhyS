@@ -29,7 +29,7 @@ flow_parameters.csv has the details like polynomial degree, phs degree, cloud_si
 
 ---
 
-### 🔧 Compilation
+### Compilation
 
 To compile the code for different hardware architectures:
 
@@ -93,12 +93,12 @@ You can customize these settings to suit your problem configuration.
 
 ---
 
-### 📄 `grid_filenames.csv`
+### `grid_filenames.csv`
 
 * First line: `num_levels` – Number of mesh refinement levels or hierarchies.
 * Following lines: Paths to `.msh` mesh files generated using Gmsh from fine grid to coarse grid.
 
-#### 🛠 Using Custom Mesh Files
+#### Using Custom Mesh Files
 
 To use your own mesh:
 

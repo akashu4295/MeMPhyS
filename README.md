@@ -52,7 +52,7 @@ nvc -acc -gpu=managed @sources.txt
 
 ---
 
-### ▶️ Running the Code
+### Running the Code
 
 After compiling:
 
@@ -62,7 +62,7 @@ After compiling:
 
 ---
 
-### 📁 Folder Structure
+### Folder Structure
 
 * `header_files/`: Contains all the custom C header files used in the solver.
 * `init/`: Holds sample initialization scripts.
@@ -71,7 +71,7 @@ After compiling:
 
 ---
 
-### 📄 `flow_parameters.csv`
+### `flow_parameters.csv`
 
 This file defines the core physical and numerical parameters for the simulation. Each line is of the format `parameter_name,value`. Here are some key parameters:
 
@@ -109,13 +109,13 @@ To use your own mesh:
 
 ---
 
-### 🧠 Notes
+### Notes
 
 * Modify `flow_parameters.csv` as needed before compilation.
 
 ---
 
-### 🧪 Sample Cases
+### Sample Cases
 
 Several 2d and 3d mesh cases are included under the paths:
 
@@ -126,6 +126,6 @@ Several 2d and 3d mesh cases are included under the paths:
 
 ---
 
-### ✍️ Author
+### Author
 
 Dr. Akash Unnikrishnan developed this code as part of his PhD work with the guidance of Prof. Surya Pratap Vanka from University of Illinois at Urbana Champaign and Prof. Vinod Narayanan at Indian Institute of Technology Gandhinagar. Special mention has to go for Dr. Shantanu Shahane, who developed the first version of memphys which is available here: github.com/shahaneshantanu/memphys

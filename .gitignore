@@ -9,3 +9,4 @@ linear_stability.c
 Solution.csv
 Convergence.csv
 .vscode/
+*.m

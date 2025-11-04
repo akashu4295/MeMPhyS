@@ -1,5 +1,5 @@
 mg_NS_solver.c
-init/init_TC.c
+init/init_LDC.c
 header_files/structures.c
 header_files/mesh_functions.c
 header_files/mat_lib.c

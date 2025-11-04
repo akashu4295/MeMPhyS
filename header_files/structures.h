@@ -45,7 +45,7 @@ extern struct parameters parameters;
 
 // Structure to represent the mesh data
 typedef struct PointStructure {   
-    char mesh_filename[50]; // name of the mesh file
+    char mesh_filename[250]; // name of the mesh file
     int num_nodes; // number of nodes
     int num_corners; // number of corner nodes
     int num_boundary_nodes; // number of boundary nodes

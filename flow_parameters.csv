@@ -1,14 +1,14 @@
-domain_dimensions,2
+domain_dimensions,3
 poly_deg,3
 phs_deg,3
 cloud_size_multiplier,2
 test_derivative,0
 courant_number,0.3
-steady_tolerance,1e-08
+steady_tolerance,1e-05
 poisson_solver_tolerance,1e-08
 sor_parameter,1.6
 time_step,0.1
-num_time_steps,100000
+num_time_steps,10000
 write_interval,50
 Re,10
 iter_momentum,5
@@ -18,4 +18,4 @@ num_relax,50
 neumann_flag_boundary,1
 facRe,1
 facdt,1
-fractional_step,1
+fractional_step,0

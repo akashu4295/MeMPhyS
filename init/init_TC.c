@@ -1,5 +1,4 @@
 // Author :  Akash Unnikrishnan and Prof. Surya Pratap Vanka
-// Affiliation : Indian Institute of Technology Gandhinagar and University of Illinois at Urbana Champaign
 
 #include "../header_files/structures.h"
 #include <stdlib.h>
@@ -12,6 +11,9 @@ void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldva
             myfieldvariables[ii].u[i] = 0;
             myfieldvariables[ii].v[i] = 0;
             myfieldvariables[ii].w[i] = 0;
+            myfieldvariables[ii].u_old[i] = 0;
+            myfieldvariables[ii].v_old[i] = 0;
+            myfieldvariables[ii].w_old[i] = 0;
             myfieldvariables[ii].u_new[i] = 0;
             myfieldvariables[ii].v_new[i] = 0;
             myfieldvariables[ii].w_new[i] = 0;

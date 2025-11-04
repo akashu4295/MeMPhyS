@@ -32,7 +32,7 @@ void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldv
     for (int ii = 0; ii < numlevels; ii++){
         for (int i = 0; i < myPointStruct[ii].num_nodes; i++){
             y = myPointStruct[ii].y[i]; 
-            if (fabs(y-1.0)<1e-9){
+            if (fabs(y-0.5)<1e-9){
                 myfieldvariables[ii].u[i] = 1.0;
                 myfieldvariables[ii].v[i] = 0.0;
                 myfieldvariables[ii].p[i] = 0.0;

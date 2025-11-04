@@ -1,5 +1,7 @@
 // Author :  Akash Unnikrishnan and Prof. Surya Pratap Vanka
-// Affiliation : Indian Institute of Technology Gandhinagar and University of Illinois at Urbana Champaign
+// Affiliation : Indian Institute of Technology Gandhinagar
+//                University of Illinois at Urbana Champaign
+//                 Faculty of Physics, University of Warsaw
 // Date : June 2025
 // Version : 2.0
 
@@ -62,7 +64,6 @@ int main()
     initial_conditions(myPointStruct, field, 1);
     boundary_conditions(myPointStruct, field, 1);
     parameters.dt = calculate_dt(&myPointStruct[0]);
-    //parameters.dt =  0.01;
     printf("Time to setup the problem in cpu: %lf\n", (double)(clock()-clock_program_begin)/CLOCKS_PER_SEC);
 
 ////////////// Copy data to GPU memory /////////////
@@ -74,56 +75,107 @@ int main()
     printf("Time taken to copy data to GPU: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
     
 ////////////// Time stepping loop start and writing solution files///////////// 
-
+    clock_start = clock();    // Start the clock
     file2 = fopen("Convergence.csv", "w"); // Write data to a file
     if (parameters.fractional_step)
-        for (int it = 0; it<parameters.num_time_steps; it++ ) 
-        {
-            steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
-            printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
-            # pragma acc update host(field[0])
-            fprintf(file2,"%d, %e\n", it, steady_state_error);
-            fflush(file2);
-            if (steady_state_error < parameters.steady_state_tolerance){
-                printf("Converged at time step: %d\n", it);
-                break;
-            }
-            if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
-                file1 = fopen("Solution.csv", "w"); // Write data to a file
-                for (int i = 0; i < myPointStruct[0].num_nodes; i++)
-                    fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
-                fflush(file1);	
-                fclose(file1);
+        if (parameters.dimension == 3){
+            for (int it = 0; it<parameters.num_time_steps; it++ ) 
+            {
+                steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
+                printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
+                # pragma acc update host(field[0])
+                fprintf(file2,"%d, %e\n", it, steady_state_error);
+                fflush(file2);
+                if (steady_state_error < parameters.steady_state_tolerance){
+                    printf("Converged at time step: %d\n", it);
+                    break;
+                }
+                if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
+                    file1 = fopen("Solution.csv", "w"); // Write data to a file
+                    for (int i = 0; i < myPointStruct[0].num_nodes; i++)
+                        fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
+                    fflush(file1);	
+                    fclose(file1);
+                }
             }
         }
-    else
-        for (int it = 0; it<parameters.num_time_steps; it++ ) 
-        {
-            steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
-            printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
-            # pragma acc update host(field[0])
-            fprintf(file2,"%d, %e\n", it, steady_state_error);
-            fflush(file2);
-            if (steady_state_error < parameters.steady_state_tolerance){
-                printf("Converged at time step: %d\n", it);
-                break;
+        else{
+            for (int it = 0; it<parameters.num_time_steps; it++ ) 
+            {
+                steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
+                printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
+                # pragma acc update host(field[0])
+                fprintf(file2,"%d, %e\n", it, steady_state_error);
+                fflush(file2);
+                if (steady_state_error < parameters.steady_state_tolerance){
+                    printf("Converged at time step: %d\n", it);
+                    break;
+                }
+                if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
+                    file1 = fopen("Solution.csv", "w"); // Write data to a file
+                    for (int i = 0; i < myPointStruct[0].num_nodes; i++)
+                        fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
+                    fflush(file1);	
+                    fclose(file1);
+                }
             }
-            if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
-                file1 = fopen("Solution.csv", "w"); // Write data to a file
-                for (int i = 0; i < myPointStruct[0].num_nodes; i++)
-                    fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
-                fflush(file1);	
-                fclose(file1);
+        }
+    else{
+        if (parameters.dimension == 3){
+            for (int it = 0; it<parameters.num_time_steps; it++ ) 
+            {
+                steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
+                printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
+                # pragma acc update host(field[0])
+                fprintf(file2,"%d, %e\n", it, steady_state_error);
+                fflush(file2);
+                if (steady_state_error < parameters.steady_state_tolerance){
+                    printf("Converged at time step: %d\n", it);
+                    break;
+                }
+                if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
+                    file1 = fopen("Solution.csv", "w"); // Write data to a file
+                    for (int i = 0; i < myPointStruct[0].num_nodes; i++)
+                        fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
+                    fflush(file1);	
+                    fclose(file1);
+                }
+            } 
+        }
+        else{
+            for (int it = 0; it<parameters.num_time_steps; it++ ) 
+                {
+                    steady_state_error = time_implicit_solver_vectorised_2d(myPointStruct, field);
+                    printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
+                    # pragma acc update host(field[0])
+                    fprintf(file2,"%d, %e\n", it, steady_state_error);
+                    fflush(file2);
+                    if (steady_state_error < parameters.steady_state_tolerance){
+                        printf("Converged at time step: %d\n", it);
+                        break;
+                    }
+                    if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
+                        file1 = fopen("Solution.csv", "w"); // Write data to a file
+                        for (int i = 0; i < myPointStruct[0].num_nodes; i++)
+                            fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
+                        fflush(file1);	
+                        fclose(file1);
+                    }
+                }
             }
-        } 
+    }
     fclose(file2); 
+    printf("Time taken for the solver: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
 
-    write_vtk(myPointStruct[0].mesh_filename,field,myPointStruct);
 ////////////// Time stepping loop end ///////////// 
-    printf("Time_step, dt : %lf\n",parameters.dt);
-    printf("Polynomial degree: %d\n",myPointStruct[0].poly_degree);
+    // Write final solution in VTK format
+    clock_start = clock();    // Start the clock
+    write_vtk(myPointStruct[0].mesh_filename,field,myPointStruct);
+    printf("Time taken for VTK writing: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
     printf("Time for execution (total): %lf\n", (double)(clock()-clock_program_begin)/CLOCKS_PER_SEC);
-    
+
+    printf("Time_step, dt : %lf\n",parameters.dt);
+    printf("Average distance between nodes: %lf\n",myPointStruct[0].d_avg);
     free_PointStructure(myPointStruct, parameters.num_levels);
     free_field(field, parameters.num_levels);
     return 0;

@@ -160,7 +160,7 @@ void FS_calculate_boundary_dpdn_vectorised_2d(PointStructure* myPointStruct, Fie
 {
     double dpdx, dpdy;
     // Copy only boundary normals to gpu
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct])
+    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
     for(int i = 0; i < myPointStruct->num_nodes; i++){
         if (myPointStruct->boundary_tag[i]){
             dpdx = (field->u_new[i] - field->u[i]) * parameters.rho/parameters.dt; 
@@ -468,7 +468,7 @@ void FS_update_boundary_pressure_vectorised(PointStructure* mypointstruct, Field
 }
 
 void FS_update_boundary_pressure_vectorised_2d(PointStructure* mypointstruct, FieldVariables* field){
-    double sumx, sumy, sumz, Ap, term;
+    double sumx, sumy, Ap, term;
     int n = mypointstruct->num_cloud_points;
     if (parameters.neumann_flag_boundary){
         # pragma acc parallel loop gang vector present(field, parameters, mypointstruct)

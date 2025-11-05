@@ -272,7 +272,7 @@ int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS)
     long elements_pos = ftell(fp_in);
     
     for (i = 0; i < num_elements; i++) {
-        int elem_id, elem_type, num_tags, tag1, tag2, n1, n2, n3;
+        int elem_id, elem_type, num_tags, tag1, n1, n2, n3;
         if (fscanf(fp_in, "%d %d %d", &elem_id, &elem_type, &num_tags) != 3) {
             fprintf(stderr, "Error reading element %d\n", i);
             free(nodes_x); free(nodes_y); free(nodes_z); free(triangle_conn);

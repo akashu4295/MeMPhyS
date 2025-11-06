@@ -81,9 +81,11 @@ int main()
         if (parameters.dimension == 3){
             for (int it = 0; it<parameters.num_time_steps; it++ ) 
             {
-                steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
+                #pragma acc data present(field[0], myPointStruct[0])
+                {
+                    steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
+                }
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
-                # pragma acc update host(field[0])
                 fprintf(file2,"%d, %e\n", it, steady_state_error);
                 fflush(file2);
                 if (steady_state_error < parameters.steady_state_tolerance){
@@ -92,6 +94,7 @@ int main()
                 }
                 if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
                     file1 = fopen("Solution.csv", "w"); // Write data to a file
+                    #pragma acc update host(field[0])
                     for (int i = 0; i < myPointStruct[0].num_nodes; i++)
                         fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
                     fflush(file1);	
@@ -102,9 +105,11 @@ int main()
         else{
             for (int it = 0; it<parameters.num_time_steps; it++ ) 
             {
-                steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
+                #pragma acc data present(field[0], myPointStruct[0])
+                {
+                    steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
+                }
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
-                # pragma acc update host(field[0])
                 fprintf(file2,"%d, %e\n", it, steady_state_error);
                 fflush(file2);
                 if (steady_state_error < parameters.steady_state_tolerance){
@@ -113,6 +118,7 @@ int main()
                 }
                 if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
                     file1 = fopen("Solution.csv", "w"); // Write data to a file
+                    #pragma acc update host(field[0])
                     for (int i = 0; i < myPointStruct[0].num_nodes; i++)
                         fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
                     fflush(file1);	
@@ -124,9 +130,11 @@ int main()
         if (parameters.dimension == 3){
             for (int it = 0; it<parameters.num_time_steps; it++ ) 
             {
-                steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
+                #pragma acc data present(field[0], myPointStruct[0])
+                {
+                    steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
+                }
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
-                # pragma acc update host(field[0])
                 fprintf(file2,"%d, %e\n", it, steady_state_error);
                 fflush(file2);
                 if (steady_state_error < parameters.steady_state_tolerance){
@@ -135,6 +143,7 @@ int main()
                 }
                 if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
                     file1 = fopen("Solution.csv", "w"); // Write data to a file
+                    #pragma acc update host(field[0])
                     for (int i = 0; i < myPointStruct[0].num_nodes; i++)
                         fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
                     fflush(file1);	
@@ -145,9 +154,11 @@ int main()
         else{
             for (int it = 0; it<parameters.num_time_steps; it++ ) 
                 {
-                    steady_state_error = time_implicit_solver_vectorised_2d(myPointStruct, field);
+                    #pragma acc data present(field[0], myPointStruct[0])
+                    {
+                        steady_state_error = time_implicit_solver_vectorised_2d(myPointStruct, field);
+                    }
                     printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
-                    # pragma acc update host(field[0])
                     fprintf(file2,"%d, %e\n", it, steady_state_error);
                     fflush(file2);
                     if (steady_state_error < parameters.steady_state_tolerance){
@@ -156,6 +167,7 @@ int main()
                     }
                     if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
                         file1 = fopen("Solution.csv", "w"); // Write data to a file
+                        #pragma acc update host(field[0])
                         for (int i = 0; i < myPointStruct[0].num_nodes; i++)
                             fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
                         fflush(file1);	

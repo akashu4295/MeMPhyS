@@ -49,6 +49,37 @@ double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldV
     return steady_state_error;
 }
 
+double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field)
+{   
+    double steady_state_error = 0.0;
+
+    #pragma acc parallel loop present(field[0].u, field[0].v, field[0].u_old, field[0].v_old)
+    for (int i = 0; i < myPointStruct[0].num_nodes; i++){
+        field[0].u_old[i] = field[0].u[i];
+        field[0].v_old[i] = field[0].v[i];
+    }
+
+    #pragma acc data present(field, myPointStruct, parameters)
+    {
+        FS_calculate_intermediate_velocity_vectorised_2d(&myPointStruct[0], &field[0]);
+        FS_calculate_mass_residual_vectorised_2d(&myPointStruct[0], &field[0]);
+        FS_calculate_boundary_dpdn_vectorised_2d(&myPointStruct[0], &field[0]);
+        FS_multigrid_Poisson_solver_vectorised_2d(myPointStruct, field);
+        FS_update_velocity_vectorised_2d(&myPointStruct[0], &field[0]);
+    }
+
+    #pragma acc parallel loop present(field[0].u, field[0].v, field[0].u_old, field[0].v_old) reduction(+:steady_state_error)
+    for (int i = 0; i < myPointStruct[0].num_nodes; i++){
+        double du = field[0].u[i] - field[0].u_old[i];
+        double dv = field[0].v[i] - field[0].v_old[i];
+        steady_state_error += du*du + dv*dv;
+    }
+
+    steady_state_error = sqrt(steady_state_error / myPointStruct[0].num_nodes);
+    return steady_state_error;
+}
+
+
 void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct, FieldVariables* field)
 {
     int num_nodes = myPointStruct->num_nodes;
@@ -193,7 +224,7 @@ void FS_multigrid_Poisson_solver_vectorised_2d(PointStructure* myPointStruct, Fi
 {
     for (int icycle = 0; icycle < parameters.num_vcycles; icycle++){
         for (int ilev = 0; ilev < parameters.num_levels; ilev++){
-            FS_relaxation_vectorised(&myPointStruct[ilev], &field[ilev]);
+            FS_relaxation_vectorised_2d(&myPointStruct[ilev], &field[ilev]);
             FS_calculate_residuals_vectorised_2d(&myPointStruct[ilev], &field[ilev]);
             if (ilev != parameters.num_levels-1){
                 FS_restrict_residuals_vectorised_2d(&myPointStruct[ilev], &myPointStruct[ilev+1], &field[ilev], &field[ilev+1]);
@@ -244,8 +275,16 @@ void FS_relaxation_vectorised(PointStructure* mypointstruct, FieldVariables* fie
 
 void FS_relaxation_vectorised_2d(PointStructure* mypointstruct, FieldVariables* field)
 {
-    # pragma acc loop
     int n = mypointstruct->num_cloud_points;
+    // if (!acc_is_present(mypointstruct->lap_Poison, mypointstruct->num_nodes * mypointstruct->num_cloud_points * sizeof(double)))
+    //     printf("lap_Poison not present on GPU!\n");
+
+    // if (!acc_is_present(mypointstruct->cloud_index, mypointstruct->num_nodes * mypointstruct->num_cloud_points * sizeof(int)))
+    //     printf("cloud_index not present on GPU!\n");
+
+    // if (!acc_is_present(field->p, mypointstruct->num_nodes * sizeof(double)))
+    //     printf("field->p not present on GPU!\n");
+
     for (int iter = 0; iter < parameters.num_relax; iter++){
         # pragma acc parallel loop gang vector present(field, parameters, mypointstruct)
         for (int i = 0; i < mypointstruct->num_nodes; i++){
@@ -487,27 +526,4 @@ void FS_update_boundary_pressure_vectorised_2d(PointStructure* mypointstruct, Fi
             field->p[i] = field->p[i] * 0.5 + 0.5 * term;
         }
     }
-}
-
-double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field)
-{   
-    double steady_state_error = 0.0;
-    # pragma acc parallel loop present(field, myPointStruct)
-    for (int i = 0; i < myPointStruct[0].num_nodes; i++){
-        field[0].u_old[i] = field[0].u[i];
-        field[0].v_old[i] = field[0].v[i];
-    }
-
-    FS_calculate_intermediate_velocity_vectorised_2d(&myPointStruct[0], &field[0]);
-    FS_calculate_mass_residual_vectorised_2d(&myPointStruct[0], &field[0]);
-    FS_calculate_boundary_dpdn_vectorised_2d(&myPointStruct[0], &field[0]);
-    FS_multigrid_Poisson_solver_vectorised_2d(myPointStruct, field);
-    FS_update_velocity_vectorised_2d(&myPointStruct[0], &field[0]);
-
-    # pragma acc parallel loop present(field, myPointStruct) reduction(+:steady_state_error)
-    for (int i = 0; i < myPointStruct[0].num_nodes; i++){
-        steady_state_error += pow((field[0].u[i] - field[0].u_old[i]), 2) + pow((field[0].v[i] - field[0].v_old[i]), 2);
-    }
-    steady_state_error = sqrt(steady_state_error/myPointStruct[0].num_nodes);
-    return steady_state_error;
 }

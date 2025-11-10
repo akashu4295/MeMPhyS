@@ -69,7 +69,20 @@ int main()
 ////////////// Copy data to GPU memory /////////////
 
     clock_start = clock();    // Start the clock
-    copyin_essentials_to_gpu(myPointStruct);
+
+    printf("DEBUG sizes: num_nodes=%d, num_cloud_points=%d, total_lap=%zu\n",
+    myPointStruct[0].num_nodes, myPointStruct[0].num_cloud_points,
+    (size_t)myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points);
+
+    printf("DEBUG final lap index check: lap_Poison[0]=%g, lap_Poison[%d]=%g\n",
+        myPointStruct[0].lap_Poison[0],
+        myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points - 1,
+        myPointStruct[0].lap_Poison[myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points - 1]
+    );
+    printf("DEBUG cloud_index last: cloud_index[last]=%d\n",
+        myPointStruct[0].cloud_index[myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points - 1]);
+
+    copyin_pointstructure_to_gpu(myPointStruct);
     copyin_field_to_gpu(field, myPointStruct);
     copyin_parameters_to_gpu();
     printf("Time taken to copy data to GPU: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
@@ -107,7 +120,7 @@ int main()
             {
                 #pragma acc data present(field[0], myPointStruct[0])
                 {
-                    steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
+                    steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
                 }
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
                 fprintf(file2,"%d, %e\n", it, steady_state_error);

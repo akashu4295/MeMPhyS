@@ -56,5 +56,6 @@ void multiply_sparse_matrix_vector(double** D_coeff, double* f, double* dfdx, in
 void multiply_sparse_vector_matrix(double* f, double** D_coeff, double** ftimesD, int n_rows_D, int n_cols_D);
 void multiply_sparse_matrix_vector_gpu(double** D_coeff, double* f, double* dfdx, int** cloud, int n_rows_D, int n_cols_D);
 void multiply_sparse_matrix_vector_vectorised(double* D_coeff, double* f, double* dfdx, int* cloud, int n_rows_D, int n_cols_D);
+void multiply_sparse_matrix_vector_vectorised_gpu(double* D_coeff, double* f, double* dfdx, int* cloud, int n_rows_D, int n_cols_D);
 
 #endif

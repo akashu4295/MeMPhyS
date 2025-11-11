@@ -29,6 +29,32 @@ void multiply_sparse_matrix_vector_vectorised(double *D_coeff, double *f, double
     }
 }
 
+void multiply_sparse_matrix_vector_vectorised_gpu(double *D_coeff, double *f, double *dfdx,
+                                                  int *cloud, int n_rows_D, int n_cols_D)
+{
+    // Expectation: the host caller must ensure D_coeff, f, dfdx, cloud are present on the device
+    // (or the function is called inside an acc data region where they are present).
+
+    // Run the outer loop on the device in parallel
+    #pragma acc parallel loop gang present(D_coeff[0:n_rows_D * n_cols_D], \
+                                           f[0:n_rows_D], \
+                                           dfdx[0:n_rows_D], \
+                                           cloud[0:n_rows_D * n_cols_D])
+    for (int i = 0; i < n_rows_D; ++i) {
+        double result = 0.0;
+        int row_start = i * n_cols_D;
+
+        // inner loop is sequential for each i (you can change to "vector" if beneficial)
+        #pragma acc loop seq
+        for (int j = 0; j < n_cols_D; ++j) {
+            int idx = cloud[row_start + j];
+            // sanity: idx should be within bounds of f[] on device
+            result += D_coeff[row_start + j] * f[idx];
+        }
+        dfdx[i] = result;
+    }
+}
+
 
 void multiply_sparse_matrix_vector_gpu(double** D_coeff, double* f, double* dfdx, int** cloud, int n_rows_D, int n_cols_D){
     # pragma acc parallel loop present(D_coeff[0:n_rows_D][0:n_cols_D], f[0:n_rows_D], dfdx[0:n_rows_D], cloud[0:n_rows_D][0:n_cols_D])

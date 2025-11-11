@@ -53,7 +53,7 @@ double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, Fie
 {   
     double steady_state_error = 0.0;
 
-    #pragma acc parallel loop present(field[0].u, field[0].v, field[0].u_old, field[0].v_old)
+    #pragma acc parallel loop present(field, myPointStruct)
     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
         field[0].u_old[i] = field[0].u[i];
         field[0].v_old[i] = field[0].v[i];
@@ -68,11 +68,12 @@ double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, Fie
         FS_update_velocity_vectorised_2d(&myPointStruct[0], &field[0]);
     }
 
-    #pragma acc parallel loop present(field[0].u, field[0].v, field[0].u_old, field[0].v_old) reduction(+:steady_state_error)
+    #pragma acc parallel loop present(field, myPointStruct) reduction(+:steady_state_error)
     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
         double du = field[0].u[i] - field[0].u_old[i];
         double dv = field[0].v[i] - field[0].v_old[i];
         steady_state_error += du*du + dv*dv;
+        // printf("Node: %d, u: %lf, u_old: %lf, v: %lf, v_old: %lf, du: %lf, dv: %lf\n", i, field[0].u[i], field[0].u_old[i], field[0].v[i], field[0].v_old[i], du, dv);
     }
 
     steady_state_error = sqrt(steady_state_error / myPointStruct[0].num_nodes);
@@ -86,12 +87,14 @@ void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct
     int num_cloud_points = myPointStruct->num_cloud_points;
     
 // x-momentum
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->u, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->u, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->lap, field->u, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
+    #pragma acc data present(field, myPointStruct, parameters)
+    {
+        multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+        multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->u, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+        multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->u, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+        multiply_sparse_matrix_vector_vectorised(myPointStruct->lap, field->u, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    }    
+    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
     for (int i = 0; i < myPointStruct->num_nodes; i++)
         field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] + field->w[i] * field->dpdz[i] - parameters.nu *field->dpdn[i]);
 
@@ -101,7 +104,7 @@ void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct
     multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->v, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
     multiply_sparse_matrix_vector_vectorised(myPointStruct->lap, field->v, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
     
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
+    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
     for (int i = 0; i < myPointStruct->num_nodes; i++)
         field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] + field->w[i] * field->dpdz[i] - parameters.nu * field->dpdn[i]);
 
@@ -111,7 +114,7 @@ void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct
     multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->w, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
     multiply_sparse_matrix_vector_vectorised(myPointStruct->lap, field->w, field->dpdn, myPointStruct->cloud_index, myPointStruct->num_nodes,myPointStruct->num_cloud_points);
     
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
+    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
     for (int i = 0; i < myPointStruct->num_nodes; i++)
         field->w_new[i] = field->w[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] + field->w[i] * field->dpdz[i] - parameters.nu * field->dpdn[i]);
 
@@ -125,23 +128,27 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
     int num_cloud_points = myPointStruct->num_cloud_points;
     
 // x-momentum
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->u, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->lap, field->u, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->u, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->lap, field->u, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
     
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
-    for (int i = 0; i < myPointStruct->num_nodes; i++)
+    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
+    for (int i = 0; i < myPointStruct->num_nodes; i++){
         field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] - parameters.nu *field->dpdn[i]);
-
+    }
 // y-momentum
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->v, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->lap, field->v, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->v, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->lap, field->v, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
     
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
+    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
     for (int i = 0; i < myPointStruct->num_nodes; i++)
         field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] - parameters.nu * field->dpdn[i]);
 
+    // # pragma acc update host(field[0].u_new[0:num_nodes], field[0].v_new[0:num_nodes])
+    // for (int i = 0; i < num_nodes; i++){
+    //     printf("DEBUG inside FS u_new[%d]: %lf, v_new[%d]: %lf\n", i, field[0].u_new[i], i, field[0].v_new[i]);   
+    // }
 }
 
 void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldVariables* field)
@@ -149,11 +156,11 @@ void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldV
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
     
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->u_new, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->v_new, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->w_new, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->u_new, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->v_new, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dz, field->w_new, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
     
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
+    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
     for (int i = 0; i < num_nodes; i++)
         if (!myPointStruct->boundary_tag[i])
             field->source[i] = parameters.rho*(field->dpdx[i]+field->dpdy[i]+field->dpdz[i])/parameters.dt;
@@ -163,20 +170,27 @@ void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, Fie
 {
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
-    
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->u_new, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->v_new, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    # pragma acc data present(field, myPointStruct, parameters)
+    {
+        multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->u_new, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+        multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->v_new, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    }
 
-    # pragma acc parallel loop present(field, parameters, myPointStruct)
+    # pragma acc parallel loop present(field, myPointStruct, parameters)
     for (int i = 0; i < num_nodes; i++)
-        if (!myPointStruct->boundary_tag[i])
+        if (!myPointStruct->boundary_tag[i]){
             field->source[i] = parameters.rho*(field->dpdx[i]+field->dpdy[i])/parameters.dt;
+        }
+    // #pragma acc update host(field->source[0:num_nodes])
+    // for (int i = 0; i < num_nodes; i++){
+    //     printf("DEBUG source[%d]: %lf\n", i, field->source[i]);   
+    // }
 }
 
 void FS_calculate_boundary_dpdn_vectorised(PointStructure* myPointStruct, FieldVariables* field)
 {
     double dpdx, dpdy, dpdz;
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
+    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
     for(int i = 0; i < myPointStruct->num_nodes; i++){
         if (myPointStruct->boundary_tag[i]){
             dpdx = (field->u_new[i] - field->u[i]) * parameters.rho/parameters.dt; 
@@ -191,7 +205,7 @@ void FS_calculate_boundary_dpdn_vectorised_2d(PointStructure* myPointStruct, Fie
 {
     double dpdx, dpdy;
     // Copy only boundary normals to gpu
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
+    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
     for(int i = 0; i < myPointStruct->num_nodes; i++){
         if (myPointStruct->boundary_tag[i]){
             dpdx = (field->u_new[i] - field->u[i]) * parameters.rho/parameters.dt; 
@@ -244,7 +258,7 @@ void FS_relaxation_vectorised(PointStructure* mypointstruct, FieldVariables* fie
 {
     int n = mypointstruct->num_cloud_points;
     for (int iter = 0; iter < parameters.num_relax; iter++){
-        # pragma acc parallel loop gang vector present(field, parameters, mypointstruct)
+        # pragma acc parallel loop gang vector present(field, mypointstruct, parameters)
         for (int i = 0; i < mypointstruct->num_nodes; i++){
             double sum = 0.0;
             # pragma acc loop reduction(+:sum)
@@ -260,7 +274,7 @@ void FS_relaxation_vectorised(PointStructure* mypointstruct, FieldVariables* fie
             field->p[i] = field->p[i] - pref;
         }
         
-        # pragma acc parallel loop gang vector present(field, mypointstruct)
+        # pragma acc parallel loop gang vector present(field, mypointstruct, parameters)
         for (int i = 0; i< mypointstruct->num_nodes; i++){
             double res_val = field->source[i];
             # pragma acc loop reduction(-:res_val)
@@ -286,7 +300,7 @@ void FS_relaxation_vectorised_2d(PointStructure* mypointstruct, FieldVariables* 
     //     printf("field->p not present on GPU!\n");
 
     for (int iter = 0; iter < parameters.num_relax; iter++){
-        # pragma acc parallel loop gang vector present(field, parameters, mypointstruct)
+        # pragma acc parallel loop gang vector present(field, mypointstruct, parameters)
         for (int i = 0; i < mypointstruct->num_nodes; i++){
             double sum = 0.0;
             int k = i*n;
@@ -303,7 +317,7 @@ void FS_relaxation_vectorised_2d(PointStructure* mypointstruct, FieldVariables* 
             field->p[i] = field->p[i] - pref;
         }
         
-        # pragma acc parallel loop gang vector present(field, mypointstruct)
+        # pragma acc parallel loop gang vector present(field, mypointstruct, parameters)
         for (int i = 0; i< mypointstruct->num_nodes; i++){
             field->res[i]=field->source[i];
             for (int j = 0; j < n; j++){

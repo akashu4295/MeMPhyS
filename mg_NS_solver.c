@@ -22,8 +22,6 @@
 ////////////// Header files
 
 #include "header_files/functions.h"
-#include "header_files/functions_supplementary.h"
-#include "header_files/solvers.h"
 #include "header_files/openACC_functions.h"
 
 ////////////// Main Program
@@ -117,9 +115,10 @@ int main()
             }
         }
         else{
+            #pragma acc data present(field[:parameters.num_levels], myPointStruct[:parameters.num_levels], parameters)
             for (int it = 0; it<parameters.num_time_steps; it++ ) 
             {
-                #pragma acc data present(field[0], myPointStruct[0])
+                // #pragma acc data present(field[0], myPointStruct[0])
                 {
                     steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
                 }

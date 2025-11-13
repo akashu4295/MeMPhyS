@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "functions_supplementary.h"
+#include "functions.h"
 
 //////////////////////////////////////////////////////////////////////
 // Function Definitions

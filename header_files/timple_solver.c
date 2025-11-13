@@ -10,7 +10,6 @@
 #include <assert.h>
 
 #include "structures.h"
-#include "solvers.h"
 #include "functions.h"
 #include "mat_lib.h"
 

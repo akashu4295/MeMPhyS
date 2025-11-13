@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include "functions_supplementary.h"
+#include "functions.h"
 
 /////////////////////////////////////////////////////////////////////////////////
 // Function Definitions

@@ -3,7 +3,6 @@
 
 #include "structures.h"
 #include "functions.h"
-#include "functions_supplementary.h"
 #include "mat_lib.h"
 #include "kdtree.h"
 #include <stdio.h>

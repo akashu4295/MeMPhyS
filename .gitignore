@@ -24,6 +24,7 @@ pgcudafat.fatbin.s
 pgcudafat.o
 profile_report.nsys-rep
 profile_report.sqlite
+pgcuda.75.cubin
 timple_solver.n001.cubin
 timple_solver.n001.fatbin
 timple_solver.n001.gpu

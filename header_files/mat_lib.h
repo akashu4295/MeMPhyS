@@ -3,7 +3,7 @@
 
 #ifndef MATH_LIBRARY_H
 #define MATH_LIBRARY_H
-
+#include "structures.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Function Declarations
@@ -57,5 +57,9 @@ void multiply_sparse_vector_matrix(double* f, double** D_coeff, double** ftimesD
 void multiply_sparse_matrix_vector_gpu(double** D_coeff, double* f, double* dfdx, int** cloud, int n_rows_D, int n_cols_D);
 void multiply_sparse_matrix_vector_vectorised(double* D_coeff, double* f, double* dfdx, int* cloud, int n_rows_D, int n_cols_D);
 void multiply_sparse_matrix_vector_vectorised_gpu(double* D_coeff, double* f, double* dfdx, int* cloud, int n_rows_D, int n_cols_D);
+
+
+void SpMV_Laplace_2D(PointStructure* ps, const double* x, double* y);
+int BiCGStab_Solve(PointStructure* ps, const double* b, double* x, int max_iter, double tol);
 
 #endif

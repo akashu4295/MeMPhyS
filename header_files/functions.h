@@ -38,7 +38,6 @@ void create_full_gradz_matrix_vectorised(PointStructure* myPointStruct);
 void create_full_laplacian_matrix_vectorised(PointStructure* myPointStruct);
 void create_derivative_matrices_vectorised(PointStructure* myPointStruct);
 
-
 // Functions to test and calculate errors with a manufactured problem
 void calculate_errors_2d(PointStructure* myPointStruct, double* f, double* fx, double* fy, double* lapf, double* F, double* Fx, double* Fy, double* lapF);
 void calculate_errors_3d(PointStructure* myPointStruct, double* f, double* fx, double* fy, double* fz, double* lapf, double* F, double* Fx, double* Fy, double* Fz, double* lapF);
@@ -50,7 +49,7 @@ void test_derivatives(PointStructure* myPointStruct, short num_levels, short dom
 void free_test_vectors(double** f, double** fx, double** fy, double** fz, double** lapf, double*** Dx, double*** Dy, double*** Dz, double*** lap, int num_nodes);
 double l2_norm_gen(PointStructure* myPointStruct, double *A, double *B, int n_rows_A);
 void test_derivatives(PointStructure* myPointStruct, short num_levels, short domain_dimension);
-
+double calculate_torque_vectorised(PointStructure* myPointStruct, FieldVariables* field);
 
 // Write files Function Declarations
 void write_normals(PointStructure* myPointStruct, char* filename);

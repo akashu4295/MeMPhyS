@@ -217,3 +217,62 @@ void read_solution_csv(FieldVariables* field, PointStructure* myPointStruct, con
     }
     fclose(file);
 }
+
+double calculate_torque_vectorised(PointStructure* myPointStruct, FieldVariables* field)
+{
+    #ifndef M_PI
+    #define M_PI 3.14159265358979323846
+    #endif
+
+    double R = 1.0;                     // cylinder radius
+    double tol = 1e-6;                  // boundary tolerance
+    double mu  = parameters.mu;         // viscosity
+    int Nb = 0;
+    
+    for (int i = 0; i < myPointStruct->num_nodes; i++) {
+        double r = sqrt(myPointStruct->x[i]*myPointStruct->x[i] + myPointStruct->y[i]*myPointStruct->y[i]);
+        if (myPointStruct->boundary_tag[i] && fabs(r - R) < tol) Nb++;
+    }
+
+    if (Nb == 0) return 0.0;
+    double dA = 2.0 * M_PI * R / Nb;
+    double total_torque = 0.0;
+
+    #pragma acc parallel loop reduction(+:total_torque) \ present(field, parameters, myPointStruct)
+    for (int i = 0; i < myPointStruct->num_nodes; i++)
+    {
+        if (!myPointStruct->boundary_tag[i]) continue;
+
+        double xi = myPointStruct->x[i];
+        double yi = myPointStruct->y[i];
+        double r  = sqrt(xi*xi + yi*yi);
+
+        if (fabs(r - R) > tol) continue;
+        double sin_t = yi / r;
+        double cos_t = xi / r;
+        double ui = field->u[i];
+        double vi = field->v[i];
+        double ut_i = -ui * sin_t + vi * cos_t;
+        double dutdx = 0.0, dutdy = 0.0;
+        int ncloud = myPointStruct->num_cloud_points;
+
+        #pragma acc loop reduction(+:dutdx, dutdy)
+        for (int j = 0; j < ncloud; j++)
+        {
+            int id = myPointStruct->cloud_index[i*ncloud + j];
+            double uj = field->u[id];
+            double vj = field->v[id];
+            double ut_j = -uj * sin_t + vj * cos_t;
+            dutdx += myPointStruct->Dx[i*ncloud + j] * ut_j;
+            dutdy += myPointStruct->Dy[i*ncloud + j] * ut_j;
+        }
+
+        // Normal derivative (at boundary normal = radial)
+        double d_ut_dn = dutdx * cos_t + dutdy * sin_t;
+        double tau_rtheta = mu * d_ut_dn;
+        double torque_i = tau_rtheta * dA * r;
+        total_torque += torque_i;
+    }
+    
+    return total_torque;
+}

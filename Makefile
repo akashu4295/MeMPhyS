@@ -11,7 +11,7 @@ MAIN = mg_NS_solver.c
 SRC = $(wildcard $(SRC_DIR)/*.c)
 
 # Output executable
-TARGET = solver
+TARGET = a.out
 
 # Build rule
 $(TARGET): $(SRC) $(INIT) $(MAIN)

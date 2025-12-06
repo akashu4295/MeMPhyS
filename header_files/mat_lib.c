@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h>  
 #include "mat_lib.h"
+#include "structures.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Function Definitions
@@ -725,4 +726,132 @@ void multiply_vector_matrix_columnwise_vectorised(double *B, double *A, double *
             C[i] += B[j] * A[j * n_cols_A + i];
         }
     }
+}
+
+
+int BiCGStab_Solve(PointStructure* ps,
+                   const double* b,   // RHS = field->source
+                   double* x,         // solution = field->p
+                   int max_iter,
+                   double tol)
+{
+    int N = ps->num_nodes;
+    int n = ps->num_cloud_points;
+
+    // Allocate temporary vectors
+    double *r = malloc(N * sizeof(double));
+    double *r0 = malloc(N * sizeof(double));
+    double *p = malloc(N * sizeof(double));
+    double *v = malloc(N * sizeof(double));
+    double *t = malloc(N * sizeof(double));
+    double *Ax = malloc(N * sizeof(double));
+
+    // Compute initial residual: r = b - A*x    
+    for (int i = 0; i < N; i++) {
+        double Ax = 0.0;
+        for (int j = 0; j < n; j++) {
+            int col = ps->cloud_index[i*n + j];
+            Ax += ps->lap_Poison[i*n + j] * x[col];
+        }
+        r[i] = b[i] - Ax;
+        r0[i] = r[i];
+    }
+
+    for (int i = 0; i < N; i++) {
+        r[i] = b[i] - Ax[i];
+        r0[i] = r[i];
+        p[i] = 0.0;
+        v[i] = 0.0;
+    }
+
+    double rho = 1, alpha = 1, omega = 1;
+    double rho_new;
+
+    for (int iter = 0; iter < max_iter; iter++) {
+
+        // rho = r0^T r
+        rho_new = 0.0;
+        for (int i = 0; i < N; i++)
+            rho_new += r0[i] * r[i];
+
+        if (fabs(rho_new) < 1e-30) break;
+
+        // p = r + (rho_new/rho)*(alpha/omega)*(p - omega*v)
+        double beta = (rho_new/rho)*(alpha/omega);
+        for (int i = 0; i < N; i++)
+            p[i] = r[i] + beta*(p[i] - omega*v[i]);
+
+        // v = A*p
+        for (int i = 0; i < N; i++) {
+            double sum = 0.0;
+            for (int j = 0; j < n; j++) {
+                int col = ps->cloud_index[i*n + j];
+                sum += ps->lap_Poison[i*n + j] * p[col];
+            }
+            v[i] = sum;
+        }   
+
+        // alpha = rho_new / (r0^T v)
+        double r0v = 0.0;
+        for (int i = 0; i < N; i++)
+            r0v += r0[i] * v[i];
+
+        alpha = rho_new / r0v;
+
+        // s = r - alpha*v
+        double *s = t; // reuse t buffer for s
+        for (int i = 0; i < N; i++)
+            s[i] = r[i] - alpha*v[i];
+
+        // Check if |s| small enough → converged early
+        double norm_s = 0.0;
+        for (int i = 0; i < N; i++)
+            norm_s += s[i]*s[i];
+
+        if (sqrt(norm_s) < tol) {
+            for (int i = 0; i < N; i++)
+                x[i] += alpha*p[i];
+            break;
+        }
+
+        // t = A*s
+        for (int i = 0; i < N; i++) {
+            double sum = 0.0;
+            for (int j = 0; j < n; j++) {
+                int col = ps->cloud_index[i*n + j];
+                sum += ps->lap_Poison[i*n + j] * s[col];
+            }
+            t[i] = sum;
+        }
+
+        // omega = (t^T s) / (t^T t)
+        double ts = 0.0, tt = 0.0;
+        for (int i = 0; i < N; i++) {
+            ts += t[i] * s[i];
+            tt += t[i] * t[i];
+        }
+        omega = ts / tt;
+
+        // x = x + alpha*p + omega*s
+        for (int i = 0; i < N; i++)
+            x[i] += alpha*p[i] + omega*s[i];
+
+        // r = s - omega*t
+        for (int i = 0; i < N; i++)
+            r[i] = s[i] - omega*t[i];
+
+        // Check convergence
+        double norm_r = 0.0;
+        for (int i = 0; i < N; i++)
+            norm_r += r[i]*r[i];
+
+        if (sqrt(norm_r) < tol) break;
+
+        rho = rho_new;
+    }
+
+    free(r); free(r0); free(p);
+    free(v); free(t); free(Ax);
+
+    return 0; // success
 }

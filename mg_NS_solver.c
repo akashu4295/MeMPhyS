@@ -19,12 +19,8 @@
 //        Please send your feedbacks and suggestions to akash.unnikrishnan@iitgn.ac.in
 ///////////////////////////////////////////////////////////////////////////////
 
-////////////// Header files
-
 #include "header_files/functions.h"
 #include "header_files/openACC_functions.h"
-
-////////////// Main Program
 
 struct parameters parameters;
 
@@ -121,6 +117,8 @@ int main()
                 // #pragma acc data present(field[0], myPointStruct[0])
                 {
                     steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
+                    // double torque = calculate_torque_vectorised(myPointStruct, field);
+                    // printf("Torque at time step %d: %lf\n", it, torque);
                 }
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
                 fprintf(file2,"%d, %e\n", it, steady_state_error);

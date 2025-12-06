@@ -30,7 +30,6 @@ void copyin_pointstructure_to_gpu(PointStructure* myPointStruct) {
 
     for (int i = 0; i < parameters.num_levels; i++) {
 
-        // 1️⃣ Copy in data arrays
         #pragma acc enter data copyin( myPointStruct[i].x[:myPointStruct[i].num_nodes],  \
                                        myPointStruct[i].y[:myPointStruct[i].num_nodes],  \
                                        myPointStruct[i].z[:myPointStruct[i].num_nodes],  \
@@ -52,7 +51,6 @@ void copyin_pointstructure_to_gpu(PointStructure* myPointStruct) {
             #pragma acc enter data copyin(myPointStruct[i].Dz[:myPointStruct[i].num_nodes * myPointStruct[i].num_cloud_points])
         }
 
-        // 2️⃣ Attach pointer fields so struct points to device copies
         #pragma acc enter data attach( myPointStruct[i].x, myPointStruct[i].y, myPointStruct[i].z, \
                                        myPointStruct[i].x_normal, myPointStruct[i].y_normal, myPointStruct[i].z_normal, \
                                        myPointStruct[i].corner_tag, myPointStruct[i].boundary_tag, \

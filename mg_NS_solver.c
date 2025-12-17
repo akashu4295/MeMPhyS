@@ -117,8 +117,6 @@ int main()
                 // #pragma acc data present(field[0], myPointStruct[0])
                 {
                     steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
-                    // double torque = calculate_torque_vectorised(myPointStruct, field);
-                    // printf("Torque at time step %d: %lf\n", it, torque);
                 }
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
                 fprintf(file2,"%d, %e\n", it, steady_state_error);
@@ -189,6 +187,9 @@ int main()
     }
     fclose(file2); 
     printf("Time taken for the solver: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
+
+    // double torque = calculate_torque_vectorised(myPointStruct, field);
+    // printf("Torque : %lf\n", torque);
 
 ////////////// Time stepping loop end ///////////// 
     // Write final solution in VTK format

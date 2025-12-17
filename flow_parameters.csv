@@ -8,13 +8,13 @@ steady_tolerance,1e-05
 poisson_solver_tolerance,1e-08
 sor_parameter,1.6
 time_step,0.1
-num_time_steps,10000
+num_time_steps,100000
 write_interval,50
 Re,10
 iter_momentum,5
 iter_timple,1
 num_vcycles,10
-num_relax,500
+num_relax,50
 neumann_flag_boundary,1
 facRe,1
 facdt,1

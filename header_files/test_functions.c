@@ -238,7 +238,7 @@ double calculate_torque_vectorised(PointStructure* myPointStruct, FieldVariables
     double dA = 2.0 * M_PI * R / Nb;
     double total_torque = 0.0;
 
-    #pragma acc parallel loop reduction(+:total_torque) \ present(field, parameters, myPointStruct)
+    #pragma acc parallel loop reduction(+:total_torque) present(field, parameters, myPointStruct)
     for (int i = 0; i < myPointStruct->num_nodes; i++)
     {
         if (!myPointStruct->boundary_tag[i]) continue;

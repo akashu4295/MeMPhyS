@@ -1,0 +1,14 @@
+name: memphys_gui
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - matplotlib
+  - pillow
+  - pyvista
+  - vtk
+  - pip
+  - pip:
+      - dearpygui

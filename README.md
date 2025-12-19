@@ -98,7 +98,7 @@ $env:USERPROFILE\Miniconda3\Scripts\conda.exe init powershell
 ```bash
 Remove-Item Miniconda3-latest-Windows-x86_64.exe 
 ```
-```bash
+```PS
 conda install -c conda-forge m2w64-gcc
 ```
 

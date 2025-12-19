@@ -83,22 +83,15 @@ rm ./Miniconda3-latest-Linux-x86_64.sh
 ```bash
 curl -o Miniconda3-latest-Windows-x86_64.exe `
      https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
-```
-```bash
+     
 Start-Process -Wait .\Miniconda3-latest-Windows-x86_64.exe `
   -ArgumentList "/InstallationType=JustMe",
                 "/AddToPath=0",
                 "/RegisterPython=0",
                 "/S",
                 "/D=$env:USERPROFILE\Miniconda3"
-```
-```bash
 $env:USERPROFILE\Miniconda3\Scripts\conda.exe init powershell
-```
-```bash
 Remove-Item Miniconda3-latest-Windows-x86_64.exe 
-```
-```PS
 conda install -c conda-forge m2w64-gcc
 ```
 
@@ -106,7 +99,7 @@ After installing conda environment run this (for both Linux and Windows system):
 ```bash
 conda env create -f environment.yml
 conda activate memphys_gui
-```bash
+```
 To start the GUI:
 ```bash
 python gui.py

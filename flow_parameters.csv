@@ -4,7 +4,7 @@ phs_deg,3
 cloud_size_multiplier,2
 test_derivative,0
 courant_number,0.3
-steady_tolerance,1e-05
+steady_tolerance,1e-08
 poisson_solver_tolerance,1e-08
 sor_parameter,1.6
 time_step,0.1

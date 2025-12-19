@@ -13,6 +13,9 @@ import pyvista as pv
 from pyvistaqt import BackgroundPlotter
 import matplotlib.pyplot as plt
 import io
+import functools
+
+STATE = {"plotter": None}
 
 # ============================================================
 # Default parameters for the GUI
@@ -43,103 +46,6 @@ IMPLICIT_PARAMETERS = {
     "iter_timple": 1,
 }
 
-# ============================================================
-# Utility / plotting helpers
-
-DEFAULT_VTK = "Solution.vtk"
-DEFAULT_WIDTH = 900
-DEFAULT_HEIGHT = 600
-# Gather available matplotlib colormaps for dropdown
-CMAPS = sorted([m for m in plt.colormaps()])
-
-
-
-def update_plot(plotter):
-    vtk_path = dpg.get_value("contour_vtk_path") or DEFAULT_VTK
-    append_status(f"Reading: {vtk_path}")
-    plotter.clear() # Clear old data
-    mesh = read_dataset(vtk_path)
-
-    var_choice = dpg.get_value("contour_var")
-    # Extract the x-component (index 0)
-    # This creates a new array of just the 'u' values
-    if var_choice == "u":
-        plot_data = mesh["velocity"][:, 0] 
-    elif var_choice == "v":
-        plot_data = mesh["velocity"][:, 1]
-    elif var_choice == "w":
-        plot_data = mesh["velocity"][:, 2]
-    elif var_choice == "velocity magnitude":
-        vectors = mesh.get_array("velocity")
-        plot_data = np.linalg.norm(vectors, axis=1)
-    elif var_choice == "p":
-        plot_data = mesh["pressure"][:]
-
-    plotter.add_mesh(mesh, scalars=plot_data, scalar_bar_args={'title': 'Contour plot'}, cmap=dpg.get_value("contour_cmap"))
-    plotter.add_scalar_bar()
-
-
-# ============================================================
-#  Window and UI construction
-
-def build_contour_ui():
-    
-    plotter = BackgroundPlotter()
-
-    with dpg.group(horizontal=True):
-        dpg.add_input_text(label="VTK File", default_value=DEFAULT_VTK, tag="contour_vtk_path", width=600, show = True)
-        dpg.add_button(label="Browse", tag="vtk_browse", callback=open_file_dialog, user_data="vtk", show=True)
-        dpg.add_file_dialog(directory_selector=False, tag="file_dialog_vtk", user_data="contour_vtk_path", callback=select_mesh_file, show=False, width=600, height=400)
-        dpg.add_file_extension(".vtk", parent="file_dialog_vtk")
-    dpg.add_spacer(height=6)
-    
-    # options: variable, colormap, levels, filled
-    with dpg.group(horizontal=True):
-        dpg.add_combo(("u","v","w","velocity magnitude","p"), label="Variable", default_value="velocity magnitude", tag="contour_var", width=200)
-        dpg.add_combo(CMAPS, label="Colormap", default_value="viridis", tag="contour_cmap", width=200)
-        dpg.add_input_int(label="Contour Levels", default_value=10, tag="contour_levels", width=120)
-        dpg.add_checkbox(label="Filled contours", default_value=True, tag="contour_filled")
-
-    # custom image size inputs (so user can control resolution)
-    with dpg.group(horizontal=True):
-        dpg.add_input_int(label="Image Width (px)", default_value=DEFAULT_WIDTH, tag="contour_img_w", width=120)
-        dpg.add_input_int(label="Image Height (px)", default_value=DEFAULT_HEIGHT, tag="contour_img_h", width=120)
-        dpg.add_button(label="Plot", callback=lambda s,a,u: update_plot(plotter))
-        dpg.add_button(label="Save", callback=lambda s,a,u: do_save_image())
-        dpg.add_input_text(label="Save Path", default_value="contour.png", tag="contour_save_path", width=300)
-
-    dpg.add_separator()
-    dpg.add_text("Preview (rendered):")
-    # image holder (we will add image dynamically)
-    with dpg.child_window(tag="contour_image_holder", width=-1, height=400, autosize_x=True, autosize_y=False):
-        # placeholder text
-        dpg.add_text("No plot yet. Click Plot to render.", tag="contour_image_placeholder")
-
-    dpg.add_separator()
-    dpg.add_text("Status log:")
-    with dpg.child_window(tag="contour_status_child", width=-1, height=120, autosize_x=True, autosize_y=False):
-        dpg.add_input_text(multiline=True, readonly=True, tag="contour_status", default_value="", height=110)
-
-def open_contour_window():
-    """Open or show contour plotting window."""
-    if dpg.does_item_exist("contour_window"):
-        dpg.show_item("contour_window")
-        return
-
-    with dpg.window(label="Contour Plot", tag="contour_window",
-                    width=dpg.get_viewport_client_width() - 100,
-                    height=dpg.get_viewport_client_height() - 100,
-                    pos=(50, 50),
-                    no_close=False):
-        build_contour_ui()
-
-def read_dataset(vtk_path):
-    """Read a vtk file using pyvista. Returns a pyvista object."""
-    if not os.path.isfile(vtk_path):
-        raise FileNotFoundError(f"VTK file not found: {vtk_path}")
-    mesh = pv.read(vtk_path)
-    return mesh
-    
 # ============================================================
 # Helper functions for processing, and CSV Writers
 
@@ -352,17 +258,99 @@ def update_mesh_inputs():
         if dpg.does_item_exist(f"file_dialog_{i}"):
             dpg.configure_item(f"file_dialog_{i}", show=False)  # dialogs hidden until needed
 
-def browse_directory_callback():
-    num_levels = int(dpg.get_value("num_mesh_levels"))
-    for i in range(10):
-        if dpg.does_item_exist(f"file_dialog_{i+1}"):
-            dpg.configure_item(f"file_dialog_{i+1}", show=(i+1 <= num_levels))
+def open_file_dialog(sender, app_data, user_data):
+    """Callback for each 'Browse' button."""
+    dialog_tag = f"file_dialog_{user_data}"
+    if dpg.does_item_exist(dialog_tag):
+        dpg.configure_item(dialog_tag, show=True)
+    else:
+        append_log(f"File dialog {dialog_tag} not found!")
 
 def show_implicit_callback():
     solver = dpg.get_value("solver_method")
     show_implicit = solver == "Implicit"
     for pname in IMPLICIT_PARAMETERS.keys():
         dpg.configure_item(f"param_{pname}", show=show_implicit)
+
+# ============================================================
+# Utility / plotting helpers
+
+DEFAULT_VTK = "Solution.vtk"
+DEFAULT_WIDTH = 900
+DEFAULT_HEIGHT = 600
+CMAPS = sorted([m for m in plt.colormaps()]) # Gather available matplotlib colormaps for dropdown
+
+def update_plot():
+    plotter = STATE["plotter"]
+    if plotter is None or not hasattr(plotter, 'app_window') or plotter.app_window is None:
+        STATE["plotter"] = BackgroundPlotter()
+        plotter = STATE["plotter"]
+        # This function will be called when 'X' is pressed
+        def on_close(event, window):
+            window.hide()  # Hide the window
+            event.ignore() # Tell the OS "Don't actually close this!"
+        # Force the window to use our function
+        plotter.app_window.closeEvent = functools.partial(on_close, window=plotter.app_window)
+    else:
+        plotter.app_window.show()
+
+    val = dpg.get_value(f"param_domain_dimensions")
+    vtk_path = dpg.get_value("contour_vtk_path") or DEFAULT_VTK
+    try:
+        mesh = read_dataset(vtk_path)
+        var_choice = dpg.get_value("contour_var")
+        plot_data = None
+        if var_choice in ["u", "v", "w"]:
+            idx = {"u": 0, "v": 1, "w": 2}[var_choice]
+            plot_data = mesh["velocity"][:, idx] 
+        elif var_choice == "velocity magnitude":
+            vectors = mesh.get_array("velocity")
+            plot_data = np.linalg.norm(vectors, axis=1)
+        elif var_choice == "p":
+            plot_data = mesh["pressure"]
+
+        if plot_data is not None:
+            plotter.clear() 
+            plotter.add_mesh(mesh, scalars=plot_data, scalar_bar_args={'title': var_choice},
+                                cmap=dpg.get_value("contour_cmap") or "viridis")
+            if val == "2":
+                plotter.view_xy()  # Look down the Z-axis at the XY plane
+                plotter.enable_parallel_projection()
+                plotter.reset_camera()
+            plotter.show() 
+        else:
+            append_log(f"Error: Variable {var_choice} not found.")
+
+    except Exception as e:
+        append_log(f"Plotting Error: {e}")
+
+    plotter.app.processEvents()
+
+def close_plotter_window():
+    if STATE["plotter"]:
+        STATE["plotter"].app_window.hide()
+
+def do_save_image():
+    plotter = STATE["plotter"]
+    if plotter is None:
+        append_log("Save failed: No active plot window found.")
+        return
+
+    filename = dpg.get_value("contour_save_path") or "contour.png"
+    if not any(filename.lower().endswith(ext) for ext in [".png", ".jpg", ".tif", ".pdf"]):
+        filename = filename + ".png"
+    try:
+        plotter.screenshot(filename, scale=3) 
+        append_log(f"Saved high-res image: {filename}")
+    except Exception as e:
+        append_log(f"Save failed: {e}")
+
+def read_dataset(vtk_path):
+    """Read a vtk file using pyvista. Returns a pyvista object."""
+    if not os.path.isfile(vtk_path):
+        raise FileNotFoundError(f"VTK file not found: {vtk_path}")
+    mesh = pv.read(vtk_path)
+    return mesh
 
 def update_convergence_plot():
     while dpg.is_dearpygui_running():
@@ -394,48 +382,6 @@ def update_convergence_plot():
                 print("Error updating plot:", e)
 
         time.sleep(2)
-        
-def open_file_dialog(sender, app_data, user_data):
-    """Callback for each 'Browse' button."""
-    dialog_tag = f"file_dialog_{user_data}"
-    if dpg.does_item_exist(dialog_tag):
-        dpg.configure_item(dialog_tag, show=True)
-    else:
-        append_log(f"File dialog {dialog_tag} not found!")
-
-
-def append_status(msg):
-    """Append to status log (simple multiline value)."""
-    cur = dpg.get_value("contour_status") or ""
-    dpg.set_value("contour_status", cur + msg + "\n")
-    dpg.split_frame()
-    # autoscroll the child
-    try:
-        dpg.set_y_scroll("contour_status_child", dpg.get_y_scroll_max("contour_status_child"))
-    except Exception:
-        pass
-
-
-def do_save_image(sender):
-    """Save current image using PIL with high DPI metadata."""
-    if STATE.get("last_image_array") is None:
-        append_status("No image to save.")
-        return
-    # ask user for filename via file dialog
-    filename = dpg.get_value("contour_save_path") or "contour.png"
-    # ensure extension
-    if not any(filename.lower().endswith(ext) for ext in [".png", ".jpg", ".tif", ".tiff"]):
-        filename = filename + ".png"
-    try:
-        arr = STATE["last_image_array"]
-        img = Image.fromarray(arr)
-        # Save with high DPI metadata (600)
-        img.save(filename, dpi=(600,600))
-        append_status(f"Saved image: {filename} (dpi metadata=600)")
-    except Exception as e:
-        append_status(f"Save failed: {e}")
-
-
 
 # ============================================================
 # GUI Construction
@@ -527,14 +473,7 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 dpg.add_separator()
                 dpg.add_text("This recompiles all .c files and runs the solver executable.")
             dpg.bind_item_theme(compile_btn, button_theme)
-            
-            dpg.add_spacer(height=10)
-            plot_btn = dpg.add_button(label="Plot Contours", width=250, height=45, callback=open_contour_window)
-            with dpg.tooltip(plot_btn):
-                dpg.add_text("Click to plot contours of the solution data", color=(220, 230, 255))
-                dpg.add_separator()
-                dpg.add_text("This opens a new window for all the plotting options")
-            dpg.bind_item_theme(plot_btn, button_theme)
+
             
         # Right Column
         with dpg.child_window(width=-1, border=True):
@@ -544,25 +483,54 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 dpg.add_plot_axis(dpg.mvYAxis, label="Total Steady-State Error", tag="y_axis_conv", log_scale=True)
                 dpg.add_line_series([], [], parent="y_axis_conv", tag="conv_series", label="Convergence")
             dpg.add_separator()
-            dpg.add_text("Logs")
+            dpg.add_spacer(height=6)
 
+            dpg.add_text("Contour plots")
+            with dpg.group(horizontal=True):
+                dpg.add_input_text(label="VTK File", default_value=DEFAULT_VTK, tag="contour_vtk_path", width=300, show = True)
+                dpg.add_button(label="Browse", tag="vtk_browse", callback=open_file_dialog, user_data="vtk", show=True)
+                dpg.add_file_dialog(directory_selector=False, tag="file_dialog_vtk", user_data="contour_vtk_path", callback=select_mesh_file, show=False, width=600, height=400)
+                dpg.add_file_extension(".vtk", parent="file_dialog_vtk")
+                dpg.add_combo(("u","v","w","velocity magnitude","p"), label="Variable", default_value="velocity magnitude", tag="contour_var", width=200)
+            
+            # options: variable, colormap, levels, filled
+            with dpg.group(horizontal=True):
+                dpg.add_combo(CMAPS, label="Colormap", default_value="viridis", tag="contour_cmap", width=200)
+                dpg.add_input_int(label="Contour Levels", default_value=10, tag="contour_levels", width=120)
+                dpg.add_checkbox(label="Filled contours", default_value=True, tag="contour_filled")
+
+            # custom image size inputs (so user can control resolution)
+            with dpg.group(horizontal=True):
+                dpg.add_input_int(label="Image Width (px)", default_value=DEFAULT_WIDTH, tag="contour_img_w", width=120)
+                dpg.add_input_int(label="Image Height (px)", default_value=DEFAULT_HEIGHT, tag="contour_img_h", width=120)
+                dpg.add_button(label="Plot", callback=lambda s,a,u: update_plot())
+                dpg.add_button(label="Hide Plot Window", callback=close_plotter_window)
+                
+            with dpg.group(horizontal=True):
+                dpg.add_button(label="Save", callback=lambda s,a,u: do_save_image())
+                dpg.add_input_text(label="Save Path", default_value="contour.png", tag="contour_save_path", width=300)
+                
+            dpg.add_separator()
+            dpg.add_spacer(height=6)
+            dpg.add_text("Logs")
             with dpg.group(horizontal=True):  # Put button next to label if you prefer
                 dpg.add_button(label="Clear Logs", callback=clear_logs)
 
-            with dpg.child_window(tag="log_child", autosize_x=True, height=350, horizontal_scrollbar=True):
-                dpg.add_input_text(
-                    tag="log_window",
-                    multiline=True,
-                    readonly=True,
-                    width=-1, height = 330,
-                    default_value="Ready.\n"
-                )
-
+            # with dpg.child_window(tag="log_child", autosize_x=True, height=275, horizontal_scrollbar=True):
+            dpg.add_input_text(tag="log_window", multiline=True, readonly=True, width=-1, height = 250,
+                 default_value="Ready.\n")
+                
 # Viewport setup
 dpg.create_viewport(title="MeMPhyS GUI", width=1280, height=800, resizable=True)
 dpg.set_primary_window("MainWindow", True)
 dpg.setup_dearpygui()
 dpg.show_viewport()
+
 threading.Thread(target=update_convergence_plot, daemon=True).start()
+
 dpg.start_dearpygui()
+
+# if STATE["plotter"]:
+#     STATE["plotter"].close() #kill the plotter if open
+
 dpg.destroy_context()

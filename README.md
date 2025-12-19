@@ -50,8 +50,6 @@ nvc -acc -ta=multicore @sources.txt
 nvc -acc -gpu=managed @sources.txt
 ```
 
----
-
 ### Running the Code
 
 After compiling:
@@ -60,22 +58,17 @@ After compiling:
 ./a.out
 ```
 
----
-
 ## Installation of GUI wrapper with python
 Since we are in the developing stage, we are using a conda environment. If you don't have conda installed in the system, please do the following:
 
 ### Linux
 ```bash
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-```
-```bash
+
 bash Miniconda3-latest-Linux-x86_64.sh
-```
-```bash
+
 source ~/.bashrc
-```
-```bash
+
 rm ./Miniconda3-latest-Linux-x86_64.sh
 ```
 
@@ -83,15 +76,18 @@ rm ./Miniconda3-latest-Linux-x86_64.sh
 ```bash
 curl -o Miniconda3-latest-Windows-x86_64.exe `
      https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
-     
+
 Start-Process -Wait .\Miniconda3-latest-Windows-x86_64.exe `
   -ArgumentList "/InstallationType=JustMe",
                 "/AddToPath=0",
                 "/RegisterPython=0",
                 "/S",
                 "/D=$env:USERPROFILE\Miniconda3"
+
 $env:USERPROFILE\Miniconda3\Scripts\conda.exe init powershell
+
 Remove-Item Miniconda3-latest-Windows-x86_64.exe 
+
 conda install -c conda-forge m2w64-gcc
 ```
 

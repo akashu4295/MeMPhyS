@@ -16,11 +16,14 @@ from pyvistaqt import BackgroundPlotter
 import matplotlib.pyplot as plt
 import io
 import functools
+import webbrowser
 
-STATE = {"plotter": None}
 
 # ============================================================
 # Default parameters for the GUI
+
+STATE = {"plotter": None}
+LOG_DIR = "./logs"
 
 BASE_PARAMETERS = {
     "domain_dimensions": 2,
@@ -48,6 +51,12 @@ IMPLICIT_PARAMETERS = {
     "iter_timple": 1,
 }
 
+DEFAULT_VTK = "Solution.vtk"
+DEFAULT_WIDTH = 900
+DEFAULT_HEIGHT = 600
+CMAPS = sorted([m for m in plt.colormaps()]) # Gather available matplotlib colormaps for dropdown
+
+
 # ============================================================
 # Helper functions for processing, and CSV Writers
 
@@ -56,46 +65,38 @@ def write_params_csv(filename="flow_parameters.csv"):
     for pname, default in BASE_PARAMETERS.items():
         val = dpg.get_value(f"param_{pname}")
         rows.append([pname, val])
-
     for pname, default in IMPLICIT_PARAMETERS.items():
         val = dpg.get_value(f"param_{pname}")
         rows.append([pname, val])
-
     for pname, default in MULTIGRID_PARAMETERS.items():
         val = dpg.get_value(f"param_{pname}")
         rows.append([pname, val])
-
     rows.append(["neumann_flag_boundary", "1"])
     rows.append(["facRe", "1"])
     rows.append(["facdt", "1"])
     rows.append(["fractional_step", 1 if dpg.get_value("solver_method") == "Fractional Step" else 0])
-
     pd.DataFrame(rows, columns=["Parameter", "Value"]).to_csv(filename, index=False, header=False)
     append_log("Parameters written to flow_parameters.csv\n")
 
 def write_grid_csv():
-    """Writes mesh file paths to test_grid_files.csv"""
+    """Writes mesh file paths to grid_files.csv"""
     mg_enabled = dpg.get_value("multigrid_toggle")
     num_levels = 1
     mesh_paths = []
-
     num_levels = int(dpg.get_value("num_mesh_levels"))
     for i in range(num_levels):
         path = dpg.get_value(f"mesh_file_{i+1}")
         if path:
             mesh_paths.append(path)
-
-
     with open("grid_filenames.csv", "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["num_levels", num_levels])
         for path in mesh_paths:
             writer.writerow([path])
-
     append_log("Grid details written to grid_filesnames.csv\n")
 
 # =============================================================
-# Function to compile and run the C solver, streaming logs to GUI
+# Function to stream logs to GUI
 
 def append_log(msg):
     current = dpg.get_value("log_window") or ""
@@ -113,7 +114,10 @@ def append_log(msg):
 def clear_logs():
     dpg.set_value("log_window", "")
     dpg.set_y_scroll("log_child", 0)
-        
+
+# ============================================================
+# Callback function to compile and run the C solver
+
 def run_solver(sender):
     """Compile and run the C solver, streaming logs into the GUI."""
     # disable button while running
@@ -130,12 +134,9 @@ def run_solver(sender):
     compiler_cmd = []
     run_cmd = []
 
-    # Path to the init .c file
-    init_path = dpg.get_value("init_path")    #"init/init_TC.c"
-
-    # Collect all .c files in the 'header_files' directory
+    init_path = dpg.get_value("init_path")    # Path to the init .c file
     header_dir = "header_files"
-    header_c_files = glob.glob(os.path.join(header_dir, "*.c"))
+    header_c_files = glob.glob(os.path.join(header_dir, "*.c")) # Collect all .c files in the 'header_files' directory
 
     # Build the compile command
     if system_type == "Windows":
@@ -188,9 +189,6 @@ def run_solver(sender):
 
     threading.Thread(target=solver_thread, daemon=True).start()
 
-
-# ============================================================
-# Callbacks : functions triggered by GUI events
 
 # def ensure_plotter_server():
 #     proc = STATE.get("plotter_process")
@@ -312,6 +310,66 @@ def update_mesh_inputs():
         if dpg.does_item_exist(f"file_dialog_{i}"):
             dpg.configure_item(f"file_dialog_{i}", show=False)  # dialogs hidden until needed
 
+# ============================================================
+# Menu bar callbacks
+
+def open_folder(path):
+    path = os.path.abspath(path)
+
+    if sys.platform.startswith("win"):
+        os.startfile(path)
+    elif sys.platform.startswith("darwin"):
+        subprocess.Popen(["open", path])
+    else:
+        subprocess.Popen(["xdg-open", path])
+
+def open_help():
+    webbrowser.open(
+        "https://github.com/akashu4295/Meshless_methods"
+    )
+
+def show_about():
+    if dpg.does_item_exist("about_window"):
+        dpg.configure_item("about_window", show=True)
+        dpg.focus_item("about_window")
+        return
+    with dpg.window(label="About", tag="about_window", modal=True, width=620, height=400, no_resize=True):
+        dpg.add_text("MeMPhyS v2.2", color=(200, 220, 255))
+        dpg.add_text("Meshless Multi-Physics Solver", color=(200, 220, 255))
+        dpg.add_separator()
+        dpg.add_text("GUI Development:", color=(255, 220, 160))
+        dpg.add_text("\tAkash Unnikrishnan")
+        dpg.add_spacer(height=6)
+        dpg.add_text("Backend / Simulation:", color=(255, 220, 160))
+        dpg.add_text("\tAkash Unnikrishnan")
+        dpg.add_text("\tProf. Surya Pratap Vanka")
+        dpg.add_text("\tProf. Vinod Narayanan")
+        dpg.add_spacer(height=6)
+        dpg.add_text("Affiliation:", color=(255, 220, 160))
+        dpg.add_text("\tIndian Institute of Technology Gandhinagar")
+        dpg.add_text("\tFaculty of Physics, University of Warsaw")
+        dpg.add_text("\tUniversity of Illinois Urbana-Champaign")
+        dpg.add_spacer(height=12)
+        dpg.add_button(label="Close", width=80, callback=lambda: dpg.configure_item("about_window", show=False))
+
+def open_logs():
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
+    open_folder(LOG_DIR)
+
+def save_logs():
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
+    open_folder(LOG_DIR)
+
+def config_dir_selected(sender, app_data):
+    selected_dir = app_data["file_path_name"]
+    print("Selected config directory:", selected_dir)
+    # store this in STATE, load config, etc.
+
+def open_config_dir():
+    dpg.configure_item("config_dir_dialog", show=True)
+
 def open_file_dialog(sender, app_data, user_data):
     """Callback for each 'Browse' button."""
     dialog_tag = f"file_dialog_{user_data}"
@@ -329,11 +387,6 @@ def show_implicit_callback():
 # ============================================================
 # Utility / plotting helpers
 
-DEFAULT_VTK = "Solution.vtk"
-DEFAULT_WIDTH = 900
-DEFAULT_HEIGHT = 600
-CMAPS = sorted([m for m in plt.colormaps()]) # Gather available matplotlib colormaps for dropdown
-
 def update_plot():
     vtk_path = dpg.get_value("contour_vtk_path") or DEFAULT_VTK
     var_choice = dpg.get_value("contour_var")
@@ -341,18 +394,11 @@ def update_plot():
     dimension = dpg.get_value("param_domain_dimensions")
 
     script_path = os.path.join("src", "plotter.py")
-
-    # -------------------------------------------------
-    # Kill previous plotter if running
-    # -------------------------------------------------
     proc = STATE.get("plotter_process")
     if proc is not None and proc.poll() is None:
         proc.terminate()
         STATE["plotter_process"] = None
 
-    # -------------------------------------------------
-    # Launch isolated plotter
-    # -------------------------------------------------
     try:
         proc = subprocess.Popen(
             [
@@ -366,9 +412,7 @@ def update_plot():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-
         STATE["plotter_process"] = proc
-
     except Exception as e:
         append_log(f"Plotting Error: {e}")
 
@@ -377,7 +421,6 @@ def do_save_image():
     if plotter is None:
         append_log("Save failed: No active plot window found.")
         return
-
     filename = dpg.get_value("contour_save_path") or "contour.png"
     if not any(filename.lower().endswith(ext) for ext in [".png", ".jpg", ".tif", ".pdf"]):
         filename = filename + ".png"
@@ -387,13 +430,6 @@ def do_save_image():
     except Exception as e:
         append_log(f"Save failed: {e}")
 
-def read_dataset(vtk_path):
-    """Read a vtk file using pyvista. Returns a pyvista object."""
-    if not os.path.isfile(vtk_path):
-        raise FileNotFoundError(f"VTK file not found: {vtk_path}")
-    mesh = pv.read(vtk_path)
-    return mesh
-
 def update_convergence_plot():
     while dpg.is_dearpygui_running():
         if os.path.exists("Convergence.csv"):
@@ -402,27 +438,21 @@ def update_convergence_plot():
                 if df.shape[1] >= 2:
                     x = df.iloc[:, 0].values
                     y = df.iloc[:, 1].values
-
                     dpg.set_value("conv_series", [x.tolist(), y.tolist()])
                     if len(x) > 0 and len(y) > 0:
                         # Get current y limits to adjust smoothly
                         y_min = np.nanmin(y[y > 0]) if np.any(y > 0) else 1e-8
                         y_max = np.nanmax(y)
-
                         # Add one order of magnitude padding in log scale
                         y_min = 10 ** (np.floor(np.log10(y_min)) - 1)
                         y_max = 10 ** (np.ceil(np.log10(y_max)) + 0.2)
-
                         # X-axis: limit to last 500 timesteps or full range
                         x_min = 0
                         x_max = np.max(x) + 10
-
                         dpg.set_axis_limits("x_axis_conv", x_min, x_max)
                         dpg.set_axis_limits("y_axis_conv", y_min, y_max)
-
             except Exception as e:
                 print("Error updating plot:", e)
-
         time.sleep(2)
 
 # ============================================================
@@ -566,23 +596,22 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
 dpg.create_viewport(title="MeMPhyS GUI", width=1280, height=800, resizable=True)
 with dpg.viewport_menu_bar():
     with dpg.menu(label="File"):
-        dpg.add_menu_item(label="Save")
-        # dpg.add_menu_item(label="Save As")
-        # with dpg.menu(label="Settings"):
-        #     dpg.add_menu_item(label="Settings1")
-        #     dpg.add_menu_item(label="Settings2")
-    
-    dpg.add_menu_item(label="Help")
+        with dpg.menu(label="Save"):
+            dpg.add_menu_item(label="Log file", callback=save_logs)
+            dpg.add_menu_item(label="Configuration file", callback=open_config_dir)
+            with dpg.file_dialog(directory_selector=True, show=False, callback=config_dir_selected, tag="config_dir_dialog",
+                            width=700, height=400):
+                dpg.add_file_extension("", color=(255, 255, 255, 255))
+        with dpg.menu(label="Open"):
+            dpg.add_menu_item(label="Log file", callback=open_logs)
+            dpg.add_menu_item(label="Configuration file", callback=open_config_dir)
+    with dpg.menu(label="Help"):
+        dpg.add_menu_item(label="Help", callback=open_help)
+        dpg.add_menu_item(label="About", callback=show_about)
 
 dpg.set_primary_window("MainWindow", True)
 dpg.setup_dearpygui()
 dpg.show_viewport()
-
 threading.Thread(target=update_convergence_plot, daemon=True).start()
-
 dpg.start_dearpygui()
-
-# if STATE["plotter"]:
-#     STATE["plotter"].close() #kill the plotter if open
-
 dpg.destroy_context()

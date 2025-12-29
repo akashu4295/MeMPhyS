@@ -5,8 +5,10 @@ import numpy as np
 import pandas as pd
 import dearpygui.dearpygui as dpg
 import json
+import socket
 import csv
 import subprocess
+import sys
 import platform
 import glob
 import pyvista as pv
@@ -190,6 +192,58 @@ def run_solver(sender):
 # ============================================================
 # Callbacks : functions triggered by GUI events
 
+# def ensure_plotter_server():
+#     proc = STATE.get("plotter_process")
+#     if proc is None or proc.poll() is not None:
+#         script = os.path.join("src", "plotter.py")
+#         proc = subprocess.Popen(
+#             [sys.executable, script],
+#             stdout=subprocess.PIPE,   # TEMP: capture for debugging
+#             stderr=subprocess.PIPE,
+#         )
+#         STATE["plotter_process"] = proc
+
+#     # ---- Wait until server is actually listening ----
+#     for _ in range(20):  # ~2 seconds max
+#         try:
+#             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#             sock.connect((HOST, PORT))
+#             sock.close()
+#             return
+#         except ConnectionRefusedError:
+#             time.sleep(0.1)
+
+#     raise RuntimeError("Plotter server did not start")
+
+# def update_plot():
+#     try:
+#         ensure_plotter_server()
+
+#         cfg = {
+#             "vtk_path": dpg.get_value("contour_vtk_path") or DEFAULT_VTK,
+#             "var": dpg.get_value("contour_var"),
+#             "cmap": dpg.get_value("contour_cmap") or "viridis",
+#             "dim": dpg.get_value("param_domain_dimensions"),
+#         }
+
+#         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#         sock.connect((HOST, PORT))
+#         sock.sendall(json.dumps(cfg).encode())
+#         sock.close()
+
+#     except Exception as e:
+#         append_log(f"Plotter connection error: {e}")
+
+# def shutdown_plotter():
+#     try:
+#         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#         sock.connect((HOST, PORT))
+#         sock.sendall(json.dumps({"cmd": "exit"}).encode())
+#         sock.close()
+#     except:
+#         pass
+
+
 def on_write_callback(sender, app_data, user_data):
     write_params_csv()
     write_grid_csv()
@@ -281,54 +335,42 @@ DEFAULT_HEIGHT = 600
 CMAPS = sorted([m for m in plt.colormaps()]) # Gather available matplotlib colormaps for dropdown
 
 def update_plot():
-    plotter = STATE["plotter"]
-    if plotter is None or not hasattr(plotter, 'app_window') or plotter.app_window is None:
-        STATE["plotter"] = BackgroundPlotter()
-        plotter = STATE["plotter"]
-        # This function will be called when 'X' is pressed
-        def on_close(event, window):
-            window.hide()  # Hide the window
-            event.ignore() # Tell the OS "Don't actually close this!"
-        # Force the window to use our function
-        plotter.app_window.closeEvent = functools.partial(on_close, window=plotter.app_window)
-    else:
-        plotter.app_window.show()
-
-    val = dpg.get_value(f"param_domain_dimensions")
     vtk_path = dpg.get_value("contour_vtk_path") or DEFAULT_VTK
-    try:
-        mesh = read_dataset(vtk_path)
-        var_choice = dpg.get_value("contour_var")
-        plot_data = None
-        if var_choice in ["u", "v", "w"]:
-            idx = {"u": 0, "v": 1, "w": 2}[var_choice]
-            plot_data = mesh["velocity"][:, idx] 
-        elif var_choice == "velocity magnitude":
-            vectors = mesh.get_array("velocity")
-            plot_data = np.linalg.norm(vectors, axis=1)
-        elif var_choice == "p":
-            plot_data = mesh["pressure"]
+    var_choice = dpg.get_value("contour_var")
+    cmap = dpg.get_value("contour_cmap") or "viridis"
+    dimension = dpg.get_value("param_domain_dimensions")
 
-        if plot_data is not None:
-            plotter.clear() 
-            plotter.add_mesh(mesh, scalars=plot_data, scalar_bar_args={'title': var_choice},
-                                cmap=dpg.get_value("contour_cmap") or "viridis")
-            if val == "2":
-                plotter.view_xy()  # Look down the Z-axis at the XY plane
-                plotter.enable_parallel_projection()
-                plotter.reset_camera()
-            plotter.show() 
-        else:
-            append_log(f"Error: Variable {var_choice} not found.")
+    script_path = os.path.join("src", "plotter.py")
+
+    # -------------------------------------------------
+    # Kill previous plotter if running
+    # -------------------------------------------------
+    proc = STATE.get("plotter_process")
+    if proc is not None and proc.poll() is None:
+        proc.terminate()
+        STATE["plotter_process"] = None
+
+    # -------------------------------------------------
+    # Launch isolated plotter
+    # -------------------------------------------------
+    try:
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                script_path,
+                vtk_path,
+                var_choice,
+                cmap,
+                dimension,
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        STATE["plotter_process"] = proc
 
     except Exception as e:
         append_log(f"Plotting Error: {e}")
-
-    plotter.app.processEvents()
-
-def close_plotter_window():
-    if STATE["plotter"]:
-        STATE["plotter"].app_window.hide()
 
 def do_save_image():
     plotter = STATE["plotter"]
@@ -399,6 +441,7 @@ with dpg.theme() as button_theme:
 
 # Main Window
 with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
+
     with dpg.group(horizontal=True):
 
         # Left Column
@@ -504,7 +547,6 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 dpg.add_input_int(label="Image Width (px)", default_value=DEFAULT_WIDTH, tag="contour_img_w", width=120)
                 dpg.add_input_int(label="Image Height (px)", default_value=DEFAULT_HEIGHT, tag="contour_img_h", width=120)
                 dpg.add_button(label="Plot", callback=lambda s,a,u: update_plot())
-                dpg.add_button(label="Hide Plot Window", callback=close_plotter_window)
                 
             with dpg.group(horizontal=True):
                 dpg.add_button(label="Save", callback=lambda s,a,u: do_save_image())
@@ -522,6 +564,16 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 
 # Viewport setup
 dpg.create_viewport(title="MeMPhyS GUI", width=1280, height=800, resizable=True)
+with dpg.viewport_menu_bar():
+    with dpg.menu(label="File"):
+        dpg.add_menu_item(label="Save")
+        # dpg.add_menu_item(label="Save As")
+        # with dpg.menu(label="Settings"):
+        #     dpg.add_menu_item(label="Settings1")
+        #     dpg.add_menu_item(label="Settings2")
+    
+    dpg.add_menu_item(label="Help")
+
 dpg.set_primary_window("MainWindow", True)
 dpg.setup_dearpygui()
 dpg.show_viewport()

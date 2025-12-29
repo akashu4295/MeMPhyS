@@ -171,3 +171,58 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 #     main()
+
+
+
+# # gui functions
+# def ensure_plotter_server():
+#     proc = STATE.get("plotter_process")
+#     if proc is None or proc.poll() is not None:
+#         script = os.path.join("src", "plotter.py")
+#         proc = subprocess.Popen(
+#             [sys.executable, script],
+#             stdout=subprocess.PIPE,   # TEMP: capture for debugging
+#             stderr=subprocess.PIPE,
+#         )
+#         STATE["plotter_process"] = proc
+
+#     # ---- Wait until server is actually listening ----
+#     for _ in range(20):  # ~2 seconds max
+#         try:
+#             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#             sock.connect((HOST, PORT))
+#             sock.close()
+#             return
+#         except ConnectionRefusedError:
+#             time.sleep(0.1)
+
+#     raise RuntimeError("Plotter server did not start")
+
+# def update_plot():
+#     try:
+#         ensure_plotter_server()
+
+#         cfg = {
+#             "vtk_path": dpg.get_value("contour_vtk_path") or DEFAULT_VTK,
+#             "var": dpg.get_value("contour_var"),
+#             "cmap": dpg.get_value("contour_cmap") or "viridis",
+#             "dim": dpg.get_value("param_domain_dimensions"),
+#         }
+
+#         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#         sock.connect((HOST, PORT))
+#         sock.sendall(json.dumps(cfg).encode())
+#         sock.close()
+
+#     except Exception as e:
+#         append_log(f"Plotter connection error: {e}")
+
+# def shutdown_plotter():
+#     try:
+#         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#         sock.connect((HOST, PORT))
+#         sock.sendall(json.dumps({"cmd": "exit"}).encode())
+#         sock.close()
+#     except:
+#         pass
+

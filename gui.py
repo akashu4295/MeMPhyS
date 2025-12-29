@@ -17,13 +17,23 @@ import matplotlib.pyplot as plt
 import io
 import functools
 import webbrowser
-
+from datetime import datetime
 
 # ============================================================
 # Default parameters for the GUI
 
 STATE = {"plotter": None}
 LOG_DIR = "./logs"
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+today_str = datetime.today().strftime("%Y-%m-%d")
+log_file = f"logs/log_{today_str}.txt"
+if not os.path.exists(log_file):
+    file = open(log_file, "w")
+else:
+    file = open(log_file, "a")
+file.write("DATE: " + today_str + "\n\n")
 
 BASE_PARAMETERS = {
     "domain_dimensions": 2,
@@ -77,6 +87,8 @@ def write_params_csv(filename="flow_parameters.csv"):
     rows.append(["fractional_step", 1 if dpg.get_value("solver_method") == "Fractional Step" else 0])
     pd.DataFrame(rows, columns=["Parameter", "Value"]).to_csv(filename, index=False, header=False)
     append_log("Parameters written to flow_parameters.csv\n")
+    append_log_file(file, "Parameters written to flow_parameters.csv\n")
+
 
 def write_grid_csv():
     """Writes mesh file paths to grid_files.csv"""
@@ -93,10 +105,15 @@ def write_grid_csv():
         writer.writerow(["num_levels", num_levels])
         for path in mesh_paths:
             writer.writerow([path])
-    append_log("Grid details written to grid_filesnames.csv\n")
+    append_log("Grid details written to grid_filenames.csv\n")
+    append_log_file(file, "Grid details written to grid_filenames.csv\n")
 
 # =============================================================
 # Function to stream logs to GUI
+
+def append_log_file(file, msg):
+    file.write(msg + "\n")
+    file.flush()
 
 def append_log(msg):
     current = dpg.get_value("log_window") or ""
@@ -128,6 +145,7 @@ def run_solver(sender):
     
     dpg.set_value("log_window", "Starting new run...\n")
     append_log("Saving Meshfile details and parameters...\n")
+    append_log_file(file, "Saving Meshfile details and parameters...\n")
     write_grid_csv()
     # Detect OS
     system_type = platform.system()
@@ -147,6 +165,7 @@ def run_solver(sender):
         run_cmd = ["./solver"]
 
     append_log("Compiling solver...")
+    append_log_file(file, "Compiling solver...")
 
     # Compile first
     compile_process = subprocess.Popen(
@@ -159,9 +178,13 @@ def run_solver(sender):
 
     if compile_process.returncode != 0:
         append_log("Compilation failed:\n" + err)
+        append_log_file(file, "Compilation failed:\n" + err)
+        dpg.configure_item(sender, label="Compilation Failed! Try Again")
+        dpg.enable_item(sender)
         return
     else:
         append_log("Compilation successful. Running solver...\n")
+        append_log_file(file, "Compilation successful. Running solver...\n")
 
     # Run solver asynchronously (so GUI stays responsive)
     def solver_thread():
@@ -181,9 +204,11 @@ def run_solver(sender):
 
         if process.returncode == 0:
             append_log("Solver completed successfully.\n Solution file saved as Solution.csv")
+            append_log_file(file, "Solver completed successfully.\n Solution file saved as Solution.csv")
         else:
             append_log(f"Solver exited with code {process.returncode}.")
-        
+            append_log_file(file, f"Solver exited with code {process.returncode}.")
+
         dpg.configure_item(sender, label="Done! Run Again")
         dpg.enable_item(sender)
 
@@ -315,7 +340,6 @@ def update_mesh_inputs():
 
 def open_folder(path):
     path = os.path.abspath(path)
-
     if sys.platform.startswith("win"):
         os.startfile(path)
     elif sys.platform.startswith("darwin"):
@@ -367,9 +391,6 @@ def config_dir_selected(sender, app_data):
     print("Selected config directory:", selected_dir)
     # store this in STATE, load config, etc.
 
-def open_config_dir():
-    dpg.configure_item("config_dir_dialog", show=True)
-
 def open_file_dialog(sender, app_data, user_data):
     """Callback for each 'Browse' button."""
     dialog_tag = f"file_dialog_{user_data}"
@@ -377,10 +398,11 @@ def open_file_dialog(sender, app_data, user_data):
         dpg.configure_item(dialog_tag, show=True)
     else:
         append_log(f"File dialog {dialog_tag} not found!")
+        append_log_file(file, f"File dialog {dialog_tag} not found!")
 
 def show_implicit_callback():
     solver = dpg.get_value("solver_method")
-    show_implicit = solver == "Implicit"
+    show_implicit = solver == "Time Implicit"
     for pname in IMPLICIT_PARAMETERS.keys():
         dpg.configure_item(f"param_{pname}", show=show_implicit)
 
@@ -415,11 +437,13 @@ def update_plot():
         STATE["plotter_process"] = proc
     except Exception as e:
         append_log(f"Plotting Error: {e}")
+        append_log_file(file, f"Plotting Error: {e}")
 
 def do_save_image():
     plotter = STATE["plotter"]
     if plotter is None:
         append_log("Save failed: No active plot window found.")
+        append_log_file(file, "Save failed: No active plot window found.")
         return
     filename = dpg.get_value("contour_save_path") or "contour.png"
     if not any(filename.lower().endswith(ext) for ext in [".png", ".jpg", ".tif", ".pdf"]):
@@ -427,8 +451,10 @@ def do_save_image():
     try:
         plotter.screenshot(filename, scale=3) 
         append_log(f"Saved high-res image: {filename}")
+        append_log_file(file, f"Saved high-res image: {filename}")
     except Exception as e:
         append_log(f"Save failed: {e}")
+        append_log_file(file, f"Save failed: {e}")
 
 def update_convergence_plot():
     while dpg.is_dearpygui_running():
@@ -469,31 +495,48 @@ with dpg.theme() as button_theme:
         dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 12, 6)             # inner padding
         dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, 10, 10)
 
+# Define a custom button theme
+with dpg.theme() as button_theme2:
+    with dpg.theme_component(dpg.mvButton):
+        dpg.add_theme_color(dpg.mvThemeCol_Button, (40, 120, 200))          # normal
+        dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (60, 140, 230))   # hover
+        dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (30, 100, 180))    # pressed
+        dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 10)               # rounded corners
+        dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 12, 6)             # inner padding
+        dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, 10, 10)
+
+with dpg.theme() as menu_theme:
+    with dpg.theme_component(dpg.mvMenuBar):
+        dpg.add_theme_color(dpg.mvThemeCol_MenuBarBg, (28, 28, 32))
+        dpg.add_theme_color(dpg.mvThemeCol_Text, (220, 220, 220))
+        dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 10, 6)
+
+
 # Main Window
 with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
 
     with dpg.group(horizontal=True):
 
         # Left Column
-        with dpg.child_window(width=420, border=True):
+        with dpg.child_window(width=320, border=True, pos=(0, 30)):
             dpg.add_text("Input & Parameters", color=(200, 220, 255))
             dpg.add_spacer(height=5)
 
             dpg.add_text("Solver Method")
-            dpg.add_combo(items=["Fractional Step", "Implicit"],
+            dpg.add_combo(items=["Fractional Step", "Time Implicit"],
                           default_value="Fractional Step",
-                          tag="solver_method",
+                          tag="solver_method", width=200,
                           callback=lambda s, a, u: show_implicit_callback())
 
             dpg.add_separator()
             dpg.add_text("Flow Parameters", color=(255, 220, 160))
             for pname, pval in BASE_PARAMETERS.items():
                 tag = f"param_{pname}"
-                dpg.add_input_text(label=pname, tag=tag, default_value=str(pval))
+                dpg.add_input_text(label=pname, tag=tag, default_value=str(pval), width=100)
 
             # Implicit params (hidden unless selected)
             for pname, pval in IMPLICIT_PARAMETERS.items():
-                dpg.add_input_text(label=pname, tag=f"param_{pname}", default_value=str(pval), show=False)
+                dpg.add_input_text(label=pname, tag=f"param_{pname}", default_value=str(pval), show=False, width=100)
 
             # Multigrid section
             dpg.add_separator()
@@ -503,21 +546,22 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 dpg.add_text("Multigrid Parameters", color=(200, 255, 200))
                 # multigrid parameter inputs
                 for pname, pval in MULTIGRID_PARAMETERS.items():
-                    dpg.add_input_text(label=pname, tag=f"param_{pname}", default_value=str(pval))
+                    dpg.add_input_text(label=pname, tag=f"param_{pname}", default_value=str(pval), width=100)
                 # number of mesh levels (create once)
-                dpg.add_input_int(label="Number of mesh levels", default_value=1, min_value=1, max_value=10,
+                dpg.add_input_int(label="Number of mesh levels", default_value=1, min_value=1, max_value=10, width=100,
                   tag="num_mesh_levels", callback=lambda s, a, u: update_mesh_inputs())
 
             # Mesh inputs         
             with dpg.group(tag="multigrid_mesh_section"):
-                dpg.add_text("Choose Mesh Files (finest to coarsest if multigrid):", color=(200, 255, 255))
+                dpg.add_text("Choose Mesh Files", color=(200, 255, 200))
+                dpg.add_text("(finest to coarsest if multigrid)", color=(200, 255, 200))
 
                 for i in range(10):
                     idx = i + 1
                     show_initial = (i == 0)
 
                     with dpg.group(horizontal=True, show=show_initial, tag=f"mesh_group_{idx}"):
-                        dpg.add_input_text(tag=f"mesh_file_{idx}", hint=f"Mesh file {idx} (choose or type path)",width=300,show=show_initial)
+                        dpg.add_input_text(tag=f"mesh_file_{idx}", hint=f"Mesh file {idx} (choose or type path)",width=200,show=show_initial)
 
                         # Pass index as user_data
                         dpg.add_button(label="Browse", tag=f"browse_{idx}", callback=open_file_dialog, user_data=idx, show=show_initial)
@@ -533,7 +577,7 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
             dpg.add_separator()               
             dpg.add_text("Choose the initialisation file", color=(255, 220, 160))     
             with dpg.group(horizontal=True, show=True, tag="init_group"):
-                dpg.add_input_text(hint="Path to Initialisation file", tag="init_path",width = 300, show = True)
+                dpg.add_input_text(hint="Path to Initialisation file", tag="init_path",width = 200, show = True)
                 dpg.add_button(label="Browse", tag="init_browse", callback=open_file_dialog, user_data="init", show=True)
                 dpg.add_file_dialog(directory_selector=False, tag="file_dialog_init", user_data="init_path", callback=select_mesh_file, show=False, width=600, height=400)
                 dpg.add_file_extension(".c", parent="file_dialog_init")
@@ -544,7 +588,7 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
             with dpg.tooltip(compile_btn):
                 dpg.add_text("Click to compile and execute the solver", color=(220, 230, 255))
                 dpg.add_separator()
-                dpg.add_text("This recompiles all .c files and runs the solver executable.")
+                # dpg.add_text("This recompiles all .c files and runs the solver executable.")
             dpg.bind_item_theme(compile_btn, button_theme)
 
             
@@ -558,56 +602,59 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
             dpg.add_separator()
             dpg.add_spacer(height=6)
 
-            dpg.add_text("Contour plots")
+            dpg.add_text("Plotting options", color=(200, 255, 200))
             with dpg.group(horizontal=True):
-                dpg.add_input_text(label="VTK File", default_value=DEFAULT_VTK, tag="contour_vtk_path", width=300, show = True)
+                dpg.add_text("VTK File:")
+                dpg.add_input_text(hint="VTK File", default_value=DEFAULT_VTK, tag="contour_vtk_path", width=150, show = True)
                 dpg.add_button(label="Browse", tag="vtk_browse", callback=open_file_dialog, user_data="vtk", show=True)
                 dpg.add_file_dialog(directory_selector=False, tag="file_dialog_vtk", user_data="contour_vtk_path", callback=select_mesh_file, show=False, width=600, height=400)
                 dpg.add_file_extension(".vtk", parent="file_dialog_vtk")
-                dpg.add_combo(("u","v","w","velocity magnitude","p"), label="Variable", default_value="velocity magnitude", tag="contour_var", width=200)
-            
-            # options: variable, colormap, levels, filled
+                dpg.add_text("Variable:")
+                dpg.add_combo(("u","v","w","velocity magnitude","p"), label="##Variable", default_value="velocity magnitude", tag="contour_var", width=150)
+                dpg.add_text("Colormap:")
+                dpg.add_combo(CMAPS, label="##Colormap", default_value="viridis", tag="contour_cmap", width=150)
+                plot_btn = dpg.add_button(label="Plot", callback=lambda s,a,u: update_plot())
+                dpg.bind_item_theme(plot_btn, button_theme2)
+                
             with dpg.group(horizontal=True):
-                dpg.add_combo(CMAPS, label="Colormap", default_value="viridis", tag="contour_cmap", width=200)
-                dpg.add_input_int(label="Contour Levels", default_value=10, tag="contour_levels", width=120)
-                dpg.add_checkbox(label="Filled contours", default_value=True, tag="contour_filled")
+                dpg.add_text("Save Image as:")
+                dpg.add_input_text(hint="Save Path", default_value="contour.png", tag="contour_save_path", width=200)
+                save_btn = dpg.add_button(label="Save", callback=lambda s,a,u: do_save_image())
+                dpg.bind_item_theme(save_btn, button_theme2)
 
-            # custom image size inputs (so user can control resolution)
-            with dpg.group(horizontal=True):
-                dpg.add_input_int(label="Image Width (px)", default_value=DEFAULT_WIDTH, tag="contour_img_w", width=120)
-                dpg.add_input_int(label="Image Height (px)", default_value=DEFAULT_HEIGHT, tag="contour_img_h", width=120)
-                dpg.add_button(label="Plot", callback=lambda s,a,u: update_plot())
-                
-            with dpg.group(horizontal=True):
-                dpg.add_button(label="Save", callback=lambda s,a,u: do_save_image())
-                dpg.add_input_text(label="Save Path", default_value="contour.png", tag="contour_save_path", width=300)
-                
             dpg.add_separator()
             dpg.add_spacer(height=6)
-            dpg.add_text("Logs")
-            with dpg.group(horizontal=True):  # Put button next to label if you prefer
-                dpg.add_button(label="Clear Logs", callback=clear_logs)
-
+            dpg.add_text("Logs", color=(200, 255, 200))
+            
             # with dpg.child_window(tag="log_child", autosize_x=True, height=275, horizontal_scrollbar=True):
             dpg.add_input_text(tag="log_window", multiline=True, readonly=True, width=-1, height = 250,
                  default_value="Ready.\n")
-                
+    
+            clear_log_btn = dpg.add_button(label="Clear Logs", callback=clear_logs)
+            dpg.bind_item_theme(clear_log_btn, button_theme2)
+
 # Viewport setup
 dpg.create_viewport(title="MeMPhyS GUI", width=1280, height=800, resizable=True)
-with dpg.viewport_menu_bar():
+
+with dpg.viewport_menu_bar() as menu_bar:
     with dpg.menu(label="File"):
-        with dpg.menu(label="Save"):
-            dpg.add_menu_item(label="Log file", callback=save_logs)
-            dpg.add_menu_item(label="Configuration file", callback=open_config_dir)
-            with dpg.file_dialog(directory_selector=True, show=False, callback=config_dir_selected, tag="config_dir_dialog",
-                            width=700, height=400):
-                dpg.add_file_extension("", color=(255, 255, 255, 255))
-        with dpg.menu(label="Open"):
-            dpg.add_menu_item(label="Log file", callback=open_logs)
-            dpg.add_menu_item(label="Configuration file", callback=open_config_dir)
+        dpg.add_menu_item(label="Open Configuration", callback=open_file_dialog, user_data="config")
+        dpg.add_file_dialog(directory_selector=False, tag="file_dialog_config", user_data="config_path", callback=select_mesh_file, show=False, width=600, height=400)
+        dpg.add_file_extension(".c", parent="file_dialog_config", color=(255, 255, 255, 255))
+        dpg.add_menu_item(label="Open Log", callback=open_logs)
+        dpg.add_separator()
+        dpg.add_menu_item(label="Save Configuration", callback=open_file_dialog, user_data="config_save")
+        dpg.add_file_dialog(directory_selector=False, tag="file_dialog_config_save", user_data="config_save_path", callback=select_mesh_file, show=False, width=600, height=400)
+        dpg.add_file_extension(".c", parent="file_dialog_config_save", color=(255, 255, 255, 255))
+        dpg.add_separator()
+        dpg.add_menu_item(label="Exit", callback=dpg.stop_dearpygui)
+    # Spacer pushes Help menu to the right
+    dpg.add_spacer()
     with dpg.menu(label="Help"):
         dpg.add_menu_item(label="Help", callback=open_help)
         dpg.add_menu_item(label="About", callback=show_about)
+
+dpg.bind_item_theme(menu_bar, menu_theme)
 
 dpg.set_primary_window("MainWindow", True)
 dpg.setup_dearpygui()

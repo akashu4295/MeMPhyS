@@ -1,4 +1,5 @@
 Backup/
+logs/
 linear_stability.c
 *.jpg
 *.jpeg

@@ -18,6 +18,7 @@ import io
 import functools
 import webbrowser
 from datetime import datetime
+from pathlib import Path
 
 # ============================================================
 # Default parameters for the GUI
@@ -64,6 +65,120 @@ IMPLICIT_PARAMETERS = {
 DEFAULT_VTK = "Solution.vtk"
 CMAPS = sorted([m for m in plt.colormaps()]) # Gather available matplotlib colormaps for dropdown
 
+FONT_SIZES = [12, 14, 16, 18, 20, 24]
+FONT_FILES = {
+    "Roboto": "Roboto-Regular.ttf",
+    "Mono": "RobotoMono-Regular.ttf"
+}
+SYSTEM_FONTS = {
+    "Windows": ["Arial.ttf", "Calibri.ttf", "SegoeUI.ttf"],
+    "Darwin": ["Helvetica.ttc", "Arial.ttf", "Menlo.ttc"],  # macOS
+    "Linux": ["DejaVuSans.ttf", "LiberationSans-Regular.ttf"]
+}
+
+fonts = {}  # (name, size) -> font_id
+
+# ===========================================================
+# Font
+
+def find_system_font(preferred=None):
+    system = platform.system()
+    search_paths = []
+
+    if system == "Windows":
+        search_paths.append(Path(os.environ.get('WINDIR', 'C:/Windows')) / "Fonts")
+    elif system == "Darwin":
+        search_paths.extend([
+            Path("/System/Library/Fonts"),
+            Path("/Library/Fonts"),
+            Path.home() / "Library/Fonts"
+        ])
+    else:  # Linux
+        search_paths.extend([
+            Path("/usr/share/fonts/truetype"),
+            Path("/usr/local/share/fonts"),
+            Path.home() / ".fonts"
+        ])
+
+    # OS defaults
+    if system == "Windows":
+        defaults = ["Arial.ttf", "Calibri.ttf", "SegoeUI.ttf"]
+    elif system == "Darwin":
+        defaults = ["Helvetica.ttc", "Arial.ttf", "Menlo.ttc"]
+    else:
+        defaults = [
+            "DejaVuSans.ttf",
+            "DejaVuSans-Bold.ttf",
+            "LiberationSans-Regular.ttf",
+            "LiberationSans-Bold.ttf"
+        ]
+
+    candidates = (preferred or []) + defaults
+
+    for folder in search_paths:
+        for font_name in candidates:
+            font_path = folder / font_name
+            if font_path.exists():
+                return str(font_path)
+
+    # Fallback: first TTF found (Linux)
+    if system == "Linux":
+        for folder in search_paths:
+            if folder.exists():
+                for file in folder.rglob("*.ttf"):
+                    return str(file)
+
+    raise FileNotFoundError(f"No system font found. Tried: {candidates}")
+
+# def find_system_font(preferred=None):
+#     system = platform.system()
+#     search_paths = []
+
+#     if system == "Windows":
+#         search_paths.append(Path("/Windows/Fonts"))
+#     elif system == "Darwin":
+#         search_paths.extend([
+#             Path("/System/Library/Fonts"),
+#             Path("/Library/Fonts"),
+#             Path.home() / "Library/Fonts"
+#         ])
+#     else:  # Linux
+#         search_paths.extend([
+#             Path("/usr/share/fonts/truetype"),
+#             Path("/usr/local/share/fonts"),
+#             Path.home() / ".fonts"
+#         ])
+
+#     # OS defaults
+#     if system == "Windows":
+#         defaults = ["Arial.ttf", "Calibri.ttf", "SegoeUI.ttf"]
+#     elif system == "Darwin":
+#         defaults = ["Helvetica.ttc", "Arial.ttf", "Menlo.ttc"]
+#     else:  # Linux
+#         defaults = [
+#             "DejaVuSans.ttf",
+#             "DejaVuSans-Bold.ttf",
+#             "LiberationSans-Regular.ttf",
+#             "LiberationSans-Bold.ttf"
+#         ]
+
+#     candidates = (preferred or []) + defaults
+
+#     # Search
+#     for folder in search_paths:
+#         for font_name in candidates:
+#             font_path = folder / font_name
+#             if font_path.exists():
+#                 return str(font_path)
+
+#     # Last resort: pick the first file in the folder (Linux)
+#     if system == "Linux":
+#         for folder in search_paths:
+#             if folder.exists():
+#                 for file in folder.rglob("*.ttf"):
+#                     return str(file)
+
+#     raise FileNotFoundError(f"No system font found. Tried: {candidates}")
 
 # ============================================================
 # Helper functions for processing, and CSV Writers
@@ -321,6 +436,31 @@ def show_about():
         dpg.add_spacer(height=12)
         dpg.add_button(label="Close", width=80, callback=lambda: dpg.configure_item("about_window", show=False))
 
+def set_preferences():
+    if dpg.does_item_exist("preferences_window"):
+        dpg.configure_item("preferences_window", show=True)
+        dpg.focus_item("preferences_window")
+        return
+    with dpg.window(label="Preferences", tag="preferences_window", modal=True, width=450, height=250, no_resize=True):
+        dpg.add_text("Preferences", color=(200, 220, 255))
+        dpg.add_separator()
+        dpg.add_combo(label="Font family", items=FONT_PREFERENCES, default_value=current_font_name, tag="pref_font_family")
+        dpg.add_combo(label="Font size", items=FONT_SIZES, default_value=current_font_size, tag="pref_font_size")
+        dpg.add_spacer(height=12)
+        dpg.add_button(label="Apply", width=80, callback=apply_preferences)
+        dpg.add_same_line()
+        dpg.add_button(label="Close", width=80, callback=lambda: dpg.configure_item("preferences_window", show=False))
+
+def apply_preferences():
+    global current_font_name, current_font_size
+    font_name = dpg.get_value("pref_font_family")
+    font_size = dpg.get_value("pref_font_size")
+    key = (font_name, font_size)
+    if key in fonts:
+        dpg.bind_font(fonts[key])
+        current_font_name = font_name
+        current_font_size = font_size
+
 def open_logs():
     if not os.path.exists(LOG_DIR):
         os.makedirs(LOG_DIR)
@@ -430,6 +570,18 @@ def update_convergence_plot():
 # GUI Construction
 dpg.create_context()
 
+FONT_SIZES = [12, 14, 16, 18, 20, 24]
+FONT_PREFERENCES = ["Arial.ttf", "LiberationSans-Regular.ttf", "DejaVuSans.ttf"]
+fonts = {}
+for font_name in FONT_PREFERENCES:
+    font_file = find_system_font([font_name])
+    with dpg.font_registry():
+        for size in FONT_SIZES:
+            fonts[(font_name, size)] = dpg.add_font(font_file, size)
+current_font_name = FONT_PREFERENCES[0]
+current_font_size = 16
+dpg.bind_font(fonts[(current_font_name, current_font_size)])
+
 # Define a custom button theme
 with dpg.theme() as button_theme:
     with dpg.theme_component(dpg.mvButton):
@@ -459,34 +611,49 @@ with dpg.theme() as menu_theme:
 
 # Main Window
 with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
+    with dpg.menu_bar() as menu_bar:
+        with dpg.menu(label="File"):
+            dpg.add_menu_item(label="Open Configuration", callback=open_file_dialog, user_data="config")
+            dpg.add_file_dialog(directory_selector=False, tag="file_dialog_config", user_data="config_path", callback=select_mesh_file, show=False, width=600, height=400)
+            dpg.add_file_extension(".c", parent="file_dialog_config", color=(255, 255, 255, 255))
+            dpg.add_menu_item(label="Open Log", callback=open_logs)
+            dpg.add_separator()
+            dpg.add_menu_item(label="Save Configuration", callback=open_file_dialog, user_data="config_save")
+            dpg.add_file_dialog(directory_selector=False, tag="file_dialog_config_save", user_data="config_save_path", callback=select_mesh_file, show=False, width=600, height=400)
+            dpg.add_file_extension(".c", parent="file_dialog_config_save", color=(255, 255, 255, 255))
+            dpg.add_separator()
+            dpg.add_menu_item(label="Exit", callback=dpg.stop_dearpygui)
+        # Spacer pushes Help menu to the right
+        dpg.add_spacer()
+        with dpg.menu(label="Edit"):
+            dpg.add_menu_item(label="Preferences", callback=set_preferences)
+        dpg.add_spacer()
+        with dpg.menu(label="Help"):
+            dpg.add_menu_item(label="Help", callback=open_help)
+            dpg.add_menu_item(label="About", callback=show_about)
+    dpg.bind_item_theme(menu_bar, menu_theme)
 
     with dpg.group(horizontal=True):
-
         # Left Column
-        with dpg.child_window(width=320, border=True, pos=(0, 30)):
+        with dpg.child_window(width=320, border=True):
             dpg.add_text("Input & Parameters", color=(200, 220, 255))
             dpg.add_spacer(height=5)
-
             dpg.add_text("Solver Method")
             dpg.add_combo(items=["Fractional Step", "Time Implicit"],
                           default_value="Fractional Step",
                           tag="solver_method", width=200,
                           callback=lambda s, a, u: show_implicit_callback())
-
             dpg.add_separator()
             dpg.add_text("Flow Parameters", color=(255, 220, 160))
             for pname, pval in BASE_PARAMETERS.items():
                 tag = f"param_{pname}"
                 dpg.add_input_text(label=pname, tag=tag, default_value=str(pval), width=100)
-
             # Implicit params (hidden unless selected)
             for pname, pval in IMPLICIT_PARAMETERS.items():
                 dpg.add_input_text(label=pname, tag=f"param_{pname}", default_value=str(pval), show=False, width=100)
-
             # Multigrid section
             dpg.add_separator()
             dpg.add_checkbox(label="Enable Multigrid", tag="multigrid_toggle", callback=lambda s, a, u: show_multigrid_callback())
-            
             with dpg.group(horizontal=False, tag="multigrid_parameters_section", show=False):
                 dpg.add_text("Multigrid Parameters", color=(200, 255, 200))
                 # multigrid parameter inputs
@@ -495,30 +662,23 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 # number of mesh levels (create once)
                 dpg.add_input_int(label="Number of mesh levels", default_value=1, min_value=1, max_value=10, width=100,
                   tag="num_mesh_levels", callback=lambda s, a, u: update_mesh_inputs())
-
             # Mesh inputs         
             with dpg.group(tag="multigrid_mesh_section"):
                 dpg.add_text("Choose Mesh Files", color=(200, 255, 200))
                 dpg.add_text("(finest to coarsest if multigrid)", color=(200, 255, 200))
-
                 for i in range(10):
                     idx = i + 1
                     show_initial = (i == 0)
-
                     with dpg.group(horizontal=True, show=show_initial, tag=f"mesh_group_{idx}"):
                         dpg.add_input_text(tag=f"mesh_file_{idx}", hint=f"Mesh file {idx} (choose or type path)",width=200,show=show_initial)
-
                         # Pass index as user_data
                         dpg.add_button(label="Browse", tag=f"browse_{idx}", callback=open_file_dialog, user_data=idx, show=show_initial)
-
                 # File dialogs (defined *after* so they exist when we call show_item)
                 for i in range(10):
                     dialog_tag = f"file_dialog_{i+1}"
                     input_tag = f"mesh_file_{i+1}"
-
                     dpg.add_file_dialog(directory_selector=False, tag=dialog_tag, user_data=input_tag, callback=select_mesh_file, show=False, width=600, height=400)
                     dpg.add_file_extension(".msh", parent=dialog_tag)
-            
             dpg.add_separator()               
             dpg.add_text("Choose the initialisation file", color=(255, 220, 160))     
             with dpg.group(horizontal=True, show=True, tag="init_group"):
@@ -526,7 +686,6 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 dpg.add_button(label="Browse", tag="init_browse", callback=open_file_dialog, user_data="init", show=True)
                 dpg.add_file_dialog(directory_selector=False, tag="file_dialog_init", user_data="init_path", callback=select_mesh_file, show=False, width=600, height=400)
                 dpg.add_file_extension(".c", parent="file_dialog_init")
-                        
             # Write button and spacer
             dpg.add_spacer(height=10)
             compile_btn = dpg.add_button(label="Compile and Run Solver", width=250, height=45, callback=run_solver)
@@ -535,7 +694,6 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 dpg.add_separator()
                 # dpg.add_text("This recompiles all .c files and runs the solver executable.")
             dpg.bind_item_theme(compile_btn, button_theme)
-
             
         # Right Column
         with dpg.child_window(width=-1, border=True):
@@ -546,7 +704,6 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 dpg.add_line_series([], [], parent="y_axis_conv", tag="conv_series", label="Convergence")
             dpg.add_separator()
             dpg.add_spacer(height=6)
-
             dpg.add_text("Plotting options", color=(200, 255, 200))
             with dpg.group(horizontal=True):
                 dpg.add_text("VTK File:")
@@ -560,47 +717,21 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 dpg.add_combo(CMAPS, label="##Colormap", default_value="viridis", tag="contour_cmap", width=150)
                 plot_btn = dpg.add_button(label="Plot", callback=lambda s,a,u: update_plot())
                 dpg.bind_item_theme(plot_btn, button_theme2)
-                
             with dpg.group(horizontal=True):
                 dpg.add_text("Save Image as:")
                 dpg.add_input_text(hint="Save Path", default_value="contour.png", tag="contour_save_path", width=200)
                 save_btn = dpg.add_button(label="Save", callback=lambda s,a,u: do_save_image())
                 dpg.bind_item_theme(save_btn, button_theme2)
-
             dpg.add_separator()
             dpg.add_spacer(height=6)
             dpg.add_text("Logs", color=(200, 255, 200))
-            
-            # with dpg.child_window(tag="log_child", autosize_x=True, height=275, horizontal_scrollbar=True):
             dpg.add_input_text(tag="log_window", multiline=True, readonly=True, width=-1, height = 250,
-                 default_value="Ready.\n")
-    
+                 default_value="Ready.\n")    
             clear_log_btn = dpg.add_button(label="Clear Logs", callback=clear_logs)
             dpg.bind_item_theme(clear_log_btn, button_theme2)
 
 # Viewport setup
 dpg.create_viewport(title="MeMPhyS GUI", width=1280, height=800, resizable=True)
-
-with dpg.viewport_menu_bar() as menu_bar:
-    with dpg.menu(label="File"):
-        dpg.add_menu_item(label="Open Configuration", callback=open_file_dialog, user_data="config")
-        dpg.add_file_dialog(directory_selector=False, tag="file_dialog_config", user_data="config_path", callback=select_mesh_file, show=False, width=600, height=400)
-        dpg.add_file_extension(".c", parent="file_dialog_config", color=(255, 255, 255, 255))
-        dpg.add_menu_item(label="Open Log", callback=open_logs)
-        dpg.add_separator()
-        dpg.add_menu_item(label="Save Configuration", callback=open_file_dialog, user_data="config_save")
-        dpg.add_file_dialog(directory_selector=False, tag="file_dialog_config_save", user_data="config_save_path", callback=select_mesh_file, show=False, width=600, height=400)
-        dpg.add_file_extension(".c", parent="file_dialog_config_save", color=(255, 255, 255, 255))
-        dpg.add_separator()
-        dpg.add_menu_item(label="Exit", callback=dpg.stop_dearpygui)
-    # Spacer pushes Help menu to the right
-    dpg.add_spacer()
-    with dpg.menu(label="Help"):
-        dpg.add_menu_item(label="Help", callback=open_help)
-        dpg.add_menu_item(label="About", callback=show_about)
-
-dpg.bind_item_theme(menu_bar, menu_theme)
-
 dpg.set_primary_window("MainWindow", True)
 dpg.setup_dearpygui()
 dpg.show_viewport()

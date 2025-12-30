@@ -47,7 +47,7 @@ BASE_PARAMETERS = {
     "poisson_solver_tolerance": 1e-8,
     "sor_parameter": 1.6,
     "time_step": 0.1,
-    "num_time_steps": 100000,
+    "num_time_steps": 100,
     "write_interval": 50,
     "Re": 10,
 }
@@ -77,6 +77,26 @@ SYSTEM_FONTS = {
 }
 
 fonts = {}  # (name, size) -> font_id
+
+# ===========================================================
+# file operations
+def cleanup_resources():
+    """Clean up resources before exit"""
+    global file
+    try:
+        if file and not file.closed:
+            file.write("\n=== Session ended ===\n")
+            file.close()
+            print("Log file closed successfully")
+    except Exception as e:
+        print(f"Error closing log file: {e}")
+    
+    # Terminate any running solver process
+    proc = STATE.get("plotter_process")
+    if proc is not None and proc.poll() is None:
+        proc.terminate()
+        print("Plotter process terminated")
+
 
 # ===========================================================
 # Font
@@ -130,96 +150,118 @@ def find_system_font(preferred=None):
 
     raise FileNotFoundError(f"No system font found. Tried: {candidates}")
 
-# def find_system_font(preferred=None):
-#     system = platform.system()
-#     search_paths = []
-
-#     if system == "Windows":
-#         search_paths.append(Path("/Windows/Fonts"))
-#     elif system == "Darwin":
-#         search_paths.extend([
-#             Path("/System/Library/Fonts"),
-#             Path("/Library/Fonts"),
-#             Path.home() / "Library/Fonts"
-#         ])
-#     else:  # Linux
-#         search_paths.extend([
-#             Path("/usr/share/fonts/truetype"),
-#             Path("/usr/local/share/fonts"),
-#             Path.home() / ".fonts"
-#         ])
-
-#     # OS defaults
-#     if system == "Windows":
-#         defaults = ["Arial.ttf", "Calibri.ttf", "SegoeUI.ttf"]
-#     elif system == "Darwin":
-#         defaults = ["Helvetica.ttc", "Arial.ttf", "Menlo.ttc"]
-#     else:  # Linux
-#         defaults = [
-#             "DejaVuSans.ttf",
-#             "DejaVuSans-Bold.ttf",
-#             "LiberationSans-Regular.ttf",
-#             "LiberationSans-Bold.ttf"
-#         ]
-
-#     candidates = (preferred or []) + defaults
-
-#     # Search
-#     for folder in search_paths:
-#         for font_name in candidates:
-#             font_path = folder / font_name
-#             if font_path.exists():
-#                 return str(font_path)
-
-#     # Last resort: pick the first file in the folder (Linux)
-#     if system == "Linux":
-#         for folder in search_paths:
-#             if folder.exists():
-#                 for file in folder.rglob("*.ttf"):
-#                     return str(file)
-
-#     raise FileNotFoundError(f"No system font found. Tried: {candidates}")
-
 # ============================================================
 # Helper functions for processing, and CSV Writers
 
+def validate_numeric_input(sender, app_data):
+    """Validate that input is a valid number"""
+    try:
+        value = dpg.get_value(sender)
+        # Try to convert to float
+        float(value)
+    except ValueError:
+        # If invalid, revert to previous valid value or default
+        param_name = sender.replace("param_", "")
+        if param_name in BASE_PARAMETERS:
+            dpg.set_value(sender, str(BASE_PARAMETERS[param_name]))
+        elif param_name in IMPLICIT_PARAMETERS:
+            dpg.set_value(sender, str(IMPLICIT_PARAMETERS[param_name]))
+        elif param_name in MULTIGRID_PARAMETERS:
+            dpg.set_value(sender, str(MULTIGRID_PARAMETERS[param_name]))
+        append_log(f"Invalid input for {param_name}. Reverted to default.")
+
+# def write_params_csv(filename="flow_parameters.csv"):
+#     rows = []
+#     for pname, default in BASE_PARAMETERS.items():
+#         val = dpg.get_value(f"param_{pname}")
+#         rows.append([pname, val])
+#     for pname, default in IMPLICIT_PARAMETERS.items():
+#         val = dpg.get_value(f"param_{pname}")
+#         rows.append([pname, val])
+#     for pname, default in MULTIGRID_PARAMETERS.items():
+#         val = dpg.get_value(f"param_{pname}")
+#         rows.append([pname, val])
+#     rows.append(["neumann_flag_boundary", "1"])
+#     rows.append(["facRe", "1"])
+#     rows.append(["facdt", "1"])
+#     rows.append(["fractional_step", 1 if dpg.get_value("solver_method") == "Fractional Step" else 0])
+#     pd.DataFrame(rows, columns=["Parameter", "Value"]).to_csv(filename, index=False, header=False)
+#     append_log("Parameters written to flow_parameters.csv\n")
+#     append_log_file(file, "Parameters written to flow_parameters.csv\n")
+
+
+# def write_grid_csv():
+#     """Writes mesh file paths to grid_files.csv"""
+#     mg_enabled = dpg.get_value("multigrid_toggle")
+#     num_levels = 1
+#     mesh_paths = []
+#     num_levels = int(dpg.get_value("num_mesh_levels"))
+#     for i in range(num_levels):
+#         path = dpg.get_value(f"mesh_file_{i+1}")
+#         if path:
+#             mesh_paths.append(path)
+#     with open("grid_filenames.csv", "w", newline="") as f:
+#         writer = csv.writer(f)
+#         writer.writerow(["num_levels", num_levels])
+#         for path in mesh_paths:
+#             writer.writerow([path])
+#     append_log("Grid details written to grid_filenames.csv\n")
+#     append_log_file(file, "Grid details written to grid_filenames.csv\n")
+
 def write_params_csv(filename="flow_parameters.csv"):
-    rows = []
-    for pname, default in BASE_PARAMETERS.items():
-        val = dpg.get_value(f"param_{pname}")
-        rows.append([pname, val])
-    for pname, default in IMPLICIT_PARAMETERS.items():
-        val = dpg.get_value(f"param_{pname}")
-        rows.append([pname, val])
-    for pname, default in MULTIGRID_PARAMETERS.items():
-        val = dpg.get_value(f"param_{pname}")
-        rows.append([pname, val])
-    rows.append(["neumann_flag_boundary", "1"])
-    rows.append(["facRe", "1"])
-    rows.append(["facdt", "1"])
-    rows.append(["fractional_step", 1 if dpg.get_value("solver_method") == "Fractional Step" else 0])
-    pd.DataFrame(rows, columns=["Parameter", "Value"]).to_csv(filename, index=False, header=False)
-    append_log("Parameters written to flow_parameters.csv\n")
-    append_log_file(file, "Parameters written to flow_parameters.csv\n")
+    try:
+        rows = []
+        for pname, default in BASE_PARAMETERS.items():
+            val = dpg.get_value(f"param_{pname}")
+            rows.append([pname, val])
+        for pname, default in IMPLICIT_PARAMETERS.items():
+            val = dpg.get_value(f"param_{pname}")
+            rows.append([pname, val])
+        for pname, default in MULTIGRID_PARAMETERS.items():
+            val = dpg.get_value(f"param_{pname}")
+            rows.append([pname, val])
+        rows.append(["neumann_flag_boundary", "1"])
+        rows.append(["facRe", "1"])
+        rows.append(["facdt", "1"])
+        rows.append(["fractional_step", 1 if dpg.get_value("solver_method") == "Fractional Step" else 0])
+        pd.DataFrame(rows, columns=["Parameter", "Value"]).to_csv(filename, index=False, header=False)
+        append_log("Parameters written to flow_parameters.csv\n")
+        append_log_file(file, "Parameters written to flow_parameters.csv\n")
+    except Exception as e:
+        append_log(f"Error writing parameters: {e}\n")
+        append_log_file(file, f"Error writing parameters: {e}\n")
 
 
 def write_grid_csv():
     """Writes mesh file paths to grid_files.csv"""
-    mg_enabled = dpg.get_value("multigrid_toggle")
-    num_levels = 1
-    mesh_paths = []
-    num_levels = int(dpg.get_value("num_mesh_levels"))
-    for i in range(num_levels):
-        path = dpg.get_value(f"mesh_file_{i+1}")
-        if path:
-            mesh_paths.append(path)
-    with open("grid_filenames.csv", "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["num_levels", num_levels])
-        for path in mesh_paths:
-            writer.writerow([path])
-    append_log("Grid details written to grid_filenames.csv\n")
-    append_log_file(file, "Grid details written to grid_filenames.csv\n")
+    try:
+        mg_enabled = dpg.get_value("multigrid_toggle")
+        num_levels = 1
+        mesh_paths = []
+        num_levels = int(dpg.get_value("num_mesh_levels"))
+        for i in range(num_levels):
+            path = dpg.get_value(f"mesh_file_{i+1}")
+            if path:
+                mesh_paths.append(path)
+            else:
+                append_log(f"Warning: Mesh file {i+1} is empty\n")
+        
+        if not mesh_paths:
+            append_log("Error: No mesh files specified\n")
+            return False
+            
+        with open("grid_filenames.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["num_levels", num_levels])
+            for path in mesh_paths:
+                writer.writerow([path])
+        append_log("Grid details written to grid_filenames.csv\n")
+        append_log_file(file, "Grid details written to grid_filenames.csv\n")
+        return True
+    except Exception as e:
+        append_log(f"Error writing grid file: {e}\n")
+        append_log_file(file, f"Error writing grid file: {e}\n")
+        return False
 
 # =============================================================
 # Function to stream logs to GUI
@@ -251,7 +293,9 @@ def clear_logs():
 def run_solver(sender):
     """Compile and run the C solver, streaming logs into the GUI."""
     # disable button while running
-    write_grid_csv()
+    if not write_grid_csv():  # Add this check
+        append_log("Cannot run solver: grid file writing failed\n")
+        return
     write_params_csv()
     dpg.disable_item(sender)
     dpg.configure_item(sender, label="Compiling and Running...")
@@ -299,7 +343,6 @@ def run_solver(sender):
         append_log("Compilation successful. Running solver...\n")
         append_log_file(file, "Compilation successful. Running solver...\n")
 
-    # Run solver asynchronously (so GUI stays responsive)
     def solver_thread():
         process = subprocess.Popen(
             run_cmd,
@@ -310,21 +353,24 @@ def run_solver(sender):
             universal_newlines=True
         )
         for line in process.stdout:
-            append_log(line.strip())
+            if dpg.is_dearpygui_running():  # Add this check
+                append_log(line.strip())
         for line in process.stderr:
-            append_log(line.strip())
+            if dpg.is_dearpygui_running():  # Add this check
+                append_log(line.strip())
         process.wait()
 
-        if process.returncode == 0:
-            append_log("Solver completed successfully.\n Solution file saved as Solution.csv")
-            append_log_file(file, "Solver completed successfully.\n Solution file saved as Solution.csv")
-        else:
-            append_log(f"Solver exited with code {process.returncode}.")
-            append_log_file(file, f"Solver exited with code {process.returncode}.")
+        # Only update GUI if it's still running
+        if dpg.is_dearpygui_running():
+            if process.returncode == 0:
+                append_log("Solver completed successfully.\n Solution file saved as Solution.csv")
+                append_log_file(file, "Solver completed successfully.\n Solution file saved as Solution.csv")
+            else:
+                append_log(f"Solver exited with code {process.returncode}.")
+                append_log_file(file, f"Solver exited with code {process.returncode}.")
 
-        dpg.configure_item(sender, label="Done! Run Again")
-        dpg.enable_item(sender)
-
+            dpg.configure_item(sender, label="Done! Run Again")
+            dpg.enable_item(sender)
     threading.Thread(target=solver_thread, daemon=True).start()
 
 def on_write_callback(sender, app_data, user_data):
@@ -524,25 +570,25 @@ def update_plot():
         append_log(f"Plotting Error: {e}")
         append_log_file(file, f"Plotting Error: {e}")
 
-def do_save_image():
-    plotter = STATE["plotter"]
-    if plotter is None:
-        append_log("Save failed: No active plot window found.")
-        append_log_file(file, "Save failed: No active plot window found.")
-        return
-    filename = dpg.get_value("contour_save_path") or "contour.png"
-    if not any(filename.lower().endswith(ext) for ext in [".png", ".jpg", ".tif", ".pdf"]):
-        filename = filename + ".png"
-    try:
-        plotter.screenshot(filename, scale=3) 
-        append_log(f"Saved high-res image: {filename}")
-        append_log_file(file, f"Saved high-res image: {filename}")
-    except Exception as e:
-        append_log(f"Save failed: {e}")
-        append_log_file(file, f"Save failed: {e}")
+# def do_save_image():
+#     plotter = STATE["plotter"]
+#     if plotter is None:
+#         append_log("Save failed: No active plot window found.")
+#         append_log_file(file, "Save failed: No active plot window found.")
+#         return
+#     filename = dpg.get_value("contour_save_path") or "contour.png"
+#     if not any(filename.lower().endswith(ext) for ext in [".png", ".jpg", ".tif", ".pdf"]):
+#         filename = filename + ".png"
+#     try:
+#         plotter.screenshot(filename, scale=3) 
+#         append_log(f"Saved high-res image: {filename}")
+#         append_log_file(file, f"Saved high-res image: {filename}")
+#     except Exception as e:
+#         append_log(f"Save failed: {e}")
+#         append_log_file(file, f"Save failed: {e}")
 
 def update_convergence_plot():
-    while dpg.is_dearpygui_running():
+    while dpg.is_dearpygui_running():  # This check exists but loop still runs
         if os.path.exists("Convergence.csv"):
             try:
                 df = pd.read_csv("Convergence.csv")
@@ -563,8 +609,12 @@ def update_convergence_plot():
                         dpg.set_axis_limits("x_axis_conv", x_min, x_max)
                         dpg.set_axis_limits("y_axis_conv", y_min, y_max)
             except Exception as e:
-                print("Error updating plot:", e)
+                # Don't print during shutdown
+                if dpg.is_dearpygui_running():
+                    print("Error updating plot:", e)
         time.sleep(2)
+    print("Convergence plot monitor stopped")  # Confirm clean exit
+
 
 # ============================================================
 # GUI Construction
@@ -622,7 +672,7 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
             dpg.add_file_dialog(directory_selector=False, tag="file_dialog_config_save", user_data="config_save_path", callback=select_mesh_file, show=False, width=600, height=400)
             dpg.add_file_extension(".c", parent="file_dialog_config_save", color=(255, 255, 255, 255))
             dpg.add_separator()
-            dpg.add_menu_item(label="Exit", callback=dpg.stop_dearpygui)
+            dpg.add_menu_item(label="Exit", callback=lambda: (cleanup_resources(), dpg.stop_dearpygui()))
         # Spacer pushes Help menu to the right
         dpg.add_spacer()
         with dpg.menu(label="Edit"):
@@ -647,10 +697,10 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
             dpg.add_text("Flow Parameters", color=(255, 220, 160))
             for pname, pval in BASE_PARAMETERS.items():
                 tag = f"param_{pname}"
-                dpg.add_input_text(label=pname, tag=tag, default_value=str(pval), width=100)
+                dpg.add_input_text(label=pname, tag=tag, default_value=str(pval), width=100, callback=validate_numeric_input, on_enter=True)
             # Implicit params (hidden unless selected)
             for pname, pval in IMPLICIT_PARAMETERS.items():
-                dpg.add_input_text(label=pname, tag=f"param_{pname}", default_value=str(pval), show=False, width=100)
+                dpg.add_input_text(label=pname, tag=f"param_{pname}", default_value=str(pval), show=False, width=100, callback=validate_numeric_input, on_enter=True)
             # Multigrid section
             dpg.add_separator()
             dpg.add_checkbox(label="Enable Multigrid", tag="multigrid_toggle", callback=lambda s, a, u: show_multigrid_callback())
@@ -658,7 +708,7 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 dpg.add_text("Multigrid Parameters", color=(200, 255, 200))
                 # multigrid parameter inputs
                 for pname, pval in MULTIGRID_PARAMETERS.items():
-                    dpg.add_input_text(label=pname, tag=f"param_{pname}", default_value=str(pval), width=100)
+                    dpg.add_input_text(label=pname, tag=f"param_{pname}", default_value=str(pval), width=100, callback=validate_numeric_input, on_enter=True)
                 # number of mesh levels (create once)
                 dpg.add_input_int(label="Number of mesh levels", default_value=1, min_value=1, max_value=10, width=100,
                   tag="num_mesh_levels", callback=lambda s, a, u: update_mesh_inputs())
@@ -717,11 +767,11 @@ with dpg.window(label="MeMPhyS GUI", tag="MainWindow", no_close=True):
                 dpg.add_combo(CMAPS, label="##Colormap", default_value="viridis", tag="contour_cmap", width=150)
                 plot_btn = dpg.add_button(label="Plot", callback=lambda s,a,u: update_plot())
                 dpg.bind_item_theme(plot_btn, button_theme2)
-            with dpg.group(horizontal=True):
-                dpg.add_text("Save Image as:")
-                dpg.add_input_text(hint="Save Path", default_value="contour.png", tag="contour_save_path", width=200)
-                save_btn = dpg.add_button(label="Save", callback=lambda s,a,u: do_save_image())
-                dpg.bind_item_theme(save_btn, button_theme2)
+            # with dpg.group(horizontal=True):
+            #     dpg.add_text("Save Image as:")
+            #     dpg.add_input_text(hint="Save Path", default_value="contour.png", tag="contour_save_path", width=200)
+            #     save_btn = dpg.add_button(label="Save", callback=lambda s,a,u: do_save_image())
+            #     dpg.bind_item_theme(save_btn, button_theme2)
             dpg.add_separator()
             dpg.add_spacer(height=6)
             dpg.add_text("Logs", color=(200, 255, 200))
@@ -737,4 +787,5 @@ dpg.setup_dearpygui()
 dpg.show_viewport()
 threading.Thread(target=update_convergence_plot, daemon=True).start()
 dpg.start_dearpygui()
+cleanup_resources()
 dpg.destroy_context()

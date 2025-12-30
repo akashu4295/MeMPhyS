@@ -32,3 +32,5 @@ timple_solver.n001.gpu
 timple_solver.n001.ptx
 test.c
 solver*
+GUI_plans.txt
+mg_heat_conduction.c

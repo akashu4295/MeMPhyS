@@ -15,7 +15,7 @@ iter_momentum,5
 iter_timple,1
 num_vcycles,10
 num_relax,50
+fractional_step,1
 neumann_flag_boundary,1
 facRe,1
 facdt,1
-fractional_step,1

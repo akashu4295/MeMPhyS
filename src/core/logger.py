@@ -141,9 +141,6 @@ class Logger:
             # Append new message
             dpg.set_value(self.log_window_tag, current + message + "\n")
             
-            # Don't force frame split - this can cause hangs
-            # dpg.split_frame()
-            
             # Auto-scroll if near bottom
             self._auto_scroll()
             
@@ -340,22 +337,22 @@ logger = Logger()
 
 
 # Convenience functions for backward compatibility
-def append_log(message: str):
-    """Append a message to the log (backward compatible)"""
-    logger.info(message)
+# def append_log(message: str):
+#     """Append a message to the log (backward compatible)"""
+#     logger.info(message)
 
 
-def append_log_file(file_handle, message: str):
-    """Append a message to log file (backward compatible)"""
-    if file_handle is not None:
-        try:
-            if not file_handle.closed:
-                file_handle.write(message + "\n")
-                file_handle.flush()
-        except Exception as e:
-            print(f"Error writing to log file: {e}")
+# def append_log_file(file_handle, message: str):
+#     """Append a message to log file (backward compatible)"""
+#     if file_handle is not None:
+#         try:
+#             if not file_handle.closed:
+#                 file_handle.write(message + "\n")
+#                 file_handle.flush()
+#         except Exception as e:
+#             print(f"Error writing to log file: {e}")
 
 
-def clear_logs():
-    """Clear the log window (backward compatible)"""
-    logger.clear()
+# def clear_logs():
+#     """Clear the log window (backward compatible)"""
+#     logger.clear()

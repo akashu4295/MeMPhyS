@@ -11,9 +11,9 @@ from .state import AppState, app_state
 from .logger import (
     Logger, 
     logger, 
-    append_log, 
-    append_log_file, 
-    clear_logs
+    # append_log, 
+    # append_log_file, 
+    # clear_logs
 )
 
 __all__ = [
@@ -24,7 +24,7 @@ __all__ = [
     # Logging
     'Logger',
     'logger',
-    'append_log',
-    'append_log_file',
-    'clear_logs',
+    # 'append_log',
+    # 'append_log_file',
+    # 'clear_logs',
 ]

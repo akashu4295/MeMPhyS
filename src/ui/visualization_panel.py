@@ -32,7 +32,7 @@ from src.callbacks import (
     change_colormap_callback,
     change_variable_callback,
 )
-from src.core import clear_logs
+# from src.core import clear_logs
 
 
 def create_visualization_panel(themes: dict) -> int:

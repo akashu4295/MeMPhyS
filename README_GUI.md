@@ -1,5 +1,30 @@
 # MeMPhyS GUI Guide
 
+# [TODO]MeMPhyS GUI Restructuring 
+
+### High Priority
+- [o] Test full solver workflow (compile → run → plot)
+- [o] Verify mesh file validation
+- [ ] Test all callbacks thoroughly
+- [ ] Remove debug print statements from main.py
+
+### Medium Priority
+- [ ] Enable custom fonts (set `ENABLE_CUSTOM_FONTS = True`)
+- [ ] Implement config save/load functionality
+- [ ] Add unit tests for modules
+- [ ] Add more validation rules
+
+### Low Priority
+- [ ] Advanced plot settings dialog
+- [ ] Keyboard shortcuts
+- [ ] Drag-and-drop mesh files
+- [ ] Recent files menu
+
+## Known Limitations
+
+1. **Font Changes**: Require application restart (DearPyGUI limitation)
+2. **Screenshot Feature**: External plotter window only
+3. **Config Save/Load**: Not yet implemented (placeholders exist)
 
 ## New Directory Structure
 
@@ -221,24 +246,87 @@ All callback functions organized by function:
 - `show_confirmation_dialog()` - Yes/No confirmation
 
 
-## Next Steps
+## Configuration
 
-1. **Code is restructured**
-2. **Test thoroughly** - Run through all features
-3. **Add unit tests** - Test individual modules
-4. **Update documentation** - User manual
-5. **Add more features** - Config save/load, advanced validation
+### Enable Custom Fonts
+In `main.py`, line ~47:
+```python
+ENABLE_CUSTOM_FONTS = True  # Change to True
+```
 
-## Support
+### Adjust Convergence Update Interval
+In `src/config/constants.py`:
+```python
+CONVERGENCE_UPDATE_INTERVAL = 2.0  # seconds
+```
 
-For issues or questions:
-- Check logs in `logs/` directory
-- Enable debug logging: `logger.set_enable_console(True)`
-- Review this guide
-- Check GitHub repository
+### Change Log Level
+In your code:
+```python
+logger.set_enable_console(True)   # Console output
+logger.set_enable_file(True)      # File output
+logger.set_enable_gui(True)       # GUI output
+```
+
+## Code Examples
+
+### Using the Logger
+```python
+from src.core import logger
+
+logger.info("Information message")
+logger.success("Success message")
+logger.error("Error message")
+logger.warning("Warning message")
+logger.separator()
+```
+
+### Using App State
+```python
+from src.core import app_state
+
+app_state.solver_running = True
+app_state.set_mesh_file(1, "mesh.msh")
+app_state.cleanup()  # On exit
+```
+
+### Using Solver
+```python
+from src.solver import solver_runner
+
+solver_runner.compile_and_run(
+    init_file="init_cavity.c",
+    button_tag="run_button"
+)
+```
+
+## Troubleshooting
+
+### Convergence plot not updating
+- Check if `Convergence.csv` exists
+- Verify convergence monitor started (check logs)
+- Run solver to generate data
+
+### Fonts not loading
+- Check available fonts for your OS
+- See `src/utils/fonts.py` for font paths
+- Try different font from Preferences
+
+### Solver won't compile
+- Verify gcc is installed: `gcc --version`
+- Check init file path is correct
+- Check mesh files exist
+- Review logs for compilation errors
+
+## Getting Help
+
+1. Check logs: `logs/log_YYYY-MM-DD.txt`
+2. Check GitHub issues
+3. Enable debug logging
+
 
 ---
 
 **Version**: 2.2 Restructured  
-**Date**: December 2024  
-**Maintainer**: Development Team
+**Date**: December 2025  
+**Maintainer**: Akash Unnikrishnan

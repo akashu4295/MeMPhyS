@@ -1,5 +1,6 @@
 Backup/
 logs/
+output/
 linear_stability.c
 *.jpg
 *.jpeg
@@ -7,8 +8,8 @@ linear_stability.c
 *.exe
 *.out
 *.vtk
-*olution.csv
-*onvergence.csv
+Solution.csv
+Convergence.csv
 .vscode/
 *.m
 fractional_step_solver.n001.cubin

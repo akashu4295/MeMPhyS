@@ -7,8 +7,8 @@ linear_stability.c
 *.exe
 *.out
 *.vtk
-Solution.csv
-Convergence.csv
+*olution.csv
+*onvergence.csv
 .vscode/
 *.m
 fractional_step_solver.n001.cubin

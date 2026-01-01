@@ -87,6 +87,10 @@ def on_solver_complete(returncode: int):
     """
     if returncode == 0:
         logger.success("Solver run completed successfully")
+        
+        # Organize output files
+        from src.utils.output_manager import organize_solver_outputs
+        organize_solver_outputs()
     else:
         logger.error(f"Solver run failed with return code {returncode}")
 

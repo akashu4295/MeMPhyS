@@ -4,6 +4,9 @@ Configuration package for MeMPhyS GUI
 This package contains all configuration constants, parameters, and theme definitions.
 Import from this package to access application settings.
 
+Example:
+    from src.config.constants import BASE_PARAMETERS, LOG_DIR
+    from src.config.themes import initialize_all_themes
 """
 
 from .constants import (
@@ -15,6 +18,9 @@ from .constants import (
     # Logging
     LOG_FILE_PATH,
     TODAY_STR,
+    
+    # Options
+    DEFAULT_OPTIONS,
     
     # Parameters
     BASE_PARAMETERS,
@@ -128,6 +134,7 @@ __all__ = [
     'OUTPUT_DIR',
     'LOG_FILE_PATH',
     'TODAY_STR',
+    'DEFAULT_OPTIONS',
     'BASE_PARAMETERS',
     'MULTIGRID_PARAMETERS',
     'IMPLICIT_PARAMETERS',

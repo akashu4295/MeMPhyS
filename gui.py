@@ -19,19 +19,10 @@ from src.config import (
     DEFAULT_FONT_SIZE,
 )
 from src.config.themes import initialize_all_themes, apply_global_theme
-
-# Import core modules
-from src.core import app_state, logger
-
-# Import utilities
-from src.utils import initialize_fonts, set_default_font
-
-# Import solver modules
-from src.solver import convergence_monitor
-
-# Import UI
-from src.ui import create_main_window
-
+from src.core import app_state, logger  # Import core modules
+from src.utils import initialize_fonts, set_default_font # Import utilities
+from src.solver import convergence_monitor # Import solver modules
+from src.ui import create_main_window # Import UI
 
 def initialize_application():
     """
@@ -64,6 +55,12 @@ def initialize_application():
     dpg.create_context()
     logger.info("DearPyGUI context created")
     print("DearPyGUI context created")
+    
+    # Load default options
+    print("Step 2b: Loading default options...")
+    app_state.load_default_options()
+    logger.info("Default options loaded")
+    print("Default options loaded")
     
     # Initialize fonts (optional - can be disabled if causing issues)
     ENABLE_CUSTOM_FONTS = False  # Set to True once font issues are resolved
@@ -122,25 +119,13 @@ def create_gui(themes: dict):
     Args:
         themes: Dictionary of theme IDs
     """
-    print("Step A: Starting GUI creation...")
     logger.info("Creating GUI components...")
-    
-    print("Step B: Creating main window...")
-    # Create main window
     main_window = create_main_window(themes)
-    print("Step C: Main window created")
     logger.success("Main window created")
-    
-    print("Step D: Setting primary window...")
-    # Set as primary window (fills entire viewport)
     dpg.set_primary_window("MainWindow", True)
-    print("Step E: Primary window set")
-    
     # Re-enable GUI logging now that log window exists
     logger.set_enable_gui(True)
     logger.info("GUI logging enabled")
-    print("Step F: GUI creation complete")
-    
     return main_window
 
 
@@ -172,16 +157,9 @@ def cleanup_and_exit():
     """Cleanup resources and exit"""
     logger.info("Shutting down application...")
     logger.separator()
-    
-    # Stop convergence monitor
-    convergence_monitor.cleanup()
-    
-    # Cleanup application state
-    app_state.cleanup()
-    
-    # Destroy DearPyGUI context
-    dpg.destroy_context()
-    
+    convergence_monitor.cleanup() # Stop convergence monitor
+    app_state.cleanup()    # Cleanup application state    
+    dpg.destroy_context()    # Destroy DearPyGUI context
     logger.info("Application closed successfully")
 
 
@@ -220,9 +198,7 @@ def main():
         logger.info("Ready for input")
         print("\n=== Application Ready ===\n")
         
-        # Main render loop (this blocks until window closes)
         print("Starting main render loop...")
-        
         # Start convergence monitor in a frame callback (after GUI is running)
         def delayed_start():
             try:
@@ -232,7 +208,6 @@ def main():
                 logger.warning(f"Could not start convergence monitor: {e}")
         
         dpg.set_frame_callback(2, delayed_start)
-        
         dpg.start_dearpygui()
         print("Main loop ended")
         
@@ -242,7 +217,6 @@ def main():
         sys.exit(1)
     
     finally:
-        # Cleanup
         cleanup_and_exit()
 
 

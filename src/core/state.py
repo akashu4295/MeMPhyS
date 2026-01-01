@@ -58,6 +58,28 @@ class AppState:
         # Flags
         self._gui_initialized: bool = False
         self._cleanup_done: bool = False
+        
+        # User options
+        self._options: Dict[str, bool] = {}
+    
+    # ==================== Options Management ====================
+    
+    def set_option(self, key: str, value: bool):
+        """Set an option value"""
+        self._options[key] = value
+    
+    def get_option(self, key: str, default: bool = False) -> bool:
+        """Get an option value"""
+        return self._options.get(key, default)
+    
+    def get_all_options(self) -> Dict[str, bool]:
+        """Get all options"""
+        return self._options.copy()
+    
+    def load_default_options(self):
+        """Load default options"""
+        from src.config import DEFAULT_OPTIONS
+        self._options = DEFAULT_OPTIONS.copy()
     
     # ==================== Process Management ====================
     

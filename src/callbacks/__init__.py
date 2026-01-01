@@ -8,6 +8,12 @@ parts of the application:
 - plot_callbacks: Visualization and plotting
 - menu_callbacks: Menu bar actions
 
+Example:
+    from src.callbacks import (
+        run_solver_callback,
+        show_multigrid_callback,
+        update_plot_callback
+    )
 """
 
 # Solver callbacks
@@ -60,6 +66,7 @@ from .menu_callbacks import (
     open_help_callback,
     show_about_callback,
     show_preferences_callback,
+    show_options_callback,
     apply_preferences_callback,
     exit_application_callback,
     open_config_callback,
@@ -114,6 +121,7 @@ __all__ = [
     'open_help_callback',
     'show_about_callback',
     'show_preferences_callback',
+    'show_options_callback',
     'apply_preferences_callback',
     'exit_application_callback',
     'open_config_callback',

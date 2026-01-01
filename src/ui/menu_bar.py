@@ -14,6 +14,7 @@ from src.callbacks import (
     exit_application_callback,
     open_config_callback,
     save_config_callback,
+    show_options_callback,
 )
 
 
@@ -62,6 +63,13 @@ def create_menu_bar(themes: dict) -> int:
             dpg.add_menu_item(
                 label="Preferences",
                 callback=show_preferences_callback
+            )
+        
+        # Options Menu
+        with dpg.menu(label="Options"):
+            dpg.add_menu_item(
+                label="Application Options",
+                callback=show_options_callback
             )
         
         # Spacer to push Help to the right

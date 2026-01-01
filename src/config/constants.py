@@ -22,6 +22,38 @@ for directory in [LOG_DIR, OUTPUT_DIR]:
         os.makedirs(directory)
 
 # ============================================================
+# Application Options (User Configurable)
+# ============================================================
+
+DEFAULT_OPTIONS = {
+    # Logging options
+    "enable_gui_logging": True,
+    "enable_file_logging": True,
+    "enable_console_logging": True,
+    
+    # File management
+    "auto_move_outputs": True,
+    "create_dated_folders": True,
+    "append_number_if_exists": True,
+    
+    # Monitoring
+    "auto_start_convergence_monitor": True,
+    "convergence_plot_auto_scale": True,
+    
+    # Validation
+    "validate_parameters_on_run": True,
+    "validate_mesh_files_on_run": True,
+    
+    # UI options
+    "show_tooltips": True,
+    "confirm_on_exit": False,
+    
+    # Solver options
+    "auto_open_plot_on_complete": False,
+    "play_sound_on_complete": False,
+}
+
+# ============================================================
 # Logging Configuration
 # ============================================================
 
@@ -84,7 +116,7 @@ DEFAULT_VTK = "Solution.vtk"
 
 # Solver executable names
 SOLVER_EXECUTABLE_WINDOWS = "solver.exe"
-SOLVER_EXECUTABLE_UNIX = "solver.out"
+SOLVER_EXECUTABLE_UNIX = "solver"
 SOLVER_SOURCE = "mg_NS_solver.c"
 
 # ============================================================

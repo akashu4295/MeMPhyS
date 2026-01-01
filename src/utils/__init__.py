@@ -1,11 +1,14 @@
 """
-Utilities package
+Utilities package for MeMPhyS GUI
 
 This package contains utility modules for:
 - Font management (fonts.py)
 - File I/O operations (file_io.py)
 - Platform-specific utilities (platform_utils.py)
 
+Example:
+    from src.utils import initialize_fonts, write_parameters_csv
+    from src.utils.platform_utils import open_folder, get_platform
 """
 
 # Font utilities
@@ -73,6 +76,18 @@ from .platform_utils import (
     kill_process_by_name,
 )
 
+# Output management
+from .output_manager import (
+    get_output_folder_path,
+    ensure_output_folder_exists,
+    get_unique_filename,
+    move_file_to_output,
+    organize_solver_outputs,
+    list_output_runs,
+    get_latest_output_folder,
+    clean_old_outputs,
+)
+
 __all__ = [
     # Font utilities
     'find_system_font',
@@ -132,4 +147,14 @@ __all__ = [
     'is_path_writable',
     'is_path_readable',
     'kill_process_by_name',
+    
+    # Output management
+    'get_output_folder_path',
+    'ensure_output_folder_exists',
+    'get_unique_filename',
+    'move_file_to_output',
+    'organize_solver_outputs',
+    'list_output_runs',
+    'get_latest_output_folder',
+    'clean_old_outputs',
 ]

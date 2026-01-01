@@ -206,6 +206,19 @@ def apply_preferences_callback(sender, app_data, user_data):
         logger.info("Font may not be available. Try another font or size.")
 
 
+def show_options_callback(sender, app_data, user_data):
+    """
+    Show the Options dialog
+    
+    Args:
+        sender: Menu item tag
+        app_data: Application data (unused)
+        user_data: User data (unused)
+    """
+    from src.ui.dialogs import create_options_dialog
+    create_options_dialog()
+
+
 def exit_application_callback(sender, app_data, user_data):
     """
     Exit the application with cleanup

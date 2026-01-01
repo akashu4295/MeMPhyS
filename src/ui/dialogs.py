@@ -252,3 +252,250 @@ def show_confirmation_dialog(title: str, message: str, on_confirm, on_cancel=Non
                 width=80,
                 callback=cancel_callback
             )
+
+
+def create_options_dialog():
+    """
+    Create Options dialog window
+    
+    This function is called by the menu callback when needed.
+    """
+    from src.config import DEFAULT_OPTIONS
+    
+    # Check if already exists
+    if dpg.does_item_exist("options_window"):
+        dpg.configure_item("options_window", show=True)
+        dpg.focus_item("options_window")
+        return
+    
+    with dpg.window(
+        label="Options",
+        tag="options_window",
+        modal=True,
+        width=600,
+        height=600,
+        no_resize=True,
+        pos=(340, 100)
+    ):
+        dpg.add_text("Application Options", color=COLORS["header"])
+        dpg.add_separator()
+        dpg.add_text("Configure application behavior and features", color=COLORS["info"])
+        dpg.add_spacer(height=10)
+        
+        # Scrollable area for options
+        with dpg.child_window(height=450, border=True):
+            # Logging Options
+            dpg.add_text("Logging Options:", color=COLORS["subheader"])
+            dpg.add_spacer(height=5)
+            
+            dpg.add_checkbox(
+                label="Enable GUI Logging",
+                tag="opt_enable_gui_logging",
+                default_value=app_state.get_option("enable_gui_logging", DEFAULT_OPTIONS["enable_gui_logging"])
+            )
+            with dpg.tooltip("opt_enable_gui_logging"):
+                dpg.add_text("Show log messages in the GUI log window")
+            
+            dpg.add_checkbox(
+                label="Enable File Logging",
+                tag="opt_enable_file_logging",
+                default_value=app_state.get_option("enable_file_logging", DEFAULT_OPTIONS["enable_file_logging"])
+            )
+            with dpg.tooltip("opt_enable_file_logging"):
+                dpg.add_text("Write log messages to log files")
+            
+            dpg.add_checkbox(
+                label="Enable Console Logging",
+                tag="opt_enable_console_logging",
+                default_value=app_state.get_option("enable_console_logging", DEFAULT_OPTIONS["enable_console_logging"])
+            )
+            with dpg.tooltip("opt_enable_console_logging"):
+                dpg.add_text("Print log messages to terminal console")
+            
+            dpg.add_spacer(height=15)
+            dpg.add_separator()
+            dpg.add_spacer(height=15)
+            
+            # File Management Options
+            dpg.add_text("File Management:", color=COLORS["subheader"])
+            dpg.add_spacer(height=5)
+            
+            dpg.add_checkbox(
+                label="Auto-move Output Files",
+                tag="opt_auto_move_outputs",
+                default_value=app_state.get_option("auto_move_outputs", DEFAULT_OPTIONS["auto_move_outputs"])
+            )
+            with dpg.tooltip("opt_auto_move_outputs"):
+                dpg.add_text("Automatically move solver outputs to organized folders after completion")
+            
+            dpg.add_checkbox(
+                label="Create Dated Folders",
+                tag="opt_create_dated_folders",
+                default_value=app_state.get_option("create_dated_folders", DEFAULT_OPTIONS["create_dated_folders"])
+            )
+            with dpg.tooltip("opt_create_dated_folders"):
+                dpg.add_text("Organize outputs into folders named by date (YYYY-MM-DD)")
+            
+            dpg.add_checkbox(
+                label="Append Number if File Exists",
+                tag="opt_append_number_if_exists",
+                default_value=app_state.get_option("append_number_if_exists", DEFAULT_OPTIONS["append_number_if_exists"])
+            )
+            with dpg.tooltip("opt_append_number_if_exists"):
+                dpg.add_text("Add _1, _2, _3 etc. to filenames to avoid overwriting existing files")
+            
+            dpg.add_spacer(height=15)
+            dpg.add_separator()
+            dpg.add_spacer(height=15)
+            
+            # Monitoring Options
+            dpg.add_text("Monitoring:", color=COLORS["subheader"])
+            dpg.add_spacer(height=5)
+            
+            dpg.add_checkbox(
+                label="Auto-start Convergence Monitor",
+                tag="opt_auto_start_convergence_monitor",
+                default_value=app_state.get_option("auto_start_convergence_monitor", DEFAULT_OPTIONS["auto_start_convergence_monitor"])
+            )
+            with dpg.tooltip("opt_auto_start_convergence_monitor"):
+                dpg.add_text("Automatically start monitoring convergence data")
+            
+            dpg.add_checkbox(
+                label="Convergence Plot Auto-scale",
+                tag="opt_convergence_plot_auto_scale",
+                default_value=app_state.get_option("convergence_plot_auto_scale", DEFAULT_OPTIONS["convergence_plot_auto_scale"])
+            )
+            with dpg.tooltip("opt_convergence_plot_auto_scale"):
+                dpg.add_text("Automatically adjust plot axes based on data")
+            
+            dpg.add_spacer(height=15)
+            dpg.add_separator()
+            dpg.add_spacer(height=15)
+            
+            # Validation Options
+            dpg.add_text("Validation:", color=COLORS["subheader"])
+            dpg.add_spacer(height=5)
+            
+            dpg.add_checkbox(
+                label="Validate Parameters on Run",
+                tag="opt_validate_parameters_on_run",
+                default_value=app_state.get_option("validate_parameters_on_run", DEFAULT_OPTIONS["validate_parameters_on_run"])
+            )
+            with dpg.tooltip("opt_validate_parameters_on_run"):
+                dpg.add_text("Check all parameters are valid before running solver")
+            
+            dpg.add_checkbox(
+                label="Validate Mesh Files on Run",
+                tag="opt_validate_mesh_files_on_run",
+                default_value=app_state.get_option("validate_mesh_files_on_run", DEFAULT_OPTIONS["validate_mesh_files_on_run"])
+            )
+            with dpg.tooltip("opt_validate_mesh_files_on_run"):
+                dpg.add_text("Verify mesh files exist and are readable before running")
+            
+            dpg.add_spacer(height=15)
+            dpg.add_separator()
+            dpg.add_spacer(height=15)
+            
+            # UI Options
+            dpg.add_text("User Interface:", color=COLORS["subheader"])
+            dpg.add_spacer(height=5)
+            
+            dpg.add_checkbox(
+                label="Show Tooltips",
+                tag="opt_show_tooltips",
+                default_value=app_state.get_option("show_tooltips", DEFAULT_OPTIONS["show_tooltips"])
+            )
+            with dpg.tooltip("opt_show_tooltips"):
+                dpg.add_text("Display helpful tooltips when hovering over UI elements")
+            
+            dpg.add_checkbox(
+                label="Confirm on Exit",
+                tag="opt_confirm_on_exit",
+                default_value=app_state.get_option("confirm_on_exit", DEFAULT_OPTIONS["confirm_on_exit"])
+            )
+            with dpg.tooltip("opt_confirm_on_exit"):
+                dpg.add_text("Ask for confirmation before closing the application")
+            
+            dpg.add_spacer(height=15)
+            dpg.add_separator()
+            dpg.add_spacer(height=15)
+            
+            # Solver Options
+            dpg.add_text("Solver:", color=COLORS["subheader"])
+            dpg.add_spacer(height=5)
+            
+            dpg.add_checkbox(
+                label="Auto-open Plot on Complete",
+                tag="opt_auto_open_plot_on_complete",
+                default_value=app_state.get_option("auto_open_plot_on_complete", DEFAULT_OPTIONS["auto_open_plot_on_complete"])
+            )
+            with dpg.tooltip("opt_auto_open_plot_on_complete"):
+                dpg.add_text("Automatically open visualization when solver completes")
+            
+            dpg.add_checkbox(
+                label="Play Sound on Complete",
+                tag="opt_play_sound_on_complete",
+                default_value=app_state.get_option("play_sound_on_complete", DEFAULT_OPTIONS["play_sound_on_complete"])
+            )
+            with dpg.tooltip("opt_play_sound_on_complete"):
+                dpg.add_text("Play notification sound when solver finishes")
+        
+        dpg.add_spacer(height=12)
+        
+        # Buttons
+        with dpg.group(horizontal=True):
+            dpg.add_button(
+                label="Apply",
+                width=100,
+                callback=lambda: apply_options_callback()
+            )
+            
+            dpg.add_button(
+                label="Reset to Defaults",
+                width=150,
+                callback=lambda: reset_options_to_defaults()
+            )
+            
+            dpg.add_button(
+                label="Close",
+                width=100,
+                callback=lambda: dpg.configure_item("options_window", show=False)
+            )
+
+
+def apply_options_callback():
+    """Apply options from the dialog"""
+    from src.core import logger, app_state
+    from src.config import DEFAULT_OPTIONS
+    
+    # Read all checkbox values and save to app_state
+    for option_key in DEFAULT_OPTIONS.keys():
+        tag = f"opt_{option_key}"
+        if dpg.does_item_exist(tag):
+            value = dpg.get_value(tag)
+            app_state.set_option(option_key, value)
+    
+    # Apply logging options immediately
+    from src.core import logger
+    logger.set_enable_gui(app_state.get_option("enable_gui_logging", True))
+    logger.set_enable_file(app_state.get_option("enable_file_logging", True))
+    logger.set_enable_console(app_state.get_option("enable_console_logging", True))
+    
+    logger.success("Options applied successfully")
+
+
+def reset_options_to_defaults():
+    """Reset all options to default values"""
+    from src.core import logger, app_state
+    from src.config import DEFAULT_OPTIONS
+    
+    # Reset app_state options
+    app_state.load_default_options()
+    
+    # Update UI checkboxes
+    for option_key, default_value in DEFAULT_OPTIONS.items():
+        tag = f"opt_{option_key}"
+        if dpg.does_item_exist(tag):
+            dpg.set_value(tag, default_value)
+    
+    logger.info("Options reset to defaults")

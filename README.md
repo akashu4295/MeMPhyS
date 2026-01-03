@@ -164,17 +164,10 @@ Several 2d and 3d mesh cases are included under the paths:
 * `mesh/3d/CUBE/`
 * `mesh/3d/SP_in_SP/`
 
----
-
-### Author
-
-Dr. Akash Unnikrishnan developed this code as part of his PhD work with the guidance of Prof. Surya Pratap Vanka from University of Illinois at Urbana Champaign and Prof. Vinod Narayanan at Indian Institute of Technology Gandhinagar. Special mention has to go for Dr. Shantanu Shahane, who developed the first version of memphys which is available here: github.com/shahaneshantanu/memphys
-
-
 
 # MeMPhyS GUI Guide
 
-# [TODO]MeMPhyS GUI Restructuring 
+## [TODO]MeMPhyS GUI Restructuring 
 
 ### High Priority
 - [o] Test full solver workflow (compile → run → plot)
@@ -499,8 +492,15 @@ solver_runner.compile_and_run(
 3. Enable debug logging
 
 
+### Author
+
+Dr. Akash Unnikrishnan developed this code as part of his PhD work with the guidance of Prof. Surya Pratap Vanka from University of Illinois at Urbana Champaign and Prof. Vinod Narayanan at Indian Institute of Technology Gandhinagar. Special mention has to go for Dr. Shantanu Shahane, who developed the first version of memphys which is available here: github.com/shahaneshantanu/memphys
+
+
 ---
 
 **Version**: 2.2 Restructured  
 **Date**: December 2025  
 **Maintainer**: Akash Unnikrishnan
+
+---

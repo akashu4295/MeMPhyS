@@ -19,10 +19,19 @@ from src.config import (
     DEFAULT_FONT_SIZE,
 )
 from src.config.themes import initialize_all_themes, apply_global_theme
-from src.core import app_state, logger  # Import core modules
-from src.utils import initialize_fonts, set_default_font # Import utilities
-from src.solver import convergence_monitor # Import solver modules
-from src.ui import create_main_window # Import UI
+
+# Import core modules
+from src.core import app_state, logger
+
+# Import utilities
+from src.utils import initialize_fonts, set_default_font
+
+# Import solver modules
+from src.solver import convergence_monitor
+
+# Import UI
+from src.ui import create_main_window
+
 
 def initialize_application():
     """
@@ -59,8 +68,25 @@ def initialize_application():
     # Load default options
     print("Step 2b: Loading default options...")
     app_state.load_default_options()
-    logger.info("Default options loaded")
-    print("Default options loaded")
+    
+    # Try to load saved options
+    from src.utils.config_manager import load_app_options, apply_app_options
+    saved_options = load_app_options()
+    if saved_options:
+        apply_app_options(saved_options)
+    
+    logger.info("Application options loaded")
+    print("Options loaded")
+    
+    # Load user preferences
+    print("Step 2c: Loading user preferences...")
+    from src.utils.config_manager import load_user_preferences, apply_user_preferences
+    saved_prefs = load_user_preferences()
+    if saved_prefs:
+        apply_user_preferences(saved_prefs)
+    
+    logger.info("User preferences loaded")
+    print("User preferences loaded")
     
     # Initialize fonts (optional - can be disabled if causing issues)
     ENABLE_CUSTOM_FONTS = False  # Set to True once font issues are resolved
@@ -119,13 +145,25 @@ def create_gui(themes: dict):
     Args:
         themes: Dictionary of theme IDs
     """
+    print("Step A: Starting GUI creation...")
     logger.info("Creating GUI components...")
+    
+    print("Step B: Creating main window...")
+    # Create main window
     main_window = create_main_window(themes)
+    print("Step C: Main window created")
     logger.success("Main window created")
+    
+    print("Step D: Setting primary window...")
+    # Set as primary window (fills entire viewport)
     dpg.set_primary_window("MainWindow", True)
+    print("Step E: Primary window set")
+    
     # Re-enable GUI logging now that log window exists
     logger.set_enable_gui(True)
     logger.info("GUI logging enabled")
+    print("Step F: GUI creation complete")
+    
     return main_window
 
 
@@ -155,11 +193,32 @@ def start_background_services():
 
 def cleanup_and_exit():
     """Cleanup resources and exit"""
+    print("Starting cleanup...")
     logger.info("Shutting down application...")
     logger.separator()
-    convergence_monitor.cleanup() # Stop convergence monitor
-    app_state.cleanup()    # Cleanup application state    
-    dpg.destroy_context()    # Destroy DearPyGUI context
+    
+    try:
+        # Stop convergence monitor
+        print("Stopping convergence monitor...")
+        convergence_monitor.cleanup()
+    except Exception as e:
+        print(f"Warning: Error during convergence monitor cleanup: {e}")
+    
+    try:
+        # Cleanup application state
+        print("Cleaning up application state...")
+        app_state.cleanup()
+    except Exception as e:
+        print(f"Warning: Error during app state cleanup: {e}")
+    
+    try:
+        # Destroy DearPyGUI context
+        print("Destroying DearPyGUI context...")
+        dpg.destroy_context()
+    except Exception as e:
+        print(f"Warning: Error destroying DearPyGUI context: {e}")
+    
+    print("Cleanup complete")
     logger.info("Application closed successfully")
 
 
@@ -198,7 +257,9 @@ def main():
         logger.info("Ready for input")
         print("\n=== Application Ready ===\n")
         
+        # Main render loop (this blocks until window closes)
         print("Starting main render loop...")
+        
         # Start convergence monitor in a frame callback (after GUI is running)
         def delayed_start():
             try:
@@ -206,8 +267,15 @@ def main():
                 logger.success("Convergence monitor started")
             except Exception as e:
                 logger.warning(f"Could not start convergence monitor: {e}")
+            
+            # Restore last session
+            from src.utils.config_manager import load_session_state, restore_session_state
+            session = load_session_state()
+            if session:
+                restore_session_state(session)
         
         dpg.set_frame_callback(2, delayed_start)
+        
         dpg.start_dearpygui()
         print("Main loop ended")
         
@@ -217,6 +285,7 @@ def main():
         sys.exit(1)
     
     finally:
+        # Cleanup
         cleanup_and_exit()
 
 

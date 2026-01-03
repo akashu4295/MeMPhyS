@@ -37,7 +37,7 @@ class AppState:
         
         # Font management
         self._font_registry: Dict[tuple, int] = {}  # (name, size) -> font_id
-        self._current_font_name: str = ""
+        self._current_font_name: str = "DejaVuSans.ttf"  # Default font
         self._current_font_size: int = 16
         
         # UI state

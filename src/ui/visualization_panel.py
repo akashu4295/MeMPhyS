@@ -165,26 +165,26 @@ def _create_plotting_options_section(themes: dict):
         if "button_secondary" in themes:
             dpg.bind_item_theme(plot_btn, themes["button_secondary"])
     
-    # Second row: Save image controls
-    with dpg.group(horizontal=True):
-        dpg.add_text("Save Image as:")
+    # # Second row: Save image controls
+    # with dpg.group(horizontal=True):
+    #     dpg.add_text("Save Image as:")
         
-        dpg.add_input_text(
-            hint="Save Path",
-            default_value=DEFAULT_SAVE_PATH,
-            tag="contour_save_path",
-            width=SAVE_PATH_INPUT_WIDTH
-        )
+    #     dpg.add_input_text(
+    #         hint="Save Path",
+    #         default_value=DEFAULT_SAVE_PATH,
+    #         tag="contour_save_path",
+    #         width=SAVE_PATH_INPUT_WIDTH
+    #     )
         
-        save_btn = dpg.add_button(
-            label="Save",
-            callback=save_plot_image_callback,
-            tag="save_plot_button"
-        )
+    #     save_btn = dpg.add_button(
+    #         label="Save",
+    #         callback=save_plot_image_callback,
+    #         tag="save_plot_button"
+    #     )
         
-        # Apply theme to save button
-        if "button_secondary" in themes:
-            dpg.bind_item_theme(save_btn, themes["button_secondary"])
+    #     # Apply theme to save button
+    #     if "button_secondary" in themes:
+    #         dpg.bind_item_theme(save_btn, themes["button_secondary"])
     
     # File dialog for VTK file
     dpg.add_file_dialog(

@@ -88,6 +88,22 @@ from .output_manager import (
     clean_old_outputs,
 )
 
+# Configuration management
+from .config_manager import (
+    save_user_preferences,
+    load_user_preferences,
+    apply_user_preferences,
+    save_app_options,
+    load_app_options,
+    apply_app_options,
+    save_session_state,
+    load_session_state,
+    restore_session_state,
+    save_configuration,
+    load_configuration,
+    auto_save_on_exit,
+)
+
 __all__ = [
     # Font utilities
     'find_system_font',

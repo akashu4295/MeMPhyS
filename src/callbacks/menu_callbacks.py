@@ -193,17 +193,30 @@ def apply_preferences_callback(sender, app_data, user_data):
     font_name = dpg.get_value("pref_font_family")
     font_size = dpg.get_value("pref_font_size")
     
+    # Validate font name is not empty
+    if not font_name or font_name.strip() == "":
+        logger.error("Invalid font name. Please select a valid font.")
+        return
+    
     logger.info(f"Attempting to change font to {font_name} @ {font_size}px")
+    
+    # Update app state
+    app_state.current_font_name = font_name
+    app_state.current_font_size = font_size
+    
+    # Save preferences
+    from src.utils.config_manager import save_user_preferences
+    save_user_preferences()
     
     # Try to change font
     success = change_font(font_name, font_size)
     
     if success:
-        logger.success(f"Font changed to {font_name} @ {font_size}px")
-        logger.info("Note: Some UI elements may require application restart to update")
+        logger.success(f"Font preference saved: {font_name} @ {font_size}px")
+        logger.info("Changes will apply fully on next restart.")
     else:
-        logger.error("Failed to change font")
-        logger.info("Font may not be available. Try another font or size.")
+        logger.warning("Could not apply font immediately")
+        logger.info("Font preference saved. Will be applied on next restart.")
 
 
 def show_options_callback(sender, app_data, user_data):
@@ -230,6 +243,10 @@ def exit_application_callback(sender, app_data, user_data):
     """
     logger.info("Exiting application...")
     
+    # Auto-save configuration
+    from src.utils.config_manager import auto_save_on_exit
+    auto_save_on_exit()
+    
     # Perform cleanup
     app_state.cleanup()
     
@@ -246,10 +263,9 @@ def open_config_callback(sender, app_data, user_data):
         app_data: Application data (unused)
         user_data: User data (unused)
     """
-    logger.info("Configuration loading not yet implemented")
-    
-    if dpg.does_item_exist("file_dialog_config"):
-        dpg.configure_item("file_dialog_config", show=True)
+    # logger.info("Configuration loading not yet implemented")
+    if dpg.does_item_exist("file_dialog_config_load"):
+        dpg.configure_item("file_dialog_config_load", show=True)
 
 
 def save_config_callback(sender, app_data, user_data):
@@ -336,3 +352,69 @@ def report_bug_callback(sender, app_data, user_data):
     else:
         logger.error("Failed to open bug report URL")
         logger.info(f"Please visit: {bug_url}")
+
+
+def save_config_file_callback(sender, app_data, user_data):
+    """
+    Callback when user selects save location
+    
+    Args:
+        sender: File dialog tag
+        app_data: Dictionary with file info
+        user_data: User data (unused)
+    """
+    if 'file_path_name' not in app_data:
+        logger.error("No file path in save dialog")
+        return
+    
+    file_path = app_data['file_path_name']
+    
+    # Ensure .json extension
+    if not file_path.endswith('.json'):
+        file_path += '.json'
+    
+    from src.utils.config_manager import save_configuration
+    success = save_configuration(file_path)
+    
+    if success:
+        logger.success(f"Configuration saved to {file_path}")
+    else:
+        logger.error(f"Failed to save configuration to {file_path}")
+
+
+def load_config_file_callback(sender, app_data, user_data):
+    """
+    Callback when user selects config file to load
+    
+    Args:
+        sender: File dialog tag
+        app_data: Dictionary with file info
+        user_data: User data (unused)
+    """
+    if 'file_path_name' not in app_data:
+        logger.error("No file path in load dialog")
+        return
+    
+    file_path = app_data['file_path_name']
+    
+    from src.utils.config_manager import load_configuration
+    success = load_configuration(file_path)
+    
+    if success:
+        logger.success(f"Configuration loaded from {file_path}")
+        logger.info("Configuration applied. Some changes (like fonts) require restart.")
+        
+        # Trigger UI updates for loaded settings
+        from src.callbacks import show_multigrid_callback, show_implicit_callback
+        
+        # Update multigrid UI
+        if dpg.does_item_exist("multigrid_toggle"):
+            show_multigrid_callback(None, None, None)
+        
+        # Update implicit parameters UI
+        if dpg.does_item_exist("solver_method"):
+            show_implicit_callback(None, None, None)
+        
+        logger.info("UI updated with loaded configuration")
+    else:
+        logger.error(f"Failed to load configuration from {file_path}")

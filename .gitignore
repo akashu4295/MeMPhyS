@@ -1,6 +1,7 @@
 Backup/
 logs/
 output/
+config/
 linear_stability.c
 *.jpg
 *.jpeg

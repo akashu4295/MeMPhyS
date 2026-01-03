@@ -95,6 +95,10 @@ def create_preferences_dialog():
     platform = get_platform()
     available_fonts = FONT_PREFERENCES.get(platform, [])
     
+    # Ensure we have valid defaults
+    if not current_font_name or current_font_name not in available_fonts:
+        current_font_name = available_fonts[0] if available_fonts else "DejaVuSans.ttf"
+    
     with dpg.window(
         label="Preferences",
         tag="preferences_window",
@@ -467,6 +471,7 @@ def apply_options_callback():
     """Apply options from the dialog"""
     from src.core import logger, app_state
     from src.config import DEFAULT_OPTIONS
+    from src.utils.config_manager import save_app_options
     
     # Read all checkbox values and save to app_state
     for option_key in DEFAULT_OPTIONS.keys():
@@ -475,13 +480,16 @@ def apply_options_callback():
             value = dpg.get_value(tag)
             app_state.set_option(option_key, value)
     
+    # Save options to file
+    save_app_options()
+    
     # Apply logging options immediately
     from src.core import logger
     logger.set_enable_gui(app_state.get_option("enable_gui_logging", True))
     logger.set_enable_file(app_state.get_option("enable_file_logging", True))
     logger.set_enable_console(app_state.get_option("enable_console_logging", True))
     
-    logger.success("Options applied successfully")
+    logger.success("Options applied and saved successfully")
 
 
 def reset_options_to_defaults():

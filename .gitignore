@@ -3,6 +3,7 @@ logs/
 output/
 config/
 linear_stability.c
+mg_heat_conduction.c
 *.jpg
 *.jpeg
 *.png

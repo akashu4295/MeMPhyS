@@ -39,3 +39,10 @@ solver.out
 GUI_plans.txt
 mg_heat_conduction.c
 gui_bak.py
+boundary_tags*
+cloud*
+coordinates*
+Convergence*
+Solution*
+normal*
+prolongation*

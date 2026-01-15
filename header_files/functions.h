@@ -25,6 +25,14 @@ void create_prolongation_matrix(PointStructure* myPointStruct, PointStructure* m
 void rcm_reordering(PointStructure* myPointStruct);
 double calculate_dt(PointStructure* myPointStruct);
 
+// Initialization Function declarations
+BCType parse_bc_type(const char* s);
+void read_physical_names(char* meshfile, PointStructure* ps);
+void read_boundary_conditions_file(char* bcfile, PointStructure* ps);
+int bc_priority(BCType t);
+void assign_node_bc(PointStructure* ps, int node, BCValue new_bc);
+void apply_boundary_conditions_from_file(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
+
 // RBF Function declarations
 double calculate_phs_rbf(double *x, double *c, int phs, int dimension);
 void create_A_matrix_from_cloud_indices_vectorised(PointStructure* myPointStruct, double* A, int cloud_index);
@@ -37,6 +45,7 @@ void create_full_grady_matrix_vectorised(PointStructure* myPointStruct);
 void create_full_gradz_matrix_vectorised(PointStructure* myPointStruct);
 void create_full_laplacian_matrix_vectorised(PointStructure* myPointStruct);
 void create_derivative_matrices_vectorised(PointStructure* myPointStruct);
+void create_laplacian_for_Poisson_vectorised(PointStructure* myPointStruct);
 
 // Functions to test and calculate errors with a manufactured problem
 void calculate_errors_2d(PointStructure* myPointStruct, double* f, double* fx, double* fy, double* lapf, double* F, double* Fx, double* Fy, double* lapF);
@@ -85,12 +94,7 @@ void update_boundary_pprime_vectorised(PointStructure* mypointstruct, FieldVaria
 double time_implicit_solver_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void calculate_intermediate_velocity_implicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void calculate_mass_residual_implicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
-void multigrid_Poisson_solver_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void update_velocity_implicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
-void relaxation_vectorised_2d(PointStructure* mypointstruct, FieldVariables* field);
-void calculate_residuals_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
-void restrict_residuals_vectorised_2d(PointStructure* myPointStruct_f,PointStructure* myPointStruct, FieldVariables* field_f, FieldVariables* field);
-void prolongate_corrections_vectorised_2d(PointStructure* myPointStruct_f,PointStructure* myPointStruct, FieldVariables* field_f, FieldVariables* field);
 void update_boundary_pressure_vectorised_2d(PointStructure* mypointstruct, FieldVariables* field);
 void update_boundary_pprime_vectorised_2d(PointStructure* mypointstruct, FieldVariables* field);
 
@@ -109,16 +113,12 @@ void FS_restrict_residuals_vectorised(PointStructure* myPointStruct_f, PointStru
 void FS_prolongate_corrections_vectorised(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);
 void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables* field);
 void FS_update_boundary_pressure_vectorised(PointStructure* myPointStruct, FieldVariables* field);
+void apply_velocity_bc_intermediate(PointStructure* myPointStruct, FieldVariables* field);
 
 double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_calculate_boundary_dpdn_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
-void FS_multigrid_Poisson_solver_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
-void FS_relaxation_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
-void FS_calculate_residuals_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
-void FS_restrict_residuals_vectorised_2d(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);
-void FS_prolongate_corrections_vectorised_2d(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);
 void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_update_boundary_pressure_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 

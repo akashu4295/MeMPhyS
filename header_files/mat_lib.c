@@ -17,6 +17,7 @@ double min3(double a, double b, double c){
         min = c;
     return min;
 }
+
 void multiply_sparse_matrix_vector_vectorised(double *D_coeff, double *f, double *dfdx, int *cloud, int n_rows_D, int n_cols_D)
 {
     for (int i = 0; i < n_rows_D; i++) {
@@ -55,26 +56,6 @@ void multiply_sparse_matrix_vector_vectorised_gpu(double *D_coeff, double *f, do
         dfdx[i] = result;
     }
 }
-
-
-void multiply_sparse_matrix_vector_gpu(double** D_coeff, double* f, double* dfdx, int** cloud, int n_rows_D, int n_cols_D){
-    # pragma acc parallel loop present(D_coeff[0:n_rows_D][0:n_cols_D], f[0:n_rows_D], dfdx[0:n_rows_D], cloud[0:n_rows_D][0:n_cols_D])
-    for (int i = 0; i < n_rows_D; i++){
-        double results = 0.0;
-        for (int j = 0; j < n_cols_D; j++){
-            results += D_coeff[i][j] * f[cloud[i][j]];
-        }
-        dfdx[i] = results;
-    }
-}
-
-void multiply_sparse_vector_matrix(double* f, double** D_coeff, double** ftimesD, int n_rows_D, int n_cols_D){
-    for (int i = 0; i < n_rows_D; i++)
-            for (int j = 0; j < n_cols_D; j++)
-                ftimesD[i][j] = f[i] * D_coeff[i][j];
-    }
-
-
 
 double** create_matrix1(int n_rows, int n_cols)
 {
@@ -122,16 +103,6 @@ void create_matrix(double ***A, int n_rows, int n_cols)
     }
 }
 
-void create_matrix_int(int ***A, int n_rows, int n_cols)
-{
-    int i;
-    *A = (int **)malloc(n_rows * sizeof(int *));
-    for (i = 0; i < n_rows; i++)
-    {
-        (*A)[i] = (int *)malloc(n_cols * sizeof(int));
-    }
-}
-
 double* create_vector(int n_rows)
 {
     double *A;
@@ -153,53 +124,6 @@ void free_matrix(double **A, int n_rows)
     free(A);
 }
 
-void free_matrix_int(int **A, int n_rows)
-{
-    int i;
-    for (i = 0; i < n_rows; i++)
-    {
-        free(A[i]);
-    }
-    free(A);
-}
-
-void free_vector(double *A)
-{
-    free(A);
-}
-
-void print_matrix(double **A, int n_rows, int n_cols)
-{
-    int i, j;
-    for (i = 0; i < n_rows; i++)
-    {
-        for (j = 0; j < n_cols; j++)
-        {
-            printf("%g ", A[i][j]);
-        }
-        printf("\n");
-    }
-}
-
-void write_matrix_to_file(double **A, int n_rows, int n_cols, char *filename)
-{
-    FILE *f = fopen(filename,   "w");   
-    if (f == NULL)
-    {
-        printf("Error opening file!\n");
-        exit(1);
-    }
-    int i, j;
-    for (i = 0; i < n_rows; i++)
-    {
-        for (j = 0; j < n_cols; j++)
-        {
-            fprintf(f, "%g ", A[i][j]);
-        }
-        fprintf(f, "\n");
-    }
-    fclose(f);
-}
 
 void multiply_matrices(double **A, double **B, double **C, int n_rows_A, int n_cols_A, int n_cols_B)
 {
@@ -257,137 +181,6 @@ void multiply_vector_matrix(double *B, double **A, double **C, int n_rows_A, int
     }
 }
 
-void multiply_scalar_matrix(double scalar, double **A, double **B, int n_rows_A, int n_cols_A)
-{
-    int i, j;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        for (j = 0; j < n_cols_A; j++)
-        {
-            B[i][j] = scalar * A[i][j];
-        }
-    }
-}
-
-void multiply_scalar_vector(double scalar, double *A, double *B, int n_rows_A)
-{
-    int i;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        B[i] = scalar * A[i];
-    }
-}
-
-void add_matrices(double **A, double **B, double **C, int n_rows_A, int n_cols_A)
-{
-    int i, j;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        for (j = 0; j < n_cols_A; j++)
-        {
-            C[i][j] = A[i][j] + B[i][j];
-        }
-    }
-}
-
-void add_matrices_to_first(double **A, double **B, int n_rows_A, int n_cols_A)
-{
-    int i, j;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        for (j = 0; j < n_cols_A; j++)
-        {
-            A[i][j] += B[i][j];
-        }
-    }
-}
-
-void add_vectors(double *A, double *B, double *C, int n_rows_A)
-{
-    int i;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        C[i] = A[i] + B[i];
-    }
-}
-
-void subtract_matrices(double **A, double **B, double **C, int n_rows_A, int n_cols_A)
-{
-    int i, j;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        for (j = 0; j < n_cols_A; j++)
-        {
-            C[i][j] = A[i][j] - B[i][j];
-        }
-    }
-}
-
-void subtract_vectors(double *A, double *B, double *C, int n_rows_A)
-{
-    int i;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        C[i] = A[i] - B[i];
-    }
-}
-
-void transpose_matrix(double **A, double **B, int n_rows_A, int n_cols_A)
-{
-    int i, j;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        for (j = 0; j < n_cols_A; j++)
-        {
-            B[j][i] = A[i][j];
-        }
-    }
-}
-
-void copy_matrix(double **A, double **B, int n_rows_A, int n_cols_A)
-{
-    int i, j;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        for (j = 0; j < n_cols_A; j++)
-        {
-            B[i][j] = A[i][j];
-        }
-    }
-}
-
-void copy_vector(double *A, double *B, int n_rows_A)
-{
-    int i;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        B[i] = A[i];
-    }
-}
-
-void vector_outer_product(double *A, double *B, double **C, int n_rows_A, int n_rows_B)
-{
-    int i, j;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        for (j = 0; j < n_rows_B; j++)
-        {
-            C[i][j] = A[i] * B[j];
-        }
-    }
-}
-
-double vector_inner_product(double *A, double *B, int n_rows_A)
-{
-    int i;
-    double result = 0;
-    for (i = 0; i < n_rows_A; i++)
-    {
-        result += A[i] * B[i];
-    }
-    return result;
-}
-
 double vector_norm(double *A, int n_rows_A)
 {
     int i;
@@ -397,32 +190,6 @@ double vector_norm(double *A, int n_rows_A)
         result += A[i] * A[i];
     }
     return sqrt(result);
-}
-
-double** identity_matrix(int n_rows)
-{
-    int i, j;
-    double **A;
-    A = (double **)malloc(n_rows * sizeof(double *));
-    for (i = 0; i < n_rows; i++)
-    {
-        A[i] = (double *)malloc(n_rows * sizeof(double));
-    }
-    for (i = 0; i < n_rows; i++)
-    {
-        for (j = 0; j < n_rows; j++)
-        {
-            if (i == j)
-            {
-                A[i][j] = 1;
-            }
-            else
-            {
-                A[i][j] = 0;
-            }
-        }
-    }
-    return A;
 }
 
 void matrixInverse_Gauss_Jordan(double** matrix1, double** inverse, int order)
@@ -557,131 +324,6 @@ void matrixInverse_Gauss_Jordan_vectorised(double* A, double* Ainv, int n){
 }
 
 
-// Function to perform LU decomposition
-void luDecomposition(double **A, int n, int *P) {
-    for (int i = 0; i < n; i++) {
-        P[i] = i; // Initialize permutation vector
-    }
-
-    for (int k = 0; k < n - 1; k++) {
-        int pivot_row = k;
-        double pivot = A[k][k];
-
-        // Find the row with the largest pivot
-        for (int i = k + 1; i < n; i++) {
-            if (abs(A[i][k]) > abs(pivot)) {
-                pivot = A[i][k];
-                pivot_row = i;
-            }
-        }
-
-        // Swap rows in permutation vector
-        int temp = P[k];
-        P[k] = P[pivot_row];
-        P[pivot_row] = temp;
-
-        // Swap rows in A
-        double *temp_row = A[k];
-        A[k] = A[pivot_row];
-        A[pivot_row] = temp_row;
-
-        for (int i = k + 1; i < n; i++) {
-            double factor = A[i][k] / A[k][k];
-            for (int j = k; j < n; j++) {
-                A[i][j] -= factor * A[k][j];
-            }
-            A[i][k] = factor;
-        }
-    }
-}
-
-// Function to solve Ly = b
-void forwardSubstitution(double **L, double *y, double *b, int n, int *P) {
-    for (int i = 0; i < n; i++) {
-        double sum = 0.0;
-        for (int j = 0; j < i; j++) {
-            sum += L[i][j] * y[j];
-        }
-        y[i] = (b[P[i]] - sum) / L[i][i];
-    }
-}
-
-// Function to solve Ux = y
-void backwardSubstitution(double **U, double *x, double *y, int n) {
-    for (int i = n - 1; i >= 0; i--) {
-        double sum = 0.0;
-        for (int j = i + 1; j < n; j++) {
-            sum += U[i][j] * x[j];
-        }
-        x[i] = (y[i] - sum) / U[i][i];
-    }
-}
-
-// Function to perform matrix inversion using LU decomposition
-void matrixInverse_LU(double **A, double **A_inv, int n) {
-    int* P = (int*) malloc(n * sizeof(int));
-
-    luDecomposition(A, n, P);
-
-    double **L = (double**) malloc(n * sizeof(double *));
-    double **U = (double**) malloc(n * sizeof(double *));
-    for (int i = 0; i < n; i++) {
-        L[i] = (double*) malloc(n * sizeof(double));
-        U[i] = (double*) malloc(n * sizeof(double));
-    }
-
-    // Extract L and U matrices
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            if (i > j)
-                L[i][j] = A[i][j];
-            else if (i == j)
-                L[i][j] = 1.0;
-            else
-                L[i][j] = 0.0;
-
-            if (i <= j)
-                U[i][j] = A[i][j];
-            else
-                U[i][j] = 0.0;
-        }
-    }
-
-    // Solve Ly = b for each column of inverse
-    double *y = (double*) malloc(n * sizeof(double));
-    double *b = (double*) malloc(n * sizeof(double));
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            if (i == j)
-                b[j] = 1.0;
-            else
-                b[j] = 0.0;
-        }
-        forwardSubstitution(L, y, b, n, P);
-        backwardSubstitution(U, A_inv[i], y, n);
-    }
-
-    free(P);
-    free(y);
-    free(b);
-    for (int i = 0; i < n; i++) {
-        free(L[i]);
-        free(U[i]);
-    }
-    free(L);
-    free(U);
-}
-
-// Function to print a matrix
-void printMatrix(double **A, int n) {
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            printf("%.2f ", A[i][j]);
-        }
-        printf("\n");
-    }
-}
-
 double l2_norm(double *A, double *B, int n_rows_A)
 {
     int i;
@@ -693,32 +335,6 @@ double l2_norm(double *A, double *B, int n_rows_A)
     return sqrt(result/n_rows_A);
 }
 
-void linear_system_solver(double** A, double* x, double* b, int n)
-{
-    double** A_inv = create_matrix1(n, n);
-    matrixInverse_Gauss_Jordan(A, A_inv, n);
-    multiply_matrix_vector(A_inv, b, x, n, n);
-    free_matrix(A_inv, n);
-}
-
-void swap_vectors(double *A, double *B, int n_rows_A)
-{
-    double temp;
-    for (int i = 0; i < n_rows_A; i++)
-    {
-        temp = A[i];
-        A[i] = B[i];
-        B[i] = temp;
-    }
-}
-
-void multiply_vector_matrix_columnwise(double *B, double **A, double *C, int n_rows_A, int n_cols_A){
-    for (int i = 0; i < n_cols_A; i++) {
-        C[i] = 0;
-        for (int j = 0; j < n_rows_A; j++) 
-            C[i] += B[j] * A[j][i];
-    }
-}
 void multiply_vector_matrix_columnwise_vectorised(double *B, double *A, double *C, int n_rows_A, int n_cols_A) {
     for (int i = 0; i < n_cols_A; i++) {
         C[i] = 0.0;
@@ -726,132 +342,4 @@ void multiply_vector_matrix_columnwise_vectorised(double *B, double *A, double *
             C[i] += B[j] * A[j * n_cols_A + i];
         }
     }
-}
-
-
-int BiCGStab_Solve(PointStructure* ps,
-                   const double* b,   // RHS = field->source
-                   double* x,         // solution = field->p
-                   int max_iter,
-                   double tol)
-{
-    int N = ps->num_nodes;
-    int n = ps->num_cloud_points;
-
-    // Allocate temporary vectors
-    double *r = malloc(N * sizeof(double));
-    double *r0 = malloc(N * sizeof(double));
-    double *p = malloc(N * sizeof(double));
-    double *v = malloc(N * sizeof(double));
-    double *t = malloc(N * sizeof(double));
-    double *Ax = malloc(N * sizeof(double));
-
-    // Compute initial residual: r = b - A*x    
-    for (int i = 0; i < N; i++) {
-        double Ax = 0.0;
-        for (int j = 0; j < n; j++) {
-            int col = ps->cloud_index[i*n + j];
-            Ax += ps->lap_Poison[i*n + j] * x[col];
-        }
-        r[i] = b[i] - Ax;
-        r0[i] = r[i];
-    }
-
-    for (int i = 0; i < N; i++) {
-        r[i] = b[i] - Ax[i];
-        r0[i] = r[i];
-        p[i] = 0.0;
-        v[i] = 0.0;
-    }
-
-    double rho = 1, alpha = 1, omega = 1;
-    double rho_new;
-
-    for (int iter = 0; iter < max_iter; iter++) {
-
-        // rho = r0^T r
-        rho_new = 0.0;
-        for (int i = 0; i < N; i++)
-            rho_new += r0[i] * r[i];
-
-        if (fabs(rho_new) < 1e-30) break;
-
-        // p = r + (rho_new/rho)*(alpha/omega)*(p - omega*v)
-        double beta = (rho_new/rho)*(alpha/omega);
-        for (int i = 0; i < N; i++)
-            p[i] = r[i] + beta*(p[i] - omega*v[i]);
-
-        // v = A*p
-        for (int i = 0; i < N; i++) {
-            double sum = 0.0;
-            for (int j = 0; j < n; j++) {
-                int col = ps->cloud_index[i*n + j];
-                sum += ps->lap_Poison[i*n + j] * p[col];
-            }
-            v[i] = sum;
-        }   
-
-        // alpha = rho_new / (r0^T v)
-        double r0v = 0.0;
-        for (int i = 0; i < N; i++)
-            r0v += r0[i] * v[i];
-
-        alpha = rho_new / r0v;
-
-        // s = r - alpha*v
-        double *s = t; // reuse t buffer for s
-        for (int i = 0; i < N; i++)
-            s[i] = r[i] - alpha*v[i];
-
-        // Check if |s| small enough → converged early
-        double norm_s = 0.0;
-        for (int i = 0; i < N; i++)
-            norm_s += s[i]*s[i];
-
-        if (sqrt(norm_s) < tol) {
-            for (int i = 0; i < N; i++)
-                x[i] += alpha*p[i];
-            break;
-        }
-
-        // t = A*s
-        for (int i = 0; i < N; i++) {
-            double sum = 0.0;
-            for (int j = 0; j < n; j++) {
-                int col = ps->cloud_index[i*n + j];
-                sum += ps->lap_Poison[i*n + j] * s[col];
-            }
-            t[i] = sum;
-        }
-
-        // omega = (t^T s) / (t^T t)
-        double ts = 0.0, tt = 0.0;
-        for (int i = 0; i < N; i++) {
-            ts += t[i] * s[i];
-            tt += t[i] * t[i];
-        }
-        omega = ts / tt;
-
-        // x = x + alpha*p + omega*s
-        for (int i = 0; i < N; i++)
-            x[i] += alpha*p[i] + omega*s[i];
-
-        // r = s - omega*t
-        for (int i = 0; i < N; i++)
-            r[i] = s[i] - omega*t[i];
-
-        // Check convergence
-        double norm_r = 0.0;
-        for (int i = 0; i < N; i++)
-            norm_r += r[i]*r[i];
-
-        if (sqrt(norm_r) < tol) break;
-
-        rho = rho_new;
-    }
-
-    free(r); free(r0); free(p);
-    free(v); free(t); free(Ax);
-
-    return 0; // success
 }

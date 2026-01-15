@@ -412,10 +412,16 @@ void create_laplacian_for_Poisson_vectorised(PointStructure* myPointStruct) {
     int n = myPointStruct->num_cloud_points;
     for (int i = 0; i < myPointStruct->num_nodes; i++){ 
         if (myPointStruct->boundary_tag[i]){
-            for (int j = 0; j < n; j++) {
-                myPointStruct->lap_Poison[i*n +j] = myPointStruct->Dx[i*n +j] * myPointStruct->x_normal[i] + myPointStruct->Dy[i*n +j] * myPointStruct->y_normal[i];
-                if (parameters.dimension == 3)
-                    myPointStruct->lap_Poison[i*n +j] += myPointStruct->Dz[i*n +j] * myPointStruct->z_normal[i];
+            if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET || myPointStruct->node_bc[i].type == BC_VELOCITY_OUTLET || myPointStruct->node_bc[i].type == BC_WALL) // Neumann BC
+                for (int j = 0; j < n; j++) {
+                    myPointStruct->lap_Poison[i*n +j] = myPointStruct->Dx[i*n +j] * myPointStruct->x_normal[i] + myPointStruct->Dy[i*n +j] * myPointStruct->y_normal[i];
+                    if (parameters.dimension == 3)
+                        myPointStruct->lap_Poison[i*n +j] += myPointStruct->Dz[i*n +j] * myPointStruct->z_normal[i];
+                }
+            else{ // Dirichlet BC for pressure
+                for (int j = 1; j < n; j++) 
+                    myPointStruct->lap_Poison[i*n +j] = 0;
+                myPointStruct->lap_Poison[i*n +0] = 1;
             }
         }
         else{
@@ -448,7 +454,7 @@ void create_derivative_matrices_vectorised(PointStructure* myPointStruct){
         create_full_laplacian_matrix_vectorised(myPointStruct);
     }
     
-    myPointStruct->lap_Poison = (double*) malloc(m*n*sizeof(double));
-    myPointStruct->lap_Poison = create_matrix_vectorised(m,n);
-    create_laplacian_for_Poisson_vectorised(myPointStruct);
+    // myPointStruct->lap_Poison = (double*) malloc(m*n*sizeof(double));
+    // myPointStruct->lap_Poison = create_matrix_vectorised(m,n);
+    // create_laplacian_for_Poisson_vectorised(myPointStruct);
 }

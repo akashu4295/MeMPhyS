@@ -10,6 +10,28 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Structures
 //////////////////////////////////////////////////////////////////////////////
+#define MAX_BC_NAME 64
+#define MAX_BC_TYPES 32
+
+typedef enum {
+    BC_INTERIOR = 0,
+    BC_WALL = 1,
+    BC_VELOCITY_INLET = 2,
+    BC_PRESSURE_OUTLET = 3,
+    BC_VELOCITY_OUTLET = 4
+} BCType;
+
+typedef struct {
+    BCType type;
+    double u, v, w;
+    double p;
+} BCValue;
+
+typedef struct {
+    short physical_id;
+    char  name[MAX_BC_NAME];
+    BCValue bc;
+} BoundaryMapEntry;
 
 // Structure to represent the common parameters for all grids
 struct parameters
@@ -54,6 +76,11 @@ typedef struct PointStructure {
     short num_poly_terms; //number of polynomial terms  //////NUM_POLY_TERMS
     short num_cloud_points; //number of cloud points in the domain
     short poly_degree; //degree of the polynomial basis functions
+    BoundaryMapEntry boundary_map[MAX_BC_TYPES];
+    short num_boundary_types;
+    bool flag_outlets; // flag to indicate presence of outlets
+    // BCType* node_bc_type; // size = num_nodes
+    BCValue* node_bc;   // size = num_nodes
     double* x;  // x coordinates of the nodes
     double* y;  // y coordinates of the nodes
     double* z;  // z coordinates of the nodes

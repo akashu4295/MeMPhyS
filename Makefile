@@ -23,7 +23,7 @@ ifeq ($(MODE),)
     CC = gcc
     MODE = cpu
     GPU_MSG = "Compiling with GCC (CPU mode)"
-    CFLAGS = -lm
+    CFLAGS = -lm -O3
 endif
 
 

@@ -36,7 +36,7 @@ int main()
 ///// Read Input File Name and Parameters
     read_flow_parameters("flow_parameters.csv");     // Read the parameters from the file
     read_grid_filenames(&myPointStruct, "grid_filenames.csv", &parameters.num_levels);     // Read the parameters from the file
-
+    
 ///// Read Mesh data on all levels and compute derivative matrices
     read_complete_mesh_data(myPointStruct, parameters.num_levels);
     printf("Time taken to read the grids and flow parameters: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
@@ -56,7 +56,24 @@ int main()
     
     AllocateMemoryFieldVariables(&field, myPointStruct, parameters.num_levels);
     initial_conditions(myPointStruct, field, 1);
-    boundary_conditions(myPointStruct, field, 1);
+
+    FILE *bcf = fopen("bc.csv", "r");
+    if (bcf != NULL){
+        fclose(bcf);  // close immediately, we just tested existence
+        apply_boundary_conditions_from_file(myPointStruct, field, 1);
+    }
+    else{
+        printf("bc.csv not found: using default init.c file for boundary conditions\n");
+        boundary_conditions(myPointStruct, field, 1);
+    }
+
+    // Making sure boundary conditions are applied to the Poisson LHS
+    for (int ii =0; ii<parameters.num_levels ; ii++){
+        myPointStruct[ii].lap_Poison = (double*) malloc(myPointStruct[ii].num_nodes*myPointStruct[ii].num_cloud_points*sizeof(double));
+        myPointStruct[ii].lap_Poison = create_matrix_vectorised(myPointStruct[ii].num_nodes,myPointStruct[ii].num_cloud_points);
+        create_laplacian_for_Poisson_vectorised(&myPointStruct[ii]);
+    }
+
     parameters.dt = calculate_dt(&myPointStruct[0]);
     printf("Time to setup the problem in cpu: %lf\n", (double)(clock()-clock_program_begin)/CLOCKS_PER_SEC);
 
@@ -68,19 +85,25 @@ int main()
     myPointStruct[0].num_nodes, myPointStruct[0].num_cloud_points,
     (size_t)myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points);
 
-    printf("DEBUG final lap index check: lap_Poison[0]=%g, lap_Poison[%d]=%g\n",
-        myPointStruct[0].lap_Poison[0],
-        myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points - 1,
-        myPointStruct[0].lap_Poison[myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points - 1]
-    );
-    printf("DEBUG cloud_index last: cloud_index[last]=%d\n",
-        myPointStruct[0].cloud_index[myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points - 1]);
+    // for (int i = 0; i<myPointStruct[0].num_nodes; i++){
+    //     if(myPointStruct[0].boundary_tag[i]){
+    //         printf("Boundary_type, u, v, w, p = %d, %g, %g, %g, %g\n", myPointStruct[0].node_bc[i].type, field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
+    //     }
+    // }
+    // printf("DEBUG final lap index check: lap_Poison[0]=%g, lap_Poison[%d]=%g\n",
+    //     myPointStruct[0].lap_Poison[0],
+    //     myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points - 1,
+    //     myPointStruct[0].lap_Poison[myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points - 1]
+    // );
+    // printf("DEBUG cloud_index last: cloud_index[last]=%d\n",
+    //     myPointStruct[0].cloud_index[myPointStruct[0].num_nodes * myPointStruct[0].num_cloud_points - 1]);
 
     copyin_pointstructure_to_gpu(myPointStruct);
     copyin_field_to_gpu(field, myPointStruct);
     copyin_parameters_to_gpu();
     printf("Time taken to copy data to GPU: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
     
+    write_processed_grid_data(myPointStruct, 0);
 ////////////// Time stepping loop start and writing solution files///////////// 
     clock_start = clock();    // Start the clock
     file2 = fopen("Convergence.csv", "w"); // Write data to a file

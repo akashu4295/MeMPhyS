@@ -10,8 +10,9 @@
 #include <string.h>
 #include <math.h>
 
-double dtemp; int itemp; char temp[50]; // temporary variables used multiple times in the code
-
+// Safe guards for fscanf on reading 1 and 2 items
+#define SAFE_SCAN1(x, msg) if ((x) != 1) { puts(msg); exit(1); }
+#define SAFE_SCAN2(x, msg) if ((x) != 2) { puts(msg); exit(1); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Function definitions
@@ -20,7 +21,7 @@ double dtemp; int itemp; char temp[50]; // temporary variables used multiple tim
 void read_flow_parameters(char *filename) {
     FILE *file;
     char ctemp[100];
-    int temp, temp1;
+    int temp;
 
     file = fopen(filename, "r");
     if (file == NULL)
@@ -28,52 +29,52 @@ void read_flow_parameters(char *filename) {
         printf("Error: Unable to open the file\n");
         exit(1);
     }
-    temp = fscanf(file, "%[^,],%hd\n", ctemp, &parameters.dimension);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.dimension), "Dimension read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.dimension);
-    temp = fscanf(file, "%[^,],%hd\n", ctemp, &parameters.poly_degree);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.poly_degree), "Polynomial degree read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.poly_degree);
-    temp = fscanf(file, "%[^,],%hd\n", ctemp, &parameters.phs_degree);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.phs_degree), "Phase degree read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.phs_degree);
-    temp = fscanf(file, "%[^,],%hd\n", ctemp, &parameters.cloud_size_multiplier);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.cloud_size_multiplier), "Cloud size multiplier read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.cloud_size_multiplier);
-    temp = fscanf(file, "%[^,],%hd\n", ctemp, &parameters.test);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.test), "Test read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.test);
-    temp = fscanf(file, "%[^,],%lf\n", ctemp, &parameters.courant_number);
+    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.courant_number), "Courant number read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %lf\n", ctemp, parameters.courant_number);
-    temp = fscanf(file, "%[^,],%lf\n", ctemp, &parameters.steady_state_tolerance);
+    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.steady_state_tolerance), "Steady state tolerance read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %e\n", ctemp, parameters.steady_state_tolerance);
-    temp = fscanf(file, "%[^,],%lf\n", ctemp, &parameters.poisson_solver_tolerance);
+    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.poisson_solver_tolerance), "Poisson solver tolerance read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %e\n", ctemp, parameters.poisson_solver_tolerance);
-    temp = fscanf(file, "%[^,],%f\n", ctemp, &parameters.omega);
+    SAFE_SCAN2(fscanf(file, "%[^,],%f\n", ctemp, &parameters.omega), "Omega read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %f\n", ctemp, parameters.omega);
-    temp = fscanf(file, "%[^,],%lf\n", ctemp, &parameters.dt);
+    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.dt), "Time step read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %lf\n", ctemp, parameters.dt);
-    temp = fscanf(file, "%[^,],%d\n", ctemp, &parameters.num_time_steps);
+    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &parameters.num_time_steps), "Number of time steps read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %d\n", ctemp, parameters.num_time_steps);
-    temp = fscanf(file, "%[^,],%d\n", ctemp, &parameters.write_interval);
+    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &parameters.write_interval), "Write interval read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %d\n", ctemp, parameters.write_interval);
-    temp = fscanf(file, "%[^,],%lf\n", ctemp, &parameters.Re);
+    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.Re), "Reynolds number read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %lf\n", ctemp, parameters.Re);
-    temp = fscanf(file, "%[^,],%hd\n", ctemp, &parameters.iter_momentum);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.iter_momentum), "Momentum iteration read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.iter_momentum);
-    temp = fscanf(file, "%[^,],%hd\n", ctemp, &parameters.iter_timple);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.iter_timple), "Timple iteration read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.iter_timple);
-    temp = fscanf(file, "%[^,],%hd\n", ctemp, &parameters.num_vcycles);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.num_vcycles), "Number of V-cycles read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.num_vcycles);
-    temp = fscanf(file, "%[^,],%hd\n", ctemp, &parameters.num_relax);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.num_relax), "Number of relaxations read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.num_relax);
-    temp = fscanf(file, "%[^,],%d\n", ctemp, &temp1);
-    if (temp1 == 1)
+    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &temp), "Neumann boundary flag read error, Check flow_parameters.csv");
+    if (temp == 1)
         parameters.neumann_flag_boundary = true;
     else
         parameters.neumann_flag_boundary = false;
     printf("PARAMETERS: %s = %d\n", ctemp, parameters.neumann_flag_boundary);
-    temp = fscanf(file, "%[^,],%lf\n", ctemp, &parameters.facRe);
+    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.facRe), "FacRe read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %lf\n", ctemp, parameters.facRe);
-    temp = fscanf(file, "%[^,],%lf\n", ctemp, &parameters.facdt);
+    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.facdt), "Facdt read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %lf\n", ctemp, parameters.facdt);
-    temp = fscanf(file, "%[^,],%d\n", ctemp, &temp1);
-    if (temp1 == 1)
+    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &temp), "Fractional step flag read error, Check flow_parameters.csv");
+    if (temp == 1)
         parameters.fractional_step = true;
     else
         parameters.fractional_step = false;
@@ -92,27 +93,19 @@ void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* 
 {   
     FILE *file;
     file = fopen(filename, "r");
-    int fscan_temp;
+    char temp[250];
     if (file == NULL)
     {
         printf("Error: Unable to open the file\n");
         exit(1);
     }
-    fscan_temp = fscanf(file, "%[^,],%hd\n", temp, num_levels);
-    if (fscan_temp == EOF){
-        printf("Error: Unable to read the file\n");
-        exit(1);
-    }
-    else
-        printf("PARAMETERS: %s = %hd\n", temp, *num_levels);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", temp, num_levels), "Number of levels read error, Check grid_filenames.csv");
+    printf("PARAMETERS: %s = %hd\n", temp, *num_levels);
+    
     // Allocate memory for point structure for all levels and read meshfile names
     *myPointStruct = (PointStructure*)malloc((*num_levels) * sizeof(PointStructure));
     for (short ii = 0; ii<*num_levels ; ii = ii +1){
-        fscan_temp = fscanf(file, "%s\n", (*myPointStruct)[ii].mesh_filename);
-        if (fscan_temp == EOF){
-            printf("Error: Unable to read the meshfile names\n");
-            exit(1);
-        }
+        SAFE_SCAN1(fscanf(file, "%s\n", (*myPointStruct)[ii].mesh_filename), "Mesh filename read error, Check grid_filenames.csv");
     }
     fclose(file);
 }
@@ -161,8 +154,8 @@ void calculate_parameters(PointStructure* myPointStruct) {
 void read_PointStructure(PointStructure* myPointStruct)
 {   
     FILE *file;
-    int fscan_temp;
     char filename[50];
+    double dtemp; int itemp; char temp[50]; // temporary variables used multiple times in the code
     strcpy(filename, myPointStruct->mesh_filename);
 
     file = fopen(filename, "r");
@@ -177,50 +170,45 @@ void read_PointStructure(PointStructure* myPointStruct)
     // Read the mesh file nodes
     while (true)
     {
-        fscan_temp = fscanf(file, "%s ", temp);
-        if (fscan_temp == EOF){
-            printf("Error: Unable to read the file\n");
-            exit(1);
-        }
-        else
-            if (strcmp(temp, "$Nodes") == 0)
-                break;
+        SAFE_SCAN1(fscanf(file, "%s ", temp), "Error reading mesh file, Check mesh file format");
+        if (strcmp(temp, "$Nodes") == 0)
+            break;
     }
-    fscan_temp = fscanf(file, "%i ", &itemp);
+    SAFE_SCAN1(fscanf(file, "%i ", &itemp), "Number of nodes read error, Check mesh file format");
 
     // Allocate memory for the members of point structure
     AllocateMemoryPointStructure(myPointStruct, itemp);
     
+    bool flag_bc_file = false;
+    FILE *bcf = fopen("bc.csv", "r");
+    if (bcf != NULL)
+    {
+        fclose(bcf);  // close immediately, we just tested existence
+        read_physical_names(filename, myPointStruct); // Read physical names from the mesh file
+        read_boundary_conditions_file("bc.csv", myPointStruct);
+        flag_bc_file = true;
+    }
+    else
+    {
+        printf("bc.csv not found: using default / interior boundary conditions\n");
+    }
+
     for (int i = 0; i < myPointStruct->num_nodes; i++)
     {
-        fscan_temp = fscanf(file, "%i ", &itemp); //node number
-        if (fscan_temp == EOF){
-            printf("Error: Unable to read the file\n");
-            exit(1);
-        }
-        fscan_temp =fscanf(file, "%lf ", &dtemp);
-        if (fscan_temp == EOF){
-            printf("Error: Unable to read the file\n");
-            exit(1);
-        }
-        else
-            myPointStruct->x[i]=dtemp;
-        fscan_temp = fscanf(file, "%lf ", &dtemp); 
-        if (fscan_temp == EOF){
-            printf("Error: Unable to read the file\n");
-            exit(1);
-        }
-        else
-            myPointStruct->y[i]=dtemp;
-        fscan_temp = fscanf(file, "%lf ", &dtemp); 
-        if (fscan_temp == EOF){
-            printf("Error: Unable to read the file\n");
-            exit(1);
-        }
-        else
-            myPointStruct->z[i]=dtemp;
+        SAFE_SCAN1(fscanf(file, "%i ", &itemp), "Node number read error, Check mesh file format"); //node number
+        SAFE_SCAN1(fscanf(file, "%lf ", &dtemp), "X coordinate read error, Check mesh file format");
+        myPointStruct->x[i]=dtemp;
+        SAFE_SCAN1(fscanf(file, "%lf ", &dtemp), "Y coordinate read error, Check mesh file format"); 
+        myPointStruct->y[i]=dtemp;
+        SAFE_SCAN1(fscanf(file, "%lf ", &dtemp), "Z coordinate read error, Check mesh file format"); 
+        myPointStruct->z[i]=dtemp;
         
         myPointStruct->point_index[i] = i;
+        myPointStruct->node_bc[i].type = BC_INTERIOR;
+        myPointStruct->node_bc[i].u = 0;
+        myPointStruct->node_bc[i].v = 0;
+        myPointStruct->node_bc[i].w = 0;
+        myPointStruct->node_bc[i].p = 0;
         myPointStruct->boundary_tag[i]=false;
         myPointStruct->corner_tag[i]=false;
         myPointStruct->x_normal[i]=0;
@@ -243,22 +231,12 @@ void read_PointStructure(PointStructure* myPointStruct)
 
     while (true)
     {
-        fscan_temp = fscanf (file, "%s ", temp);
-        if (fscan_temp == EOF){
-            printf("Error: Unable to read the file\n");
-            exit(1);
-        }
-        else
-            if (strcmp(temp, "$Elements") == 0)
-                break;
+        SAFE_SCAN1(fscanf(file, "%s ", temp), "Error reading mesh file, Check mesh file format");
+        if (strcmp(temp, "$Elements") == 0)
+            break;
     }
-    fscan_temp=fscanf(file, "%i ", &itemp);
-    if (fscan_temp == EOF){
-            printf("Error: Unable to read the file\n");
-            exit(1);
-        }
-        else
-            myPointStruct->num_elem = itemp;
+    SAFE_SCAN1(fscanf(file, "%i ", &itemp), "Number of elements read error, Check mesh file format");
+    myPointStruct->num_elem = itemp;
 
     if (parameters.dimension == 2) // Calculation done only for kdtree search
         myPointStruct->d_avg = sqrt((x_max - x_min)*(y_max - y_min) / myPointStruct->num_elem);
@@ -266,199 +244,424 @@ void read_PointStructure(PointStructure* myPointStruct)
         myPointStruct->d_avg = cbrt((x_max - x_min)*(y_max - y_min)*(z_max - z_min)/myPointStruct->num_elem);
 
     // Read the mesh file elements and boundary nodes
-    int e_type, tag_int, e_node1, e_node2, e_node3, e_node4; //variables for reading elements
-    double dx,dy,dz,dx1,dy1,dz1; // vectors for calculating normal to the surface
-
-    if (parameters.dimension==2) //if 2D problem, then read only line elements as boundary elements
+    int e_type, e_node1, e_node2, e_node3, e_node4;
+    int num_tags, geom_id;
+    short phys_id;
+    double dx, dy, dz, dx1, dy1, dz1;
+    
+    if (parameters.dimension == 2)
     {
         for (int ie = 0; ie < myPointStruct->num_elem; ie++)
         {
-            fscan_temp = fscanf(file, "%i ", &itemp);   //element number
-            fscan_temp = fscanf(file, "%i ", &e_type); //type of the element
-            if (e_type == 1) //reading line elements
-            { 
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &tag_int); // edge/boundary tag, if a square, elements on one edge will have same tag
-                fscan_temp = fscanf(file, "%i ", &e_node1);     //node number
-                myPointStruct->boundary_tag[e_node1 - 1] = true; //set boundary tag to true
-                fscan_temp = fscanf(file, "%i ", &e_node2);     //node number
-                myPointStruct->boundary_tag[e_node2 - 1] = true; //set boundary tag to true
-                dx = myPointStruct->x[e_node2 - 1] - myPointStruct->x[e_node1 - 1]; //calculate normal to the line
-                dy = myPointStruct->y[e_node2 - 1] - myPointStruct->y[e_node1 - 1]; 
-                myPointStruct->x_normal[e_node1 - 1] += -dy; myPointStruct->y_normal[e_node1 - 1] += dx; //add the normals to each node
-                myPointStruct->x_normal[e_node2 - 1] += -dy; myPointStruct->y_normal[e_node2 - 1] += dx; //add the normals to each node
-            }
-            else if (e_type == 15) //reading corner nodes
-            { 
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &tag_int); // edge/boundary tag; if a square domain, elements on one edge will have same tag
-                fscan_temp = fscanf(file, "%i ", &itemp);   //node number
-                myPointStruct->corner_tag[itemp - 1] = true; //set corner tag to true
+            fscanf(file, "%d %d", &itemp, &e_type);
+
+            if (e_type == 1 || e_type == 15)   // line or point
+            {
+                fscanf(file, "%d", &num_tags);
+
+                phys_id = 0;
+                geom_id = 0;
+                if (num_tags >= 1) fscanf(file, "%hd", &phys_id);
+                if (num_tags >= 2) fscanf(file, "%d", &geom_id);
+                for (int t = 2; t < num_tags; t++) fscanf(file, "%*d");
+
+                
+                BCValue bc = {0};
+                bc.type = BC_INTERIOR;
+
+                if ((phys_id != 0) && (!flag_bc_file))
+                {
+                    for (int i = 0; i < myPointStruct->num_boundary_types; i++)
+                    {
+                        if (myPointStruct->boundary_map[i].physical_id == phys_id)
+                        {
+                            bc = myPointStruct->boundary_map[i].bc;
+                            break;
+                        }
+                    }
+                }
+
+                if (e_type == 1)  // 2-node line
+                {
+                    fscanf(file, "%d %d", &e_node1, &e_node2);
+
+                    myPointStruct->boundary_tag[e_node1 - 1] = true;
+                    myPointStruct->boundary_tag[e_node2 - 1] = true;
+
+                    if (myPointStruct->node_bc[e_node1 - 1].type == BC_INTERIOR) {
+                        assign_node_bc(myPointStruct, e_node1 - 1, bc);
+                    }
+                    else if (myPointStruct->node_bc[e_node1 - 1].type != bc.type) {
+                        myPointStruct->corner_tag[e_node1 - 1] = true;
+                        assign_node_bc(myPointStruct, e_node1 - 1, bc);  // priority-based
+                    }
+
+                    if (myPointStruct->node_bc[e_node2 - 1].type == BC_INTERIOR) {
+                        assign_node_bc(myPointStruct, e_node2 - 1, bc);
+                    }
+                    else if (myPointStruct->node_bc[e_node2 - 1].type != bc.type) {
+                        myPointStruct->corner_tag[e_node2 - 1] = true;
+                        assign_node_bc(myPointStruct, e_node2 - 1, bc);  // priority-based
+                    }
+
+                    dx = myPointStruct->x[e_node2 - 1] - myPointStruct->x[e_node1 - 1];
+                    dy = myPointStruct->y[e_node2 - 1] - myPointStruct->y[e_node1 - 1];
+
+                    myPointStruct->x_normal[e_node1 - 1] += -dy;
+                    myPointStruct->y_normal[e_node1 - 1] +=  dx;
+                    myPointStruct->x_normal[e_node2 - 1] += -dy;
+                    myPointStruct->y_normal[e_node2 - 1] +=  dx;
+                }
+                else   // e_type == 15 → point (corner)
+                {
+                    fscanf(file, "%d", &itemp);
+                    myPointStruct->corner_tag[itemp - 1]   = true;
+                    myPointStruct->boundary_tag[itemp - 1] = true;
+
+                    if (bc.type != BC_INTERIOR) {
+                        assign_node_bc(myPointStruct, itemp - 1, bc);
+                    }
+                }
             }
             else
-            {                              //not reading any other kind of elements
-                fscan_temp = fscanf(file, "%*[^\n]\n"); //skip reading remaining row
+            {
+                fscanf(file, "%*[^\n]\n");
             }
         }
     }
-    else //if 3D problem, then read only surface elements as boundary elements
-    {   
+    else   // ========================== 3D ==========================
+    {
         for (int ie = 0; ie < myPointStruct->num_elem; ie++)
         {
-            fscan_temp = fscanf(file, "%i ", &itemp);   //element number
-            fscan_temp = fscanf(file, "%i ", &e_type); //element type
-            if (e_type == 2)
-            { //important 3 node triangle CV on the boundary
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &tag_int); //element tag
-                fscan_temp = fscanf(file, "%i ", &e_node1);     //node number
-                myPointStruct->boundary_tag[e_node1 - 1] = true; //set boundary tag to true
-                fscan_temp = fscanf(file, "%i ", &e_node2);     //node number
-                myPointStruct->boundary_tag[e_node2 - 1] = true; //set boundary tag to true
-                fscan_temp = fscanf(file, "%i ", &e_node3);     //node number
-                myPointStruct->boundary_tag[e_node3 - 1] = true; //set boundary tag to true
-                //calculate normal to the surface of the triangle
-                // by calculating cross product of the two vectors
-                dx = myPointStruct->x[e_node2 - 1] - myPointStruct->x[e_node1 - 1]; 
-                dy = myPointStruct->y[e_node2 - 1] - myPointStruct->y[e_node1 - 1];
-                dz = myPointStruct->z[e_node2 - 1] - myPointStruct->z[e_node1 - 1];
-                dx1 = myPointStruct->x[e_node3 - 1] - myPointStruct->x[e_node1 - 1];
-                dy1 = myPointStruct->y[e_node3 - 1] - myPointStruct->y[e_node1 - 1];
-                dz1 = myPointStruct->z[e_node3 - 1] - myPointStruct->z[e_node1 - 1];
-                dtemp = dy*dz1 - dz*dy1;
-                myPointStruct->x_normal[e_node1 - 1] += dtemp;
-                myPointStruct->x_normal[e_node2 - 1] += dtemp;
-                myPointStruct->x_normal[e_node3 - 1] += dtemp;
-                dtemp = dz*dx1 - dx*dz1;
-                myPointStruct->y_normal[e_node1 - 1] += dtemp;
-                myPointStruct->y_normal[e_node2 - 1] += dtemp;
-                myPointStruct->y_normal[e_node3 - 1] += dtemp;
-                dtemp = dx*dy1 - dy*dx1;
-                myPointStruct->z_normal[e_node1 - 1] += dtemp;
-                myPointStruct->z_normal[e_node2 - 1] += dtemp;
-                myPointStruct->z_normal[e_node3 - 1] += dtemp;
-            }
-            else if (e_type == 3)
-            { //important 4 node quad element on the boundary
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &tag_int); //element tag
-                fscan_temp = fscanf(file, "%i ", &e_node1);     //node number
-                myPointStruct->boundary_tag[e_node1 - 1] = true; //set boundary tag to true
-                fscan_temp = fscanf(file, "%i ", &e_node2);     //node number
-                myPointStruct->boundary_tag[e_node2 - 1] = true; //set boundary tag to true
-                fscan_temp = fscanf(file, "%i ", &e_node3);     //node number
-                myPointStruct->boundary_tag[e_node3 - 1] = true; //set boundary tag to true
-                fscan_temp = fscanf(file, "%i ", &e_node4);     //node number
-                myPointStruct->boundary_tag[e_node4 - 1] = true; //set boundary tag to true
-                // calculate normal to the surface of the quad element
-                // by calculating cross product of any two vectors/lines on the surface
-                dx = myPointStruct->x[e_node2 - 1] - myPointStruct->x[e_node1 - 1];
-                dy = myPointStruct->y[e_node2 - 1] - myPointStruct->y[e_node1 - 1];
-                dz = myPointStruct->z[e_node2 - 1] - myPointStruct->z[e_node1 - 1];
-                dx1 = myPointStruct->x[e_node3 - 1] - myPointStruct->x[e_node1 - 1];
-                dy1 = myPointStruct->y[e_node3 - 1] - myPointStruct->y[e_node1 - 1];
-                dz1 = myPointStruct->z[e_node3 - 1] - myPointStruct->z[e_node1 - 1];
-                dtemp = dy*dz1 - dz*dy1;
-                myPointStruct->x_normal[e_node1 - 1] += dtemp;
-                myPointStruct->x_normal[e_node2 - 1] += dtemp;
-                myPointStruct->x_normal[e_node3 - 1] += dtemp;
-                myPointStruct->x_normal[e_node4 - 1] += dtemp;
-                dtemp = dz*dx1 - dx*dz1;
-                myPointStruct->y_normal[e_node1 - 1] += dtemp;
-                myPointStruct->y_normal[e_node2 - 1] += dtemp;
-                myPointStruct->y_normal[e_node3 - 1] += dtemp;
-                myPointStruct->y_normal[e_node4 - 1] += dtemp;
-                dtemp = dx*dy1 - dy*dx1;
-                myPointStruct->z_normal[e_node1 - 1] += dtemp;
-                myPointStruct->z_normal[e_node2 - 1] += dtemp;
-                myPointStruct->z_normal[e_node3 - 1] += dtemp;
-                myPointStruct->z_normal[e_node4 - 1] += dtemp;
-            }
-            else if (e_type == 1)
-            { //2 node line: log these 2 vertex numbers to delete them later
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &tag_int); //element tag
-                fscan_temp = fscanf(file, "%i ", &itemp);   //first point
-                myPointStruct->corner_tag[itemp - 1] = true;
-                fscan_temp = fscanf(file, "%i ", &itemp); //second point
-                myPointStruct->corner_tag[itemp - 1] = true;
-            }
-            else if (e_type == 15) //reading corner nodes
-            { 
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &itemp);
-                fscan_temp = fscanf(file, "%i ", &tag_int); // edge/boundary tag; if a square domain, elements on one edge will have same tag
-                fscan_temp = fscanf(file, "%i ", &itemp);   //node number
-                myPointStruct->corner_tag[itemp - 1] = true; //set corner tag to true
+            fscanf(file, "%d %d", &itemp, &e_type);
+
+            if (e_type == 2 || e_type == 3 || e_type == 1 || e_type == 15)
+            {
+                fscanf(file, "%d", &num_tags);
+
+                phys_id = 0;
+                geom_id = 0;
+                if (num_tags >= 1) fscanf(file, "%hd", &phys_id);
+                if (num_tags >= 2) fscanf(file, "%d", &geom_id);
+                for (int t = 2; t < num_tags; t++) fscanf(file, "%*d");
+
+                BCValue bc = {0};
+                bc.type = BC_INTERIOR;
+
+                if ((phys_id != 0) && (!flag_bc_file))
+                {
+                    for (int i = 0; i < myPointStruct->num_boundary_types; i++)
+                    {
+                        if (myPointStruct->boundary_map[i].physical_id == phys_id)
+                        {
+                            bc = myPointStruct->boundary_map[i].bc;
+                            break;
+                        }
+                    }
+                }
+
+                if (e_type == 2 || e_type == 3)   // triangle or quad
+                {
+                    fscanf(file, "%d %d %d", &e_node1, &e_node2, &e_node3);
+
+                    myPointStruct->boundary_tag[e_node1 - 1] = true;
+                    myPointStruct->boundary_tag[e_node2 - 1] = true;
+                    myPointStruct->boundary_tag[e_node3 - 1] = true;
+
+
+                    if (myPointStruct->node_bc[e_node1 - 1].type == BC_INTERIOR) {
+                        assign_node_bc(myPointStruct, e_node1 - 1, bc);
+                    }
+                    else if (myPointStruct->node_bc[e_node1 - 1].type != bc.type) {
+                        myPointStruct->corner_tag[e_node1 - 1] = true;
+                        assign_node_bc(myPointStruct, e_node1 - 1, bc);
+                    }
+                    if (myPointStruct->node_bc[e_node2 - 1].type == BC_INTERIOR) {
+                        assign_node_bc(myPointStruct, e_node2 - 1, bc);
+                    }
+                    else if (myPointStruct->node_bc[e_node2 - 1].type != bc.type) {
+                        myPointStruct->corner_tag[e_node2 - 1] = true;
+                        assign_node_bc(myPointStruct, e_node2 - 1, bc);
+                    }
+                    if (myPointStruct->node_bc[e_node3 - 1].type == BC_INTERIOR) {
+                        assign_node_bc(myPointStruct, e_node3 - 1, bc);
+                    }
+                    else if (myPointStruct->node_bc[e_node3 - 1].type != bc.type) {
+                        myPointStruct->corner_tag[e_node3 - 1] = true;
+                        assign_node_bc(myPointStruct, e_node3 - 1, bc);
+                    }
+
+                    if (e_type == 3)
+                    {
+                        fscanf(file, "%d", &e_node4);
+                        myPointStruct->boundary_tag[e_node4 - 1] = true;
+                        if (myPointStruct->node_bc[e_node4 - 1].type == BC_INTERIOR) {
+                            assign_node_bc(myPointStruct, e_node4 - 1, bc);
+                        }
+                        else if (myPointStruct->node_bc[e_node4 - 1].type != bc.type) {
+                            myPointStruct->corner_tag[e_node4 - 1] = true;
+                            assign_node_bc(myPointStruct, e_node4 - 1, bc);
+                        }
+                    }
+
+                    dx  = myPointStruct->x[e_node2 - 1] - myPointStruct->x[e_node1 - 1];
+                    dy  = myPointStruct->y[e_node2 - 1] - myPointStruct->y[e_node1 - 1];
+                    dz  = myPointStruct->z[e_node2 - 1] - myPointStruct->z[e_node1 - 1];
+                    dx1 = myPointStruct->x[e_node3 - 1] - myPointStruct->x[e_node1 - 1];
+                    dy1 = myPointStruct->y[e_node3 - 1] - myPointStruct->y[e_node1 - 1];
+                    dz1 = myPointStruct->z[e_node3 - 1] - myPointStruct->z[e_node1 - 1];
+
+                    dtemp = dy*dz1 - dz*dy1;
+                    myPointStruct->x_normal[e_node1 - 1] += dtemp;
+                    myPointStruct->x_normal[e_node2 - 1] += dtemp;
+                    myPointStruct->x_normal[e_node3 - 1] += dtemp;
+                    if (e_type == 3) myPointStruct->x_normal[e_node4 - 1] += dtemp;
+
+                    dtemp = dz*dx1 - dx*dz1;
+                    myPointStruct->y_normal[e_node1 - 1] += dtemp;
+                    myPointStruct->y_normal[e_node2 - 1] += dtemp;
+                    myPointStruct->y_normal[e_node3 - 1] += dtemp;
+                    if (e_type == 3) myPointStruct->y_normal[e_node4 - 1] += dtemp;
+
+                    dtemp = dx*dy1 - dy*dx1;
+                    myPointStruct->z_normal[e_node1 - 1] += dtemp;
+                    myPointStruct->z_normal[e_node2 - 1] += dtemp;
+                    myPointStruct->z_normal[e_node3 - 1] += dtemp;
+                    if (e_type == 3) myPointStruct->z_normal[e_node4 - 1] += dtemp;
+                }
+                else if (e_type == 1)   // line → corners
+                {
+                    fscanf(file, "%d %d", &e_node1, &e_node2);
+                    myPointStruct->corner_tag[e_node1 - 1] = true;
+                    myPointStruct->corner_tag[e_node2 - 1] = true;
+                    myPointStruct->boundary_tag[e_node1 - 1] = true;    
+                    myPointStruct->boundary_tag[e_node2 - 1] = true;
+                    if (bc.type != BC_INTERIOR) {
+                        assign_node_bc(myPointStruct, e_node1 - 1,  bc);
+                        assign_node_bc(myPointStruct, e_node2 - 1,  bc);
+                    }
+                }
+                else   // e_type == 15
+                {
+                    fscanf(file, "%d", &itemp);
+                    myPointStruct->corner_tag[itemp - 1] = true;
+                    myPointStruct->boundary_tag[itemp - 1] = true;
+
+                    if (bc.type != BC_INTERIOR) {
+                        assign_node_bc(myPointStruct, itemp - 1, bc);
+                    }
+                }
             }
             else
-            {                              //not reading any other kind of element
-                fscan_temp = fscanf(file, "%*[^\n]\n"); //skip reading remaining row
+            {
+                fscanf(file, "%*[^\n]\n");
             }
         }
     }
+
     fclose(file);
     myPointStruct->num_corners = 0;
     myPointStruct->num_boundary_nodes = 0;
-    for (int i = 0; i < myPointStruct->num_nodes; i++)
-    {
+    for (int i = 0; i < myPointStruct->num_nodes; i++){
         if (myPointStruct->boundary_tag[i] == true)
-        {
             myPointStruct->num_boundary_nodes++;
-        }
         if (myPointStruct->corner_tag[i] == true)
-        {
             myPointStruct->num_corners++;
-        }
     }
     // Remove first num_corners nodes
     int remove_count = myPointStruct->num_corners;
 
-    memmove(myPointStruct->x, myPointStruct->x + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
-    memmove(myPointStruct->y, myPointStruct->y + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
-    memmove(myPointStruct->z, myPointStruct->z + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
-    memmove(myPointStruct->x_normal, myPointStruct->x_normal + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
-    memmove(myPointStruct->y_normal, myPointStruct->y_normal + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
-    memmove(myPointStruct->z_normal, myPointStruct->z_normal + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
-    memmove(myPointStruct->point_index, myPointStruct->point_index + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(int));
-    memmove(myPointStruct->boundary_tag, myPointStruct->boundary_tag + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(bool));
-    memmove(myPointStruct->corner_tag, myPointStruct->corner_tag + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(bool));
+    if (remove_count != 0){
+        memmove(myPointStruct->x, myPointStruct->x + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
+        memmove(myPointStruct->y, myPointStruct->y + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
+        memmove(myPointStruct->z, myPointStruct->z + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
+        memmove(myPointStruct->x_normal, myPointStruct->x_normal + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
+        memmove(myPointStruct->y_normal, myPointStruct->y_normal + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
+        memmove(myPointStruct->z_normal, myPointStruct->z_normal + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
+        memmove(myPointStruct->point_index, myPointStruct->point_index + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(int));
+        memmove(myPointStruct->boundary_tag, myPointStruct->boundary_tag + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(bool));
+        memmove(myPointStruct->corner_tag, myPointStruct->corner_tag + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(bool));
+        memmove(myPointStruct->node_bc, myPointStruct->node_bc + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(BCValue));
 
+        // Reallocate memory to shrink the array
+        int new_size = myPointStruct->num_nodes - remove_count;
+        myPointStruct->x = (double*)realloc(myPointStruct->x, new_size * sizeof(double));
+        myPointStruct->y = (double*)realloc(myPointStruct->y, new_size * sizeof(double));
+        myPointStruct->z = (double*)realloc(myPointStruct->z, new_size * sizeof(double));
+        myPointStruct->x_normal = (double*)realloc(myPointStruct->x_normal, new_size * sizeof(double));
+        myPointStruct->y_normal = (double*)realloc(myPointStruct->y_normal, new_size * sizeof(double));
+        myPointStruct->z_normal = (double*)realloc(myPointStruct->z_normal, new_size * sizeof(double));
+        myPointStruct->point_index = (int*)realloc(myPointStruct->point_index, new_size * sizeof(int));
+        myPointStruct->boundary_tag = (bool*)realloc(myPointStruct->boundary_tag, new_size * sizeof(bool));
+        myPointStruct->corner_tag = (bool*)realloc(myPointStruct->corner_tag, new_size * sizeof(bool));
+        myPointStruct->node_bc = (BCValue*)realloc(myPointStruct->node_bc, new_size * sizeof(BCValue));
 
-    // Reallocate memory to shrink the array
-    int new_size = myPointStruct->num_nodes - remove_count;
-    myPointStruct->x = (double*)realloc(myPointStruct->x, new_size * sizeof(double));
-    myPointStruct->y = (double*)realloc(myPointStruct->y, new_size * sizeof(double));
-    myPointStruct->z = (double*)realloc(myPointStruct->z, new_size * sizeof(double));
-    myPointStruct->x_normal = (double*)realloc(myPointStruct->x_normal, new_size * sizeof(double));
-    myPointStruct->y_normal = (double*)realloc(myPointStruct->y_normal, new_size * sizeof(double));
-    myPointStruct->z_normal = (double*)realloc(myPointStruct->z_normal, new_size * sizeof(double));
-    myPointStruct->point_index = (int*)realloc(myPointStruct->point_index, new_size * sizeof(int));
-    myPointStruct->boundary_tag = (bool*)realloc(myPointStruct->boundary_tag, new_size * sizeof(bool));
-    myPointStruct->corner_tag = (bool*)realloc(myPointStruct->corner_tag, new_size * sizeof(bool));
+        if (myPointStruct->x == NULL || myPointStruct->y == NULL || myPointStruct->z == NULL 
+                || myPointStruct->x_normal == NULL || myPointStruct->y_normal == NULL || 
+                myPointStruct->z_normal == NULL || myPointStruct->point_index == NULL || 
+                myPointStruct->boundary_tag == NULL|| myPointStruct->corner_tag == NULL) {
+            perror("realloc failed while deleting corner nodes");
+            exit(1);
+        }
+        myPointStruct->num_nodes = new_size;
+        myPointStruct->num_boundary_nodes = myPointStruct->num_boundary_nodes - myPointStruct->num_corners;
+        // myPointStruct->num_corners = 0;
 
-    if (myPointStruct->x == NULL || myPointStruct->y == NULL || myPointStruct->z == NULL 
-        || myPointStruct->x_normal == NULL || myPointStruct->y_normal == NULL || 
-        myPointStruct->z_normal == NULL || myPointStruct->point_index == NULL || 
-        myPointStruct->boundary_tag == NULL|| myPointStruct->corner_tag == NULL) {
-        perror("realloc failed while deleting corner nodes");
+        for(int i = 0; i<new_size; i++){
+            myPointStruct->point_index[i] = myPointStruct->point_index[i]-remove_count;
+        }
+    }
+    for (int i = 0; i < myPointStruct->num_nodes; i++){
+        if (myPointStruct->boundary_tag[i] == true){
+            printf("Boundary node %d: BC type = %d\n", i+1, myPointStruct->node_bc[i].type);    
+        }
+    }
+    
+    // Count corners and boundary nodes
+    myPointStruct->num_corners = 0;
+    myPointStruct->num_boundary_nodes = 0;
+    for (int i = 0; i < myPointStruct->num_nodes; i++) {
+        if (myPointStruct->boundary_tag[i])
+            myPointStruct->num_boundary_nodes++;
+        if (myPointStruct->corner_tag[i])
+            myPointStruct->num_corners++;
+    }
+
+    // Only proceed if there are corners to remove
+    if (myPointStruct->num_corners == 0)
+        return; // or continue with your code
+
+    int new_size = myPointStruct->num_nodes - myPointStruct->num_corners;
+
+    // Allocate temporary arrays for non-corner nodes
+    double *temp_x = (double*)malloc(new_size * sizeof(double));
+    double *temp_y = (double*)malloc(new_size * sizeof(double));
+    double *temp_z = (double*)malloc(new_size * sizeof(double));
+    double *temp_x_normal = (double*)malloc(new_size * sizeof(double));
+    double *temp_y_normal = (double*)malloc(new_size * sizeof(double));
+    double *temp_z_normal = (double*)malloc(new_size * sizeof(double));
+    int *temp_point_index = (int*)malloc(new_size * sizeof(int));
+    bool *temp_boundary_tag = (bool*)malloc(new_size * sizeof(bool));
+    bool *temp_corner_tag = (bool*)malloc(new_size * sizeof(bool));
+    BCValue *temp_node_bc = (BCValue*)malloc(new_size * sizeof(BCValue));
+
+    if (!temp_x || !temp_y || !temp_z || !temp_x_normal || !temp_y_normal || 
+        !temp_z_normal || !temp_point_index || !temp_boundary_tag || 
+        !temp_corner_tag || !temp_node_bc) {
+        perror("malloc failed during corner node removal");
+        // Free any successfully allocated memory
+        free(temp_x); free(temp_y); free(temp_z);
+        free(temp_x_normal); free(temp_y_normal); free(temp_z_normal);
+        free(temp_point_index); free(temp_boundary_tag); 
+        free(temp_corner_tag); free(temp_node_bc);
         exit(1);
     }
-    myPointStruct->num_nodes = new_size;
-    myPointStruct->num_boundary_nodes = myPointStruct->num_boundary_nodes - myPointStruct->num_corners;
-    // myPointStruct->num_corners = 0;
 
-    for(int i = 0; i<new_size; i++){
-        myPointStruct->point_index[i] = myPointStruct->point_index[i]-remove_count;
+    // Copy non-corner nodes to temporary arrays
+    int j = 0;
+    for (int i = 0; i < myPointStruct->num_nodes; i++) {
+        if (!myPointStruct->corner_tag[i]) {
+            temp_x[j] = myPointStruct->x[i];
+            temp_y[j] = myPointStruct->y[i];
+            temp_z[j] = myPointStruct->z[i];
+            temp_x_normal[j] = myPointStruct->x_normal[i];
+            temp_y_normal[j] = myPointStruct->y_normal[i];
+            temp_z_normal[j] = myPointStruct->z_normal[i];
+            temp_point_index[j] = myPointStruct->point_index[i];
+            temp_boundary_tag[j] = myPointStruct->boundary_tag[i];
+            temp_corner_tag[j] = false; // All corners removed
+            temp_node_bc[j] = myPointStruct->node_bc[i];
+            j++;
+        }
     }
+
+    // Free old arrays and assign new ones
+    free(myPointStruct->x);
+    free(myPointStruct->y);
+    free(myPointStruct->z);
+    free(myPointStruct->x_normal);
+    free(myPointStruct->y_normal);
+    free(myPointStruct->z_normal);
+    free(myPointStruct->point_index);
+    free(myPointStruct->boundary_tag);
+    free(myPointStruct->corner_tag);
+    free(myPointStruct->node_bc);
+
+    myPointStruct->x = temp_x;
+    myPointStruct->y = temp_y;
+    myPointStruct->z = temp_z;
+    myPointStruct->x_normal = temp_x_normal;
+    myPointStruct->y_normal = temp_y_normal;
+    myPointStruct->z_normal = temp_z_normal;
+    myPointStruct->point_index = temp_point_index;
+    myPointStruct->boundary_tag = temp_boundary_tag;
+    myPointStruct->corner_tag = temp_corner_tag;
+    myPointStruct->node_bc = temp_node_bc;
+
+    // Update counts
+    myPointStruct->num_boundary_nodes -= myPointStruct->num_corners;
+    myPointStruct->num_nodes = new_size;
+    // myPointStruct->num_corners is now effectively 0
+
+    // Reindex point_index array if needed
+    // (Depends on what point_index represents in your application)
+    for (int i = 0; i < new_size; i++) {
+        myPointStruct->point_index[i] = i;
+    }
+    
     printf("No of nodes = %d \nNo of elements = %d \n", myPointStruct->num_nodes, myPointStruct->num_elem);
-    printf("No of boundary nodes = %d \nNo of corner nodes removed = %d \n", myPointStruct->num_boundary_nodes, remove_count);
+    printf("No of boundary nodes = %d \nNo of corner nodes removed = %d \n", myPointStruct->num_boundary_nodes, myPointStruct->num_corners);
 }
+
+// TODO: Need to reset this function using an element centroid method for better accuracy in cases with complex geometries
+// void correct_normal_directions(PointStructure *ps)
+// {
+//     for (int i = 0; i < ps->num_nodes; i++)
+//     {
+//         if (!ps->boundary_tag[i]) continue;
+//         if (ps->corner_tag[i])   continue;
+
+//         int n = ps->num_cloud_points;
+//         int ref = -1;
+
+//         for (int j = 0; j < n; j++) {
+//             int nb = ps->cloud_index[i*n + j];
+//             if (!ps->boundary_tag[nb]) {
+//                 ref = nb;
+//                 break;
+//             }
+//         }
+
+//         if (ref < 0) continue;  // no interior neighbor
+
+//         double dx = ps->x[ref] - ps->x[i];
+//         double dy = ps->y[ref] - ps->y[i];
+//         double dz = ps->z[ref] - ps->z[i];
+
+//         double dot =
+//             dx * ps->x_normal[i] +
+//             dy * ps->y_normal[i] +
+//             dz * ps->z_normal[i];
+
+//         if (dot > 0.0) {
+//             ps->x_normal[i] = -ps->x_normal[i];
+//             ps->y_normal[i] = -ps->y_normal[i];
+//             ps->z_normal[i] = -ps->z_normal[i];
+//         }
+
+//         double mag = sqrt(
+//             ps->x_normal[i]*ps->x_normal[i] +
+//             ps->y_normal[i]*ps->y_normal[i] +
+//             ps->z_normal[i]*ps->z_normal[i]
+//         );
+
+//         if (mag < 1e-12) continue;
+
+//         ps->x_normal[i] /= mag;
+//         ps->y_normal[i] /= mag;
+//         ps->z_normal[i] /= mag;
+//     }
+// }
 
 void correct_normal_directions(PointStructure *myPointStruct)
 {
@@ -501,7 +704,6 @@ void correct_normal_directions(PointStructure *myPointStruct)
         }
     }
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //////// Restriction and Prolongation matrix creation 
@@ -743,6 +945,7 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
     double *temp_ny = (double*)malloc(m * sizeof(double));
     double *temp_nz = (double*)malloc(m * sizeof(double));
     bool *temp_boundary_tag = (bool*)malloc(m * sizeof(bool));
+    BCValue *temp_node_bc = (BCValue*)malloc(m * sizeof(BCValue));
     
     int *temp_cloud_index = (int*)malloc(m*n * sizeof(int));
 
@@ -754,23 +957,32 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
     int count = 0;        // Counter for filling queue1 (RCM order)
     int count_queue = 0;   // Pointer to track current node in BFS
 
-    queue1[0] = 0;   // Starting with node 0 (can change to another node)
+    queue1[0] = 0;
     visited[0] = true;
-    count++;
-    
-    // Perform BFS-like traversal to generate RCM order in queue1
-    while (count_queue < count) {
-        int current = queue1[count_queue++];  // Dequeue node
+    count = 1;
+    count_queue = 0;
 
-        // For each neighbor (cloud point) of the current node
+    while (count_queue < count) {
+        int current = queue1[count_queue++];
+
         for (int i = 1; i < n; i++) {
-            int k = current * n + i;
-            int neighbor = myPointstruct->cloud_index[k];  // Get neighboring node
-            // Enqueue neighbor if not visited
+            int neighbor = myPointstruct->cloud_index[current*n + i];
+
+            if (neighbor < 0 || neighbor >= m)
+                continue;
+
             if (!visited[neighbor]) {
-                queue1[count++] = neighbor;
                 visited[neighbor] = true;
+                queue1[count++] = neighbor;
             }
+        }
+    }
+
+    /* Catch disconnected components */
+    for (int i = 0; i < m; i++) {
+        if (!visited[i]) {
+            queue1[count++] = i;
+            visited[i] = true;
         }
     }
 
@@ -784,7 +996,6 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
         temp_x[i] = myPointstruct->x[queue1[i]];
         temp_y[i] = myPointstruct->y[queue1[i]];
         temp_z[i] = myPointstruct->z[queue1[i]];
-        
         // Reorder the cloud index array based on queue2 mapping
         for (int j = 0; j < n; j++) {
             temp_cloud_index[i*n +j] = queue2[myPointstruct->cloud_index[queue1[i]*n +j]];
@@ -793,6 +1004,7 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
         temp_ny[i] = myPointstruct->y_normal[queue1[i]];
         temp_nz[i] = myPointstruct->z_normal[queue1[i]];
         temp_boundary_tag[i] = myPointstruct->boundary_tag[queue1[i]];
+        temp_node_bc[i] = myPointstruct->node_bc[queue1[i]];
     }
 
     for (int i = 0; i < m; i++) {
@@ -808,6 +1020,7 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
         myPointstruct->y_normal[i] = temp_ny[i];
         myPointstruct->z_normal[i] = temp_nz[i];
         myPointstruct->boundary_tag[i] = temp_boundary_tag[i];
+        myPointstruct->node_bc[i] = temp_node_bc[i];
     }
 
     // Free allocated memory
@@ -822,6 +1035,7 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
     free(temp_nz);
     free(temp_boundary_tag);
     free(temp_cloud_index);
+    free(temp_node_bc);
 }
 
 void create_prolongation_and_restriction_matrices(PointStructure* myPointStruct, short num_levels){

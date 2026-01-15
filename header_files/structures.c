@@ -12,6 +12,8 @@ void AllocateMemoryPointStructure(PointStructure* myPointStruct, int nodes) {
     myPointStruct->point_index = (int*)malloc(nodes * sizeof(int));
     myPointStruct->boundary_tag = (bool*)malloc(nodes * sizeof(bool));
     myPointStruct->corner_tag = (bool*)malloc(nodes * sizeof(bool));
+    // myPointStruct->node_bc_type = (BCType*)malloc(nodes * sizeof(BCType));
+    myPointStruct->node_bc = (BCValue*)malloc(nodes * sizeof(BCValue));
     myPointStruct->num_nodes = nodes;
     myPointStruct->num_elem = 0;
     myPointStruct->rcm_order = (int*)malloc(nodes*sizeof(int));
@@ -73,6 +75,8 @@ void free_PointStructure(PointStructure* myPointStruct, int num_levels) {
         free(myPointStruct[i].y_normal);
         free(myPointStruct[i].z_normal);
         free(myPointStruct[i].boundary_tag);
+        // free(myPointStruct[i].node_bc_type);
+        free(myPointStruct[i].node_bc);
         free(myPointStruct[i].corner_tag);
         free(myPointStruct[i].pow_x);
         free(myPointStruct[i].pow_y);

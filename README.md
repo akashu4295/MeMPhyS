@@ -1,6 +1,6 @@
 # Meshless Method Navier-Stokes Solver (C Code)
 
-This repository contains a C-based implementation of a **Meshless Method** for solving the Navier-Stokes equations. The solver utilizes a radial basis function (RBF) based meshless approach with optional multicore CPU acceleration using OpenACC.
+This repository contains a C-based implementation of a **Meshless Method** for solving the Navier-Stokes equations. The solver utilizes a radial basis function (RBF) based meshless approach with optional multicore CPU acceleration using OpenACC. The previous C++ implementation of MemPhyS from Dr. Shantanu Shahane is available at https://github.com/shahaneshantanu/memphys.
 
 ---
 

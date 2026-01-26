@@ -12,8 +12,10 @@ void AllocateMemoryPointStructure(PointStructure* myPointStruct, int nodes) {
     myPointStruct->point_index = (int*)malloc(nodes * sizeof(int));
     myPointStruct->boundary_tag = (bool*)malloc(nodes * sizeof(bool));
     myPointStruct->corner_tag = (bool*)malloc(nodes * sizeof(bool));
-    // myPointStruct->node_bc_type = (BCType*)malloc(nodes * sizeof(BCType));
     myPointStruct->node_bc = (BCValue*)malloc(nodes * sizeof(BCValue));
+    myPointStruct->pow_x = (short*)malloc(myPointStruct->num_poly_terms * sizeof(short));
+    myPointStruct->pow_y = (short*)malloc(myPointStruct->num_poly_terms * sizeof(short));
+    myPointStruct->pow_z = (short*)malloc(myPointStruct->num_poly_terms * sizeof(short));
     myPointStruct->num_nodes = nodes;
     myPointStruct->num_elem = 0;
     myPointStruct->rcm_order = (int*)malloc(nodes*sizeof(int));

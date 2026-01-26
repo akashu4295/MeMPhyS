@@ -70,7 +70,7 @@ endif
 ############################################
 
 SRC_DIR = header_files
-INIT = init/init_TC.c
+INIT = init.c
 MAIN = mg_NS_solver.c
 SRC = $(wildcard $(SRC_DIR)/*.c)
 

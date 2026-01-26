@@ -18,10 +18,10 @@
 // Function definitions
 ///////////////////////////////////////////////////////////////////////////////
 
+// Tested working well. all variables used have default allocated memory
 void read_flow_parameters(char *filename) {
     FILE *file;
-    char ctemp[100];
-    int temp;
+    char ctemp[100]; int temp;
 
     file = fopen(filename, "r");
     if (file == NULL)
@@ -89,6 +89,7 @@ void read_flow_parameters(char *filename) {
     parameters.nu = parameters.mu / parameters.rho;
 }
 
+//tested and working well. Allocation of Pointstructure pointer memory and not the whole structure
 void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* num_levels)
 {   
     FILE *file;
@@ -106,11 +107,13 @@ void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* 
     *myPointStruct = (PointStructure*)malloc((*num_levels) * sizeof(PointStructure));
     for (short ii = 0; ii<*num_levels ; ii = ii +1){
         SAFE_SCAN1(fscanf(file, "%s\n", (*myPointStruct)[ii].mesh_filename), "Mesh filename read error, Check grid_filenames.csv");
+        printf("Mesh filename for level %d : %s\n", ii, (*myPointStruct)[ii].mesh_filename);
     }
     fclose(file);
 }
 
-void calculate_parameters(PointStructure* myPointStruct) {
+void read_PointStructure(PointStructure* myPointStruct)
+{   
     if (parameters.dimension == 3)
         myPointStruct->num_poly_terms = (myPointStruct->poly_degree + 1) * (myPointStruct->poly_degree + 2) * (myPointStruct->poly_degree + 3)/ 6;
     else
@@ -119,40 +122,7 @@ void calculate_parameters(PointStructure* myPointStruct) {
     printf("PARAMETERS: num_poly_terms = %d\n", myPointStruct->num_poly_terms);
     printf("PARAMETERS: num_cloud_points = %d\n", myPointStruct->num_cloud_points);
     printf("PARAMETERS: dimension = %d\n", parameters.dimension);
-    myPointStruct->pow_x = (short*)malloc(myPointStruct->num_poly_terms * sizeof(short));
-    myPointStruct->pow_y = (short*)malloc(myPointStruct->num_poly_terms * sizeof(short));
-    myPointStruct->pow_z = (short*)malloc(myPointStruct->num_poly_terms * sizeof(short));
-    int count = 0;
-    
-    if (parameters.dimension==2)
-        for (int i = 0; i <= myPointStruct->poly_degree; i++)
-        {
-            for (int j = 0; j <= myPointStruct->poly_degree - i; j++)
-            {
-                myPointStruct->pow_x[count] = i;
-                myPointStruct->pow_y[count] = j;
-                myPointStruct->pow_z[count] = 0;
-                count++;
-            }
-        }
-    else if (parameters.dimension==3)
-        for (int i = 0; i <= myPointStruct->poly_degree; i++)
-        {
-            for (int j = 0; j <= myPointStruct->poly_degree - i; j++)
-            {
-                for (int k = 0; k <= myPointStruct->poly_degree - i - j; k++)
-                {
-                    myPointStruct->pow_x[count] = i;
-                    myPointStruct->pow_y[count] = j;
-                    myPointStruct->pow_z[count] = k;
-                    count++;
-                }
-            }
-        }
-}
 
-void read_PointStructure(PointStructure* myPointStruct)
-{   
     FILE *file;
     char filename[50];
     double dtemp; int itemp; char temp[50]; // temporary variables used multiple times in the code
@@ -179,6 +149,33 @@ void read_PointStructure(PointStructure* myPointStruct)
     // Allocate memory for the members of point structure
     AllocateMemoryPointStructure(myPointStruct, itemp);
     
+    int count = 0;
+    if (parameters.dimension==2)
+        for (int i = 0; i <= myPointStruct->poly_degree; i++)
+        {
+            for (int j = 0; j <= myPointStruct->poly_degree - i; j++)
+            {
+                myPointStruct->pow_x[count] = i;
+                myPointStruct->pow_y[count] = j;
+                myPointStruct->pow_z[count] = 0;
+                count++;
+            }
+        }
+    else if (parameters.dimension==3)
+        for (int i = 0; i <= myPointStruct->poly_degree; i++)
+        {
+            for (int j = 0; j <= myPointStruct->poly_degree - i; j++)
+            {
+                for (int k = 0; k <= myPointStruct->poly_degree - i - j; k++)
+                {
+                    myPointStruct->pow_x[count] = i;
+                    myPointStruct->pow_y[count] = j;
+                    myPointStruct->pow_z[count] = k;
+                    count++;
+                }
+            }
+        }
+
     bool flag_bc_file = false;
     FILE *bcf = fopen("bc.csv", "r");
     if (bcf != NULL)
@@ -264,15 +261,15 @@ void read_PointStructure(PointStructure* myPointStruct)
                 if (num_tags >= 1) fscanf(file, "%hd", &phys_id);
                 if (num_tags >= 2) fscanf(file, "%d", &geom_id);
                 for (int t = 2; t < num_tags; t++) fscanf(file, "%*d");
-
                 
                 BCValue bc = {0};
                 bc.type = BC_INTERIOR;
-
-                if ((phys_id != 0) && (!flag_bc_file))
+                
+                if ((phys_id != 0))
                 {
                     for (int i = 0; i < myPointStruct->num_boundary_types; i++)
                     {
+                        // printf("%d %d \n", myPointStruct->boundary_map[i].physical_id, phys_id);
                         if (myPointStruct->boundary_map[i].physical_id == phys_id)
                         {
                             bc = myPointStruct->boundary_map[i].bc;
@@ -304,6 +301,7 @@ void read_PointStructure(PointStructure* myPointStruct)
                         assign_node_bc(myPointStruct, e_node2 - 1, bc);  // priority-based
                     }
 
+                    // printf(" %d %d \n", myPointStruct->node_bc[e_node1 - 1].type, myPointStruct->node_bc[e_node2 - 1].type);
                     dx = myPointStruct->x[e_node2 - 1] - myPointStruct->x[e_node1 - 1];
                     dy = myPointStruct->y[e_node2 - 1] - myPointStruct->y[e_node1 - 1];
 
@@ -348,7 +346,7 @@ void read_PointStructure(PointStructure* myPointStruct)
                 BCValue bc = {0};
                 bc.type = BC_INTERIOR;
 
-                if ((phys_id != 0) && (!flag_bc_file))
+                if ((phys_id != 0))
                 {
                     for (int i = 0; i < myPointStruct->num_boundary_types; i++)
                     {
@@ -471,7 +469,8 @@ void read_PointStructure(PointStructure* myPointStruct)
     // Remove first num_corners nodes
     int remove_count = myPointStruct->num_corners;
 
-    if (remove_count != 0){
+    if ((remove_count != 0) && (myPointStruct->num_boundary_types == 0)) {
+        printf("Removing %d corner nodes from the mesh\n", remove_count);
         memmove(myPointStruct->x, myPointStruct->x + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
         memmove(myPointStruct->y, myPointStruct->y + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
         memmove(myPointStruct->z, myPointStruct->z + remove_count, (myPointStruct->num_nodes - remove_count) * sizeof(double));
@@ -511,157 +510,91 @@ void read_PointStructure(PointStructure* myPointStruct)
             myPointStruct->point_index[i] = myPointStruct->point_index[i]-remove_count;
         }
     }
-    for (int i = 0; i < myPointStruct->num_nodes; i++){
-        if (myPointStruct->boundary_tag[i] == true){
-            printf("Boundary node %d: BC type = %d\n", i+1, myPointStruct->node_bc[i].type);    
+    else if ((myPointStruct->num_corners != 0) ) {
+
+        int new_size = myPointStruct->num_nodes - myPointStruct->num_corners;
+
+        // Allocate temporary arrays for non-corner nodes
+        double *temp_x = (double*)malloc(new_size * sizeof(double));
+        double *temp_y = (double*)malloc(new_size * sizeof(double));
+        double *temp_z = (double*)malloc(new_size * sizeof(double));
+        double *temp_x_normal = (double*)malloc(new_size * sizeof(double));
+        double *temp_y_normal = (double*)malloc(new_size * sizeof(double));
+        double *temp_z_normal = (double*)malloc(new_size * sizeof(double));
+        int *temp_point_index = (int*)malloc(new_size * sizeof(int));
+        bool *temp_boundary_tag = (bool*)malloc(new_size * sizeof(bool));
+        bool *temp_corner_tag = (bool*)malloc(new_size * sizeof(bool));
+        BCValue *temp_node_bc = (BCValue*)malloc(new_size * sizeof(BCValue));
+
+        if (!temp_x || !temp_y || !temp_z || !temp_x_normal || !temp_y_normal || 
+            !temp_z_normal || !temp_point_index || !temp_boundary_tag || 
+            !temp_corner_tag || !temp_node_bc) {
+            perror("malloc failed during corner node removal");
+            // Free any successfully allocated memory
+            free(temp_x); free(temp_y); free(temp_z);
+            free(temp_x_normal); free(temp_y_normal); free(temp_z_normal);
+            free(temp_point_index); free(temp_boundary_tag); 
+            free(temp_corner_tag); free(temp_node_bc);
+            exit(1);
+        }
+
+        // Copy non-corner nodes to temporary arrays
+        int j = 0;
+        for (int i = 0; i < myPointStruct->num_nodes; i++) {
+            if (!myPointStruct->corner_tag[i]) {
+                temp_x[j] = myPointStruct->x[i];
+                temp_y[j] = myPointStruct->y[i];
+                temp_z[j] = myPointStruct->z[i];
+                temp_x_normal[j] = myPointStruct->x_normal[i];
+                temp_y_normal[j] = myPointStruct->y_normal[i];
+                temp_z_normal[j] = myPointStruct->z_normal[i];
+                temp_point_index[j] = myPointStruct->point_index[i];
+                temp_boundary_tag[j] = myPointStruct->boundary_tag[i];
+                temp_corner_tag[j] = false; // All corners removed
+                temp_node_bc[j] = myPointStruct->node_bc[i];
+                j++;
+            }
+        }
+
+        // Free old arrays and assign new ones
+        free(myPointStruct->x);
+        free(myPointStruct->y);
+        free(myPointStruct->z);
+        free(myPointStruct->x_normal);
+        free(myPointStruct->y_normal);
+        free(myPointStruct->z_normal);
+        free(myPointStruct->point_index);
+        free(myPointStruct->boundary_tag);
+        free(myPointStruct->corner_tag);
+        free(myPointStruct->node_bc);
+
+        myPointStruct->x = temp_x;
+        myPointStruct->y = temp_y;
+        myPointStruct->z = temp_z;
+        myPointStruct->x_normal = temp_x_normal;
+        myPointStruct->y_normal = temp_y_normal;
+        myPointStruct->z_normal = temp_z_normal;
+        myPointStruct->point_index = temp_point_index;
+        myPointStruct->boundary_tag = temp_boundary_tag;
+        myPointStruct->corner_tag = temp_corner_tag;
+        myPointStruct->node_bc = temp_node_bc;
+
+        // Update counts
+        myPointStruct->num_boundary_nodes -= myPointStruct->num_corners;
+        myPointStruct->num_nodes = new_size;
+        // myPointStruct->num_corners is now effectively 0
+
+        // Reindex point_index array if needed
+        // (Depends on what point_index represents in your application)
+        for (int i = 0; i < new_size; i++) {
+            myPointStruct->point_index[i] = i;
         }
     }
-    
-    // Count corners and boundary nodes
-    myPointStruct->num_corners = 0;
-    myPointStruct->num_boundary_nodes = 0;
-    for (int i = 0; i < myPointStruct->num_nodes; i++) {
-        if (myPointStruct->boundary_tag[i])
-            myPointStruct->num_boundary_nodes++;
-        if (myPointStruct->corner_tag[i])
-            myPointStruct->num_corners++;
-    }
-
-    // Only proceed if there are corners to remove
-    if (myPointStruct->num_corners == 0)
-        return; // or continue with your code
-
-    int new_size = myPointStruct->num_nodes - myPointStruct->num_corners;
-
-    // Allocate temporary arrays for non-corner nodes
-    double *temp_x = (double*)malloc(new_size * sizeof(double));
-    double *temp_y = (double*)malloc(new_size * sizeof(double));
-    double *temp_z = (double*)malloc(new_size * sizeof(double));
-    double *temp_x_normal = (double*)malloc(new_size * sizeof(double));
-    double *temp_y_normal = (double*)malloc(new_size * sizeof(double));
-    double *temp_z_normal = (double*)malloc(new_size * sizeof(double));
-    int *temp_point_index = (int*)malloc(new_size * sizeof(int));
-    bool *temp_boundary_tag = (bool*)malloc(new_size * sizeof(bool));
-    bool *temp_corner_tag = (bool*)malloc(new_size * sizeof(bool));
-    BCValue *temp_node_bc = (BCValue*)malloc(new_size * sizeof(BCValue));
-
-    if (!temp_x || !temp_y || !temp_z || !temp_x_normal || !temp_y_normal || 
-        !temp_z_normal || !temp_point_index || !temp_boundary_tag || 
-        !temp_corner_tag || !temp_node_bc) {
-        perror("malloc failed during corner node removal");
-        // Free any successfully allocated memory
-        free(temp_x); free(temp_y); free(temp_z);
-        free(temp_x_normal); free(temp_y_normal); free(temp_z_normal);
-        free(temp_point_index); free(temp_boundary_tag); 
-        free(temp_corner_tag); free(temp_node_bc);
-        exit(1);
-    }
-
-    // Copy non-corner nodes to temporary arrays
-    int j = 0;
-    for (int i = 0; i < myPointStruct->num_nodes; i++) {
-        if (!myPointStruct->corner_tag[i]) {
-            temp_x[j] = myPointStruct->x[i];
-            temp_y[j] = myPointStruct->y[i];
-            temp_z[j] = myPointStruct->z[i];
-            temp_x_normal[j] = myPointStruct->x_normal[i];
-            temp_y_normal[j] = myPointStruct->y_normal[i];
-            temp_z_normal[j] = myPointStruct->z_normal[i];
-            temp_point_index[j] = myPointStruct->point_index[i];
-            temp_boundary_tag[j] = myPointStruct->boundary_tag[i];
-            temp_corner_tag[j] = false; // All corners removed
-            temp_node_bc[j] = myPointStruct->node_bc[i];
-            j++;
-        }
-    }
-
-    // Free old arrays and assign new ones
-    free(myPointStruct->x);
-    free(myPointStruct->y);
-    free(myPointStruct->z);
-    free(myPointStruct->x_normal);
-    free(myPointStruct->y_normal);
-    free(myPointStruct->z_normal);
-    free(myPointStruct->point_index);
-    free(myPointStruct->boundary_tag);
-    free(myPointStruct->corner_tag);
-    free(myPointStruct->node_bc);
-
-    myPointStruct->x = temp_x;
-    myPointStruct->y = temp_y;
-    myPointStruct->z = temp_z;
-    myPointStruct->x_normal = temp_x_normal;
-    myPointStruct->y_normal = temp_y_normal;
-    myPointStruct->z_normal = temp_z_normal;
-    myPointStruct->point_index = temp_point_index;
-    myPointStruct->boundary_tag = temp_boundary_tag;
-    myPointStruct->corner_tag = temp_corner_tag;
-    myPointStruct->node_bc = temp_node_bc;
-
-    // Update counts
-    myPointStruct->num_boundary_nodes -= myPointStruct->num_corners;
-    myPointStruct->num_nodes = new_size;
-    // myPointStruct->num_corners is now effectively 0
-
-    // Reindex point_index array if needed
-    // (Depends on what point_index represents in your application)
-    for (int i = 0; i < new_size; i++) {
-        myPointStruct->point_index[i] = i;
-    }
-    
     printf("No of nodes = %d \nNo of elements = %d \n", myPointStruct->num_nodes, myPointStruct->num_elem);
-    printf("No of boundary nodes = %d \nNo of corner nodes removed = %d \n", myPointStruct->num_boundary_nodes, myPointStruct->num_corners);
+    printf("Types of boundaries identified from mesh file = %d \n", myPointStruct->num_boundary_types);
+    for (int i = 0; i < myPointStruct->num_boundary_types; i++)
+        printf("\tPhysical ID: %d\n", myPointStruct->boundary_map[i].physical_id);
 }
-
-// TODO: Need to reset this function using an element centroid method for better accuracy in cases with complex geometries
-// void correct_normal_directions(PointStructure *ps)
-// {
-//     for (int i = 0; i < ps->num_nodes; i++)
-//     {
-//         if (!ps->boundary_tag[i]) continue;
-//         if (ps->corner_tag[i])   continue;
-
-//         int n = ps->num_cloud_points;
-//         int ref = -1;
-
-//         for (int j = 0; j < n; j++) {
-//             int nb = ps->cloud_index[i*n + j];
-//             if (!ps->boundary_tag[nb]) {
-//                 ref = nb;
-//                 break;
-//             }
-//         }
-
-//         if (ref < 0) continue;  // no interior neighbor
-
-//         double dx = ps->x[ref] - ps->x[i];
-//         double dy = ps->y[ref] - ps->y[i];
-//         double dz = ps->z[ref] - ps->z[i];
-
-//         double dot =
-//             dx * ps->x_normal[i] +
-//             dy * ps->y_normal[i] +
-//             dz * ps->z_normal[i];
-
-//         if (dot > 0.0) {
-//             ps->x_normal[i] = -ps->x_normal[i];
-//             ps->y_normal[i] = -ps->y_normal[i];
-//             ps->z_normal[i] = -ps->z_normal[i];
-//         }
-
-//         double mag = sqrt(
-//             ps->x_normal[i]*ps->x_normal[i] +
-//             ps->y_normal[i]*ps->y_normal[i] +
-//             ps->z_normal[i]*ps->z_normal[i]
-//         );
-
-//         if (mag < 1e-12) continue;
-
-//         ps->x_normal[i] /= mag;
-//         ps->y_normal[i] /= mag;
-//         ps->z_normal[i] /= mag;
-//     }
-// }
 
 void correct_normal_directions(PointStructure *myPointStruct)
 {
@@ -698,6 +631,7 @@ void correct_normal_directions(PointStructure *myPointStruct)
             }
 
             mag = sqrt(myPointStruct->x_normal[i] * myPointStruct->x_normal[i] + myPointStruct->y_normal[i] * myPointStruct->y_normal[i] + myPointStruct->z_normal[i] * myPointStruct->z_normal[i]);
+            if (mag < 1e-14) continue; // or set a default normal
             myPointStruct->x_normal[i] = myPointStruct->x_normal[i] / mag;
             myPointStruct->y_normal[i] = myPointStruct->y_normal[i] / mag;
             myPointStruct->z_normal[i] = myPointStruct->z_normal[i] / mag;
@@ -717,7 +651,7 @@ void create_restriction_matrix(PointStructure* myPointStruct_f,
     short n = myPointStruct_f->num_poly_terms;
     short mpn = m+n;
 
-    myPointStruct_c->restr_mat = (double*)malloc(myPointStruct_c->num_nodes * m * sizeof(double*));
+    myPointStruct_c->restr_mat = (double*)malloc(myPointStruct_c->num_nodes * m * sizeof(double));
 
     // for (int i = 0; i < myPointStruct_c->num_nodes; i++)
     //     myPointStruct_c->restr_mat[i] = (double*)malloc(m * sizeof(double));
@@ -832,104 +766,6 @@ void create_prolongation_matrix(PointStructure* myPointStruct_f, PointStructure*
     free(A_inv);
 }
 
-void rcm_reordering(PointStructure* myPointstruct) {
-    int *queue1 = (int*)malloc(myPointstruct->num_nodes * sizeof(int));  // RCM ordered indices
-    int *queue2 = (int*)malloc(myPointstruct->num_nodes * sizeof(int));  // Maps from original to RCM
-    bool *visited = (bool*)malloc(myPointstruct->num_nodes * sizeof(bool));
-
-    // Temporary arrays to hold reordered data
-    double *temp_x = (double*)malloc(myPointstruct->num_nodes * sizeof(double));
-    double *temp_y = (double*)malloc(myPointstruct->num_nodes * sizeof(double));
-    double *temp_z = (double*)malloc(myPointstruct->num_nodes * sizeof(double));
-    double *temp_nx = (double*)malloc(myPointstruct->num_nodes * sizeof(double));
-    double *temp_ny = (double*)malloc(myPointstruct->num_nodes * sizeof(double));
-    double *temp_nz = (double*)malloc(myPointstruct->num_nodes * sizeof(double));
-    
-    int *temp_cloud_index = (int*)malloc(myPointstruct->num_nodes * myPointstruct->num_cloud_points * sizeof(int*));
-    int n = myPointstruct->num_cloud_points;
-    // Initialize visited array and queue counters
-    for (int i = 0; i < myPointstruct->num_nodes; i++) {
-        visited[i] = false;
-    }
-
-    int count = 0;        // Counter for filling queue1 (RCM order)
-    int count_queue = 0;   // Pointer to track current node in BFS
-
-    // Start BFS with node 0 (or a node of your choice)
-    for (int i = 0; i<myPointstruct->num_boundary_nodes; i++){
-        queue1[count++] = i;   // Starting with node 0 (can change to another node)
-        count_queue++;
-        visited[i] = true;
-    }
-    queue1[count++] = myPointstruct->point_index[myPointstruct->num_boundary_nodes];   // Starting with node 0 (can change to another node)
-    visited[myPointstruct->num_boundary_nodes] = true;
-
-    // Perform BFS-like traversal to generate RCM order in queue1
-    while (count_queue < count) {
-        int current = queue1[count_queue++];  // Dequeue node
-
-        // For each neighbor (cloud point) of the current node
-        for (int i = 1; i < n; i++) {
-            int k = current*n + i;
-            int neighbor = myPointstruct->cloud_index[k];  // Get neighboring node
-
-            // Enqueue neighbor if not visited
-            if (!visited[neighbor]) {
-                queue1[count++] = neighbor;
-                visited[neighbor] = true;
-            }
-        }
-    }
-
-    // Now queue1 contains nodes in the RCM order. Generate queue2 for reverse mapping
-    for (int i = 0; i < myPointstruct->num_nodes; i++) {
-        queue2[queue1[i]] = i;  // Mapping original node to RCM index
-    }
-
-    // Reorder the data based on RCM order (queue1) and apply the reverse mapping (queue2)
-    for (int i = 0; i < myPointstruct->num_nodes; i++) {
-        temp_x[i] = myPointstruct->x[queue1[i]];
-        temp_y[i] = myPointstruct->y[queue1[i]];
-        temp_z[i] = myPointstruct->z[queue1[i]];
-
-        // Reorder the cloud index array based on queue2 mapping
-        for (int j = 0; j < n; j++) {
-            int k = queue1[i]*n+j;
-            temp_cloud_index[i*n+j] = queue2[myPointstruct->cloud_index[k]];
-        }
-
-        temp_nx[i] = myPointstruct->x_normal[queue1[i]];
-        temp_ny[i] = myPointstruct->y_normal[queue1[i]];
-        temp_nz[i] = myPointstruct->z_normal[queue1[i]];
-    }
-
-    for (int i = 0; i < myPointstruct->num_nodes; i++) {
-        myPointstruct->x[i] = temp_x[i];
-        myPointstruct->y[i] = temp_y[i];
-        myPointstruct->z[i] = temp_z[i];
-
-        for (int j = 0; j < n; j++) {
-            myPointstruct->cloud_index[i*n +j] = temp_cloud_index[i*n +j];
-        }
-
-        myPointstruct->x_normal[i] = temp_nx[i];
-        myPointstruct->y_normal[i] = temp_ny[i];
-        myPointstruct->z_normal[i] = temp_nz[i];
-    }
-
-    // Free allocated memory
-    free(queue1);
-    free(queue2);
-    free(visited);
-    free(temp_x);
-    free(temp_y);
-    free(temp_z);
-    free(temp_nx);
-    free(temp_ny);
-    free(temp_nz);
-    free(temp_cloud_index);
-}
-
 void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
     int m = myPointstruct->num_nodes;
     int n = myPointstruct->num_cloud_points;
@@ -945,8 +781,8 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
     double *temp_ny = (double*)malloc(m * sizeof(double));
     double *temp_nz = (double*)malloc(m * sizeof(double));
     bool *temp_boundary_tag = (bool*)malloc(m * sizeof(bool));
+    bool *temp_corner_tag = (bool*)malloc(m * sizeof(bool));
     BCValue *temp_node_bc = (BCValue*)malloc(m * sizeof(BCValue));
-    
     int *temp_cloud_index = (int*)malloc(m*n * sizeof(int));
 
     // Initialize visited array and queue counters
@@ -1004,6 +840,7 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
         temp_ny[i] = myPointstruct->y_normal[queue1[i]];
         temp_nz[i] = myPointstruct->z_normal[queue1[i]];
         temp_boundary_tag[i] = myPointstruct->boundary_tag[queue1[i]];
+        temp_corner_tag[i] = myPointstruct->corner_tag[queue1[i]];
         temp_node_bc[i] = myPointstruct->node_bc[queue1[i]];
     }
 
@@ -1020,6 +857,7 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
         myPointstruct->y_normal[i] = temp_ny[i];
         myPointstruct->z_normal[i] = temp_nz[i];
         myPointstruct->boundary_tag[i] = temp_boundary_tag[i];
+        myPointstruct->corner_tag[i] = temp_corner_tag[i];
         myPointstruct->node_bc[i] = temp_node_bc[i];
     }
 
@@ -1034,6 +872,7 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
     free(temp_ny);
     free(temp_nz);
     free(temp_boundary_tag);
+    free(temp_corner_tag);
     free(temp_cloud_index);
     free(temp_node_bc);
 }
@@ -1085,11 +924,14 @@ void read_complete_mesh_data(PointStructure* myPointStruct, short num_levels)
         myPointStruct[ii].poly_degree = 3; 
     	myPointStruct[0].poly_degree = parameters.poly_degree;
         printf("\nReading mesh data for level %d\n", ii+1);
-        calculate_parameters(&myPointStruct[ii]);
         read_PointStructure(&myPointStruct[ii]);
+        printf("Identifying cloud indices\n");
         find_cloud_index(&myPointStruct[ii]);
+        printf("RCM reordering of nodes\n");
         rcm_reordering_with_boundarynodes(&myPointStruct[ii]);
+        printf("Correcting normal directions\n");
         correct_normal_directions(&myPointStruct[ii]);
+        printf("Calculating average nodal distance\n");
         calculate_avg_dx(&myPointStruct[ii]);
     }
     create_prolongation_and_restriction_matrices(myPointStruct, num_levels);

@@ -31,7 +31,7 @@ void read_physical_names(char* meshfile, PointStructure* ps);
 void read_boundary_conditions_file(char* bcfile, PointStructure* ps);
 int bc_priority(BCType t);
 void assign_node_bc(PointStructure* ps, int node, BCValue new_bc);
-void apply_boundary_conditions_from_file(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
+void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
 
 // RBF Function declarations
 double calculate_phs_rbf(double *x, double *c, int phs, int dimension);
@@ -45,7 +45,8 @@ void create_full_grady_matrix_vectorised(PointStructure* myPointStruct);
 void create_full_gradz_matrix_vectorised(PointStructure* myPointStruct);
 void create_full_laplacian_matrix_vectorised(PointStructure* myPointStruct);
 void create_derivative_matrices_vectorised(PointStructure* myPointStruct);
-void create_laplacian_for_Poisson_vectorised(PointStructure* myPointStruct);
+void create_laplacian_Poisson_vectorised(PointStructure* myPointStruct);
+void create_laplacian_for_Poisson_equation_vectorised(PointStructure* myPointStruct);
 
 // Functions to test and calculate errors with a manufactured problem
 void calculate_errors_2d(PointStructure* myPointStruct, double* f, double* fx, double* fy, double* lapf, double* F, double* Fx, double* Fy, double* lapF);
@@ -71,6 +72,7 @@ void write_test_files(double* f, double* fx, double* fy, double* fz, double* lap
 void write_processed_grid_data(PointStructure* myPointStruct, int num_levels);
 void make_directory(const char* name);
 int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS);
+int write_vtk_test(char *gmsh_filename, FieldVariables *field, PointStructure* myPS) ;
 
 
 ////////////////////////////////////////////////////////////////////////////////////

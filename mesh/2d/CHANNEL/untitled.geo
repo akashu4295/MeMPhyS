@@ -22,4 +22,4 @@ Physical Line("inlet")  = {4};
 
 Physical Surface("fluid") = {1};
 
-Mesh.MeshSizeMax = 0.5;
+Mesh.MeshSizeMax = 0.03;

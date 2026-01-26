@@ -105,7 +105,9 @@
 //     double radius = (myPointStruct1->d_avg) * n ; // Initial radius for the search
     
 //     double pt[3]; // Array to store the coordinates of the search point
-//     for (int i = myPointStruct1->num_boundary_nodes; i < myPointStruct1->num_nodes; i++) {
+//     for (int i = 0; i < myPointStruct1->num_nodes; i++) {
+//         if (myPointStruct1->boundary_tag[i])
+//             continue;
 //         int* neighbours; // Array to store the indices of the nearest neighbours
 //         pt[0] = myPointStruct1->x[i]; pt[1] = myPointStruct1->y[i]; pt[2] = myPointStruct1->z[i];
 //         neighbours = find_neighbours(pt, ptree, radius, n);
@@ -117,7 +119,9 @@
 
 //     void* ptree2 = create_kdtree_without_boundarynodes(myPointStruct1);
     
-//     for (int i = 0; i < myPointStruct1->num_boundary_nodes; i++) {
+//     for (int i = 0; i < myPointStruct1->num_nodes; i++) {
+//         if (!myPointStruct1->boundary_tag[i])
+//             continue;
 //         int* neighbours; // Array to store the indices of the nearest neighbours
 //         pt[0] = myPointStruct1->x[i]; pt[1] = myPointStruct1->y[i]; pt[2] = myPointStruct1->z[i];
 //         neighbours = find_neighbours(pt, ptree2, radius, n);
@@ -154,9 +158,9 @@
 // }
 
 
-/* -------------------------------------------------- */
-/* Utility                                            */
-/* -------------------------------------------------- */
+// /* -------------------------------------------------- */
+// /* Utility                                            */
+// /* -------------------------------------------------- */
 
 static double dist_sq(double *a1, double *a2)
 {
@@ -212,7 +216,7 @@ void free_kdtree(void* ptree)
 int* find_neighbours(double* p, void* ptree, double radius, int num_cloud_points)
 {
     const double INF = DBL_MAX;
-    const int MAX_EXPANDS = 20;
+    const int MAX_EXPANDS = 50;
 
     double pos[3], dist;
     struct kdres *presults;
@@ -310,8 +314,9 @@ void find_cloud_index(PointStructure* ps)
     /* -------- Interior nodes (exclude corners) -------- */
     void* ptree_all = create_kdtree_no_corners(ps);
 
-    for (int i = ps->num_boundary_nodes; i < N; i++) {
+    for (int i = 0; i < N; i++) {
         if (ps->corner_tag[i]) continue;
+        if (ps->boundary_tag[i]) continue;
 
         pt[0] = ps->x[i];
         pt[1] = ps->y[i];
@@ -329,8 +334,9 @@ void find_cloud_index(PointStructure* ps)
     /* -------- Boundary nodes → interior-only cloud -------- */
     void* ptree_int = create_kdtree_interior_only(ps);
 
-    for (int i = 0; i < ps->num_boundary_nodes; i++) {
+    for (int i = 0; i < ps->num_nodes; i++) {
         if (ps->corner_tag[i]) continue;
+        if (!ps->boundary_tag[i]) continue;
 
         pt[0] = ps->x[i];
         pt[1] = ps->y[i];
@@ -346,51 +352,6 @@ void find_cloud_index(PointStructure* ps)
     }
     free_kdtree(ptree_int);
 }
-
-
-// void find_cloud_index(PointStructure* ps)
-// {
-//     int n = ps->num_cloud_points;
-//     int N = ps->num_nodes;
-
-//     ps->cloud_index = malloc(N * n * sizeof(int));
-//     if (!ps->cloud_index) abort();
-
-//     double radius = ps->d_avg * n;
-//     double pt[3];
-
-//     /* Interior nodes */
-//     void* ptree_all = create_kdtree(ps);
-//     for (int i = ps->num_boundary_nodes; i < N; i++) {
-//         pt[0] = ps->x[i];
-//         pt[1] = ps->y[i];
-//         pt[2] = ps->z[i];
-
-//         int* neigh = find_neighbours(pt, ptree_all, radius, n);
-//         for (int j = 0; j < n; j++)
-//             ps->cloud_index[i*n + j] = neigh[j];
-
-//         free(neigh);
-//     }
-//     free_kdtree(ptree_all);
-
-//     /* Boundary nodes → interior-only cloud */
-//     void* ptree_int = create_kdtree_without_boundarynodes(ps);
-//     for (int i = 0; i < ps->num_boundary_nodes; i++) {
-//         pt[0] = ps->x[i];
-//         pt[1] = ps->y[i];
-//         pt[2] = ps->z[i];
-
-//         int* neigh = find_neighbours(pt, ptree_int, radius, n - 1);
-
-//         ps->cloud_index[i*n] = i; /* self */
-//         for (int j = 1; j < n; j++)
-//             ps->cloud_index[i*n + j] = neigh[j - 1];
-
-//         free(neigh);
-//     }
-//     free_kdtree(ptree_int);
-// }
 
 /* -------------------------------------------------- */
 /* Nearest-point mapping                              */

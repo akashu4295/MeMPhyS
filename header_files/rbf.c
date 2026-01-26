@@ -407,7 +407,7 @@ void create_full_laplacian_matrix_vectorised(PointStructure* myPointStruct) {
     free(B1);
 }
 
-void create_laplacian_for_Poisson_vectorised(PointStructure* myPointStruct) {
+void create_laplacian_Poisson_vectorised(PointStructure* myPointStruct) {
     // Parallelize the outer loop with OpenACC
     int n = myPointStruct->num_cloud_points;
     for (int i = 0; i < myPointStruct->num_nodes; i++){ 
@@ -453,8 +453,12 @@ void create_derivative_matrices_vectorised(PointStructure* myPointStruct){
         create_full_grady_matrix_vectorised(myPointStruct);
         create_full_laplacian_matrix_vectorised(myPointStruct);
     }
-    
-    // myPointStruct->lap_Poison = (double*) malloc(m*n*sizeof(double));
-    // myPointStruct->lap_Poison = create_matrix_vectorised(m,n);
-    // create_laplacian_for_Poisson_vectorised(myPointStruct);
+}
+
+void create_laplacian_for_Poisson_equation_vectorised(PointStructure* myPointStruct){
+    int m = myPointStruct->num_nodes;
+    int n = myPointStruct->num_cloud_points;
+    myPointStruct->lap_Poison = (double*) malloc(m*n*sizeof(double));
+    myPointStruct->lap_Poison = create_matrix_vectorised(m,n);
+    create_laplacian_Poisson_vectorised(myPointStruct);
 }

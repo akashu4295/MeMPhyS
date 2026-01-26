@@ -128,6 +128,13 @@ void* create_kdtree_without_boundarynodes(PointStructure* myPointStruct);
 void free_kdtree(void* ptree);
 void find_cloud_index(PointStructure* myPointStruct1);
 int* find_nearest_point(PointStructure* myPointStruct1, PointStructure* myPointStruct2, int num_cloud_points);
+// int* find_neighbours(const double* p,
+//                      void* ptree,
+//                      double radius,
+//                      int num_cloud_points);
+// void* create_kdtree_no_corners(PointStructure* ps);
+// void* create_kdtree_interior_only(PointStructure* ps);
+// int* find_nearest_point(PointStructure* src, PointStructure* tgt);
 
 
 #ifdef __cplusplus

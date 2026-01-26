@@ -467,6 +467,10 @@ solver_runner.compile_and_run(
 )
 ```
 
+### Some default parameters (non-dimensionalisation)
+Density, rho = 1
+Viscosity, nu = 1/Re
+
 ## Troubleshooting
 
 ### Convergence plot not updating

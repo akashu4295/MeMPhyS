@@ -9,8 +9,7 @@
 #include <ctype.h>
 
 /* trim whitespace in-place */
-static char* trim(char* s)
-{
+static char* trim(char* s){
     while (isspace((unsigned char)*s)) s++;
     if (*s == 0) return s;
 
@@ -20,8 +19,7 @@ static char* trim(char* s)
     return s;
 }
 
-BCType parse_bc_type(const char* s)
-{
+BCType parse_bc_type(const char* s){
     if (!strcmp(s, "wall")) return BC_WALL;
     if (!strcmp(s, "velocity_inlet")) return BC_VELOCITY_INLET;
     if (!strcmp(s, "velocity_outlet")) return BC_VELOCITY_OUTLET;
@@ -41,11 +39,22 @@ void read_physical_names(char* meshfile, PointStructure* ps)
     fscanf(file, "%d", &n);
     printf("Number of physical names: %d\n", n);
     ps->num_boundary_types = n;
+    if (n == 0) {
+        ps->boundary_map[0].physical_id = 0;
+        strcpy(ps->boundary_map[0].name, "default");
+        ps->boundary_map[0].bc.type = BC_INTERIOR;
+        ps->boundary_map[0].bc.u = 0.0;
+        ps->boundary_map[0].bc.v = 0.0;
+        ps->boundary_map[0].bc.w = 0.0;
+        ps->boundary_map[0].bc.p = 0.0;
+        printf("No physical names found in mesh file.\n");
+        fclose(file);
+        return;
+    }
     for (int i = 0; i < n; i++) {
         int dim;
         char raw[64];
         fscanf(file, "%d %hd %63s", &dim, &ps->boundary_map[i].physical_id, raw);
-
         int len = strlen(raw);
         if (raw[0] == '"' && raw[len-1] == '"') {
             raw[len-1] = '\0';
@@ -53,13 +62,17 @@ void read_physical_names(char* meshfile, PointStructure* ps)
         } else {
             strcpy(ps->boundary_map[i].name, raw);
         }
+        printf("Physical ID: %d, Name: %s\n", ps->boundary_map[i].physical_id, ps->boundary_map[i].name);
         ps->boundary_map[i].bc.type = BC_INTERIOR; // default
+        ps->boundary_map[i].bc.u = 0.0;
+        ps->boundary_map[i].bc.v = 0.0;
+        ps->boundary_map[i].bc.w = 0.0;
+        ps->boundary_map[i].bc.p = 0.0;
     }
     fclose(file);
 }
 
-void read_boundary_conditions_file(char* bcfile, PointStructure* ps)
-{
+void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
     FILE* file = fopen(bcfile, "r");
     char line[512];
 
@@ -173,38 +186,28 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps)
                    lineno, name);
         }
     }
-
     fclose(file);
 }
 
-int bc_priority(BCType t)
-{
+int bc_priority(BCType t){
     if (t == BC_VELOCITY_INLET) return 3;
     if (t == BC_WALL) return 2;
     if (t == BC_PRESSURE_OUTLET) return 1;
     return 0;
 }
 
-void assign_node_bc(PointStructure* ps, int node, BCValue new_bc)
-{
-    BCValue* old = &ps->node_bc[node];
-
-    if (bc_priority(new_bc.type) > bc_priority(old->type)) {
-        *old = new_bc;
-    }
+void assign_node_bc(PointStructure* ps, int node, BCValue new_bc){
+    if (bc_priority(new_bc.type) > bc_priority(ps->node_bc[node].type)) 
+        ps->node_bc[node] = new_bc;
 }
 
 
-void apply_boundary_conditions_from_file(PointStructure* myPointStruct,
-                                   FieldVariables* field,
-                                   int numlevels)
-{
+void apply_boundary_conditions(PointStructure* myPointStruct,FieldVariables* field, int numlevels){
     for (int ii = 0; ii < numlevels; ii++)
     {
         for (int i = 0; i < myPointStruct[ii].num_nodes; i++)
         {
             if (!myPointStruct[ii].boundary_tag[i]) continue;
-
             switch (myPointStruct[ii].node_bc[i].type)
             {
                 case BC_VELOCITY_INLET:
@@ -226,6 +229,11 @@ void apply_boundary_conditions_from_file(PointStructure* myPointStruct,
                     break;
 
                 default:
+                    field[ii].u[i] = 0.0;
+                    field[ii].v[i] = 0.0;
+                    field[ii].w[i] = 0.0;
+                    field[ii].p[i] = 0.0;
+                    printf("Applying default BC at node %d: u=v=w=p=0.0\n", i);
                     break;
             }
         }

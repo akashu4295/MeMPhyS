@@ -107,9 +107,12 @@ void update_boundary_pprime_vectorised_2d(PointStructure* mypointstruct, FieldVa
 double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldVariables* field);
 void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct, FieldVariables* field);
 void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldVariables* field);
-void FS_calculate_boundary_dpdn_vectorised(PointStructure* myPointStruct, FieldVariables* field);
 void FS_multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field);
-void FS_relaxation_vectorised(PointStructure* myPointStruct, FieldVariables* field);
+void FS_relaxation_vectorised_Gauss_Seidel(PointStructure* mypointstruct, FieldVariables* field);
+void FS_relaxation_vectorised_Jacobi(PointStructure* mypointstruct, FieldVariables* field);
+void FS_relaxation_vectorised_bicgstab(PointStructure* mypointstruct, FieldVariables* field);
+int BiCGStab_Solve(PointStructure* ps, const double* b, double* x, int max_iter, double tol);
+int BiCGStab_Solve_Preconditioned(PointStructure* ps, const double* b, double* x, int max_iter, double tol);
 void FS_calculate_residuals_vectorised(PointStructure* myPointStruct, FieldVariables* field);
 void FS_restrict_residuals_vectorised(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);
 void FS_prolongate_corrections_vectorised(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);

@@ -61,6 +61,7 @@ struct parameters
     double facdt;//dual time step factor
     double nu; // kinematic viscosity
     bool fractional_step; // fractional step flag
+    short poisson_solver_type; // Solver type Jacobi/Gauss Seidel/Bicgstab etc...
     }; // child created only once and used globally
 
 extern struct parameters parameters;

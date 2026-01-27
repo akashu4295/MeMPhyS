@@ -63,16 +63,6 @@ void read_flow_parameters(char *filename) {
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.num_vcycles);
     SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.num_relax), "Number of relaxations read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.num_relax);
-    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &temp), "Neumann boundary flag read error, Check flow_parameters.csv");
-    if (temp == 1)
-        parameters.neumann_flag_boundary = true;
-    else
-        parameters.neumann_flag_boundary = false;
-    printf("PARAMETERS: %s = %d\n", ctemp, parameters.neumann_flag_boundary);
-    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.facRe), "FacRe read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %lf\n", ctemp, parameters.facRe);
-    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.facdt), "Facdt read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %lf\n", ctemp, parameters.facdt);
     SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &temp), "Fractional step flag read error, Check flow_parameters.csv");
     if (temp == 1)
         parameters.fractional_step = true;
@@ -83,6 +73,18 @@ void read_flow_parameters(char *filename) {
         printf("Error: Unable to read the file\n");
         exit(1);
     }
+    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &temp), "Neumann boundary flag read error, Check flow_parameters.csv");
+    if (temp == 1)
+        parameters.neumann_flag_boundary = true;
+    else
+        parameters.neumann_flag_boundary = false;
+    printf("PARAMETERS: %s = %d\n", ctemp, parameters.neumann_flag_boundary);
+    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.facRe), "FacRe read error, Check flow_parameters.csv");
+    printf("PARAMETERS: %s = %lf\n", ctemp, parameters.facRe);
+    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.facdt), "Facdt read error, Check flow_parameters.csv");
+    printf("PARAMETERS: %s = %lf\n", ctemp, parameters.facdt);
+    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.poisson_solver_type), "Number of relaxations read error, Check flow_parameters.csv");
+    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.poisson_solver_type);
     fclose(file);
     parameters.rho = 1;
     parameters.mu = parameters.rho / parameters.Re;

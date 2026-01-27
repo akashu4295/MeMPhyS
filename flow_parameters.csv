@@ -1,4 +1,4 @@
-domain_dimensions,3
+domain_dimensions,2
 poly_deg,3
 phs_deg,3
 cloud_size_multiplier,2
@@ -6,9 +6,9 @@ test_derivative,0
 courant_number,0.3
 steady_tolerance,1e-08
 poisson_solver_tolerance,1e-12
-sor_parameter,1.0
+sor_parameter,0.5
 time_step,0.1
-num_time_steps,5000
+num_time_steps,1000
 write_interval,50
 Re,100
 iter_momentum,5

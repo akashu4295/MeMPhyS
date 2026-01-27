@@ -1,5 +1,5 @@
 """
-MeMPhyS GUI - Main Entry Point
+MeMPhyS GUI
 
 Meshless Multi-Physics Solver
 Version 2.2
@@ -19,19 +19,10 @@ from src.config import (
     DEFAULT_FONT_SIZE,
 )
 from src.config.themes import initialize_all_themes, apply_global_theme
-
-# Import core modules
-from src.core import app_state, logger
-
-# Import utilities
-from src.utils import initialize_fonts, set_default_font
-
-# Import solver modules
-from src.solver import convergence_monitor
-
-# Import UI
-from src.ui import create_main_window
-
+from src.core import app_state, logger  # Import core modules
+from src.utils import initialize_fonts, set_default_font    # Import utilities
+from src.solver import convergence_monitor  # Import solver modules
+from src.ui import create_main_window   # Import UI
 
 def initialize_application():
     """

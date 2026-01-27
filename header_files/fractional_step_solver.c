@@ -33,6 +33,7 @@ double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldV
         field[0].u_old[i] = field[0].u[i];
         field[0].v_old[i] = field[0].v[i];
         field[0].w_old[i] = field[0].w[i];
+        field[0].p_old[i] = field[0].p[i];
     }
 
     FS_calculate_intermediate_velocity_vectorised(&myPointStruct[0], &field[0]);
@@ -231,8 +232,7 @@ void FS_multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, Field
             FS_prolongate_corrections_vectorised(&myPointStruct[ilev-1], &myPointStruct[ilev], &field[ilev-1], &field[ilev]);
             if (ilev != 1) 
                 FS_relaxation_vectorised(&myPointStruct[ilev-1], &field[ilev-1]);
-        }   
-        // update_boundary_pressure(&myPointStruct[0], &field[0]);
+        }
     } 
 }
 
@@ -241,60 +241,135 @@ void FS_relaxation_vectorised(PointStructure* mypointstruct, FieldVariables* fie
     int n = mypointstruct->num_cloud_points;
     int N = mypointstruct->num_nodes;
 
-    #pragma acc data present(field, mypointstruct, parameters)
     for (int iter = 0; iter < parameters.num_relax; iter++) {
-        // Relaxation step
-        #pragma acc parallel loop gang vector_length(128) present(field, mypointstruct, parameters)
+        #pragma acc parallel loop gang vector present(field, mypointstruct, parameters)
         for (int i = 0; i < N; i++) {
-            double sum = 0.0;
-            #pragma acc loop vector reduction(+:sum)
-            for (int j = 1; j < n; j++) {
-                sum += mypointstruct->lap_Poison[i*n + j] *
-                       field->p[mypointstruct->cloud_index[i*n + j]];
+            if (mypointstruct->corner_tag[i]) continue;
+            if (mypointstruct->boundary_tag[i] && mypointstruct->node_bc[i].type == BC_PRESSURE_OUTLET) {
+                field->p[i] = mypointstruct->node_bc[i].p;
+                continue;
             }
-            field->p[i] = parameters.omega *
-                ((field->source[i] - sum) / mypointstruct->lap_Poison[i*n])
-                + (1 - parameters.omega) * field->p[i];
-        }
 
-        if (!mypointstruct->flag_outlets) {
-            double pref = field->p[0];
-            // Normalization + residual in one pass
-            #pragma acc parallel loop gang vector_length(128) present(field, mypointstruct)
-            for (int i = 0; i < N; i++) {
-                double val = field->p[i] - pref;
-                field->p[i] = val;
-                double res = field->source[i];
-                #pragma acc loop vector reduction(+:res)
-                for (int j = 0; j < n; j++) {
-                    res -= mypointstruct->lap[i*n + j] *
-                        field->p[mypointstruct->cloud_index[i*n + j]];
-                }
-                field->res[i] = res;
+            double sum = 0.0;
+            for (int j = 1; j < n; j++) {
+                int neighbor_idx = mypointstruct->cloud_index[i*n + j];
+                sum += mypointstruct->lap_Poison[i*n + j] * field->p_old[neighbor_idx];
             }
+            double diagonal = mypointstruct->lap_Poison[i*n];
+            double p_new = (field->source[i] - sum) / diagonal;
+            
+            field->p[i] = parameters.omega * p_new + (1.0 - parameters.omega) * field->p_old[i];
         }
-        else {
-            // Just residual calculation
-            #pragma acc parallel loop gang vector_length(128) present(field, mypointstruct)
-            for (int i = 0; i < N; i++) {
-                double res = field->source[i];
-                #pragma acc loop vector reduction(+:res)
-                for (int j = 0; j < n; j++) {
-                    res -= mypointstruct->lap[i*n + j] *
-                        field->p[mypointstruct->cloud_index[i*n + j]];
-                }
-                field->res[i] = res;
-                // printf("iter: %d, \t node: %d,\t residual: %e\n",iter,i,field->res[i]);
+        #pragma acc parallel loop present(field)
+        for (int i = 0; i < N; i++) {
+            field->p_old[i] = field->p[i];
+        }
+    }
+
+    // for (int i = 0; i < mypointstruct->num_nodes; i++) {
+    //     if (mypointstruct->boundary_tag[i]) continue;
+    //     double diag = fabs(mypointstruct->lap_Poison[i*mypointstruct->num_cloud_points]);
+    //     double offdiag_sum = 0.0;
+    //     for (int j = 1; j < mypointstruct->num_cloud_points; j++) {
+    //         offdiag_sum += fabs(mypointstruct->lap_Poison[i*mypointstruct->num_cloud_points +j]);
+    //     }
+    //     printf("DEBUG: Node %d: ratio = %f\n", i, diag/(offdiag_sum+1e-6));
+    // }
+    
+    if (!mypointstruct->flag_outlets) {
+        double pref = field->p[0];
+        #pragma acc parallel loop gang vector_length(128) present(field, mypointstruct)
+        for (int i = 0; i < N; i++) {
+            if (mypointstruct->corner_tag[i]) continue;
+            double val = field->p[i] - pref;
+            field->p[i] = val;
+            double res = field->source[i];
+            #pragma acc loop vector reduction(+:res)
+            for (int j = 0; j < n; j++) {
+                res -= mypointstruct->lap_Poison[i*n + j] *
+                    field->p[mypointstruct->cloud_index[i*n + j]];
             }
+            field->res[i] = res;
         }
-        double sum =0.0;
-        for (int i = 0; i<mypointstruct->num_nodes; i++ ){
-            if (!mypointstruct->boundary_tag)
-                sum = sum+ field->res[i];
+    }
+    else {
+        #pragma acc parallel loop gang vector_length(128) present(field, mypointstruct)
+        for (int i = 0; i < N; i++) {
+            if (mypointstruct->corner_tag[i]) continue;
+            double res = field->source[i];
+            #pragma acc loop vector reduction(+:res)
+            for (int j = 0; j < n; j++) {
+                res -= mypointstruct->lap_Poison[i*n + j] *
+                    field->p[mypointstruct->cloud_index[i*n + j]];
+            }
+            field->res[i] = res;
         }
-        // printf("Residual sum = %lf\n",sum);
     }
 }
+
+// void FS_relaxation_vectorised(PointStructure* mypointstruct, FieldVariables* field)
+// {
+//     int n = mypointstruct->num_cloud_points;
+//     int N = mypointstruct->num_nodes;
+
+//     #pragma acc data present(field, mypointstruct, parameters)
+//     for (int iter = 0; iter < parameters.num_relax; iter++) {
+//         // Relaxation step
+//         #pragma acc parallel loop gang vector_length(128) present(field, mypointstruct, parameters)
+//         for (int i = 0; i < N; i++) {
+//             double sum = 0.0;
+//             #pragma acc loop vector reduction(+:sum)
+//             for (int j = 1; j < n; j++) {
+//                 sum += mypointstruct->lap_Poison[i*n + j] *
+//                        field->p_old[mypointstruct->cloud_index[i*n + j]];
+//             }
+//             field->p[i] = parameters.omega *
+//                 ((field->source[i] - sum) / mypointstruct->lap_Poison[i*n])
+//                 + (1 - parameters.omega) * field->p_old[i];
+//         }
+
+//         if (!mypointstruct->flag_outlets) {
+//             double pref = field->p[0];
+//             // Normalization + residual in one pass
+//             #pragma acc parallel loop gang vector_length(128) present(field, mypointstruct)
+//             for (int i = 0; i < N; i++) {
+//                 double val = field->p[i] - pref;
+//                 field->p[i] = val;
+//                 double res = field->source[i];
+//                 #pragma acc loop vector reduction(+:res)
+//                 for (int j = 0; j < n; j++) {
+//                     res -= mypointstruct->lap[i*n + j] *
+//                         field->p[mypointstruct->cloud_index[i*n + j]];
+//                 }
+//                 field->res[i] = res;
+//             }
+//         }
+//         else {
+//             // Just residual calculation
+//             #pragma acc parallel loop gang vector_length(128) present(field, mypointstruct)
+//             for (int i = 0; i < N; i++) {
+//                 double res = field->source[i];
+//                 #pragma acc loop vector reduction(+:res)
+//                 for (int j = 0; j < n; j++) {
+//                     res -= mypointstruct->lap[i*n + j] *
+//                         field->p[mypointstruct->cloud_index[i*n + j]];
+//                 }
+//                 field->res[i] = res;
+//                 // printf("iter: %d, \t node: %d,\t residual: %e\n",iter,i,field->res[i]);
+//             }
+//         }
+//         // Update p_old with the updated p
+//         for (int i = 0; i < N; i++){
+//             field->p_old[i] = field->p[i];
+//         }
+//         // double sum =0.0;
+//         // for (int i = 0; i<mypointstruct->num_nodes; i++ ){
+//         //     if (!mypointstruct->boundary_tag)
+//         //         sum = sum+ field->res[i];
+//         // }
+//         // printf("Residual sum = %lf\n",sum);
+//     }
+// }
 
 void FS_restrict_residuals_vectorised(PointStructure* mypointStruct_f, PointStructure* mypointStruct_c, FieldVariables* field_f, FieldVariables* field_c)
 {
@@ -340,16 +415,19 @@ void FS_calculate_residuals_vectorised(PointStructure* mypointStruct, FieldVaria
 {
     int n = mypointStruct->num_cloud_points;
     # pragma acc parallel loop gang vector present(field, mypointStruct)
+    double sum_res = 0.0;
     for (int i = 0; i < mypointStruct->num_nodes; i++){
         if (!mypointStruct->boundary_tag[i]){
             double sum = 0;
             # pragma acc loop reduction(+:sum)
             for (int j = 0; j < n; j++){
-                sum += mypointStruct->lap[i*n + j]*field->p[mypointStruct->cloud_index[i*n + j]];
+                sum += mypointStruct->lap_Poison[i*n + j]*field->p[mypointStruct->cloud_index[i*n + j]];
             }
             field->res[i] = field->source[i] - sum;
+            sum_res += field->res[i];
         }
     }
+    printf("Poisson residual: %e\n", sum_res);
 }
 
 void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables* field)

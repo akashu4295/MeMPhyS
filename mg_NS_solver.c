@@ -44,13 +44,8 @@ int main()
     clock_start = clock();    // Start the clock
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
         create_derivative_matrices_vectorised(&myPointStruct[ii]);
+    if(parameters.test>0) test_derivatives(myPointStruct, parameters.num_levels, parameters.dimension);
     printf("Time taken to create derivative matrices: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
-
-    clock_start = clock();    // Start the clock
-    if(parameters.test>0){
-        test_derivatives (myPointStruct, parameters.num_levels, parameters.dimension);
-        printf("Time taken to test the derivatives: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
-    }
 
 ////////////// Setting up the boudary condition 
     FILE *bcf = fopen("bc.csv", "r");
@@ -64,7 +59,6 @@ int main()
         boundary_conditions(myPointStruct, field, 1);
     }
     apply_boundary_conditions(myPointStruct, field, 1);
-
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
         create_laplacian_for_Poisson_equation_vectorised(&myPointStruct[ii]);
     

@@ -18,13 +18,21 @@ typedef enum {
     BC_WALL = 1,
     BC_VELOCITY_INLET = 2,
     BC_PRESSURE_OUTLET = 3,
-    BC_VELOCITY_OUTLET = 4
+    BC_VELOCITY_OUTLET = 4,
+    BC_ISOTHERMAL_WALL = 5,     // Wall with fixed T
+    BC_ADIABATIC_WALL = 6,      // Wall with ∂T/∂n = 0
+    BC_SYMMETRY = 7,            // Zero normal velocity and gradients
+    BC_SUPERSONIC_INLET = 8,    // All variables specified
+    BC_SUPERSONIC_OUTLET = 9,   // All variables extrapolated
+    BC_SUBSONIC_INLET = 10,      // Specify T, p_total, direction
+    BC_SUBSONIC_OUTLET = 11     // Specify p_static, extrapolate others
 } BCType;
 
 typedef struct {
     BCType type;
     double u, v, w;
-    double p;
+    double p, T, rho;
+    double p_total, T_total;
 } BCValue;
 
 typedef struct {
@@ -62,6 +70,20 @@ struct parameters
     double nu; // kinematic viscosity
     bool fractional_step; // fractional step flag
     short poisson_solver_type; // Solver type Jacobi/Gauss Seidel/Bicgstab etc...
+    bool compressible_flow;
+    double gamma;          // Ratio of specific heats (1.4 for air)
+    double R_gas;          // Gas constant (287 J/(kg·K) for air)
+    double Pr;             // Prandtl number (0.71 for air)
+    double cv;             // Specific heat at constant volume
+    double cp;             // Specific heat at constant pressure (cp = gamma*cv/(gamma-1))
+    double T_ref;          // Reference temperature (e.g., 300 K)
+    double rho_ref;        // Reference density (e.g., 1.225 kg/m³)
+    double p_ref;          // Reference pressure (e.g., 101325 Pa)
+    double mu_ref;         // Reference viscosity (e.g., 1.81e-5 Pa·s)
+    double T_sutherland;   // Sutherland's constant (110.4 K for air)
+    int viscosity_model;   // 0=constant, 1=Sutherland, 2=power-law
+    double Mach;           // Reference Mach number
+    int energy_equation;   // 0=isothermal, 1=solve energy equation
     }; // child created only once and used globally
 
 extern struct parameters parameters;
@@ -127,9 +149,26 @@ typedef struct FieldVariables {
     double* dpdx; // dpdx field
     double* dpdy; // dpdy field
     double* dpdz; // dpdz field
-    double rho; // density field
-    double mu; // dynamic viscosity field
-    
+
+    // Compressible flow variables
+    double* rho; // density field
+    double* rho_old; // density old field
+    double* rho_new; // density new field
+    double* T_old; // Temperature old field
+    double* T_new; // Temperature new field
+    double* e; // Energy
+    double* e_old; // Energy old
+    double *drhodx, *drhody, *drhodz;
+    double *dTdx, *dTdy, *dTdz;
+    double *dedx, *dedy, *dedz;
+    double *mu;
+    double *kappa;
+    double *tau_xx, *tau_yy, *tau_zz;
+    double *tau_xy, *tau_xz, *tau_yz;
+    double *div_tau_x, *div_tau_y, *div_tau_z;
+    double *Q_visc;        // Viscous dissipation (heating)
+    double *Q_source;      // External heat source term
+
     double nu; // kinematic viscosity field
     double Re; // Reynolds number field
     //double facRe; // Re factor for defect correction

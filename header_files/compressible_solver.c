@@ -14,71 +14,6 @@
 #include "mat_lib.h"
 #include "functions.h"
 
-
-/////////////////////////////////////////////////////////////////////////////
-// ADDITIONAL FIELD VARIABLES REQUIRED FOR COMPRESSIBLE FLOW
-/////////////////////////////////////////////////////////////////////////////
-/*
-Add these to your FieldVariables structure:
-
-typedef struct {
-    // Existing incompressible variables
-    double *u, *v, *w;          // Velocities
-    double *u_old, *v_old, *w_old;
-    double *u_new, *v_new, *w_new;
-    double *p, *p_old;          // Pressure
-    
-    // NEW COMPRESSIBLE VARIABLES - PRIMARY
-    double *rho;                // Density
-    double *rho_old;            // Previous time step density
-    double *rho_new;            // Intermediate density
-    double *T;                  // Temperature
-    double *T_old;              // Previous time step temperature
-    double *T_new;              // Intermediate temperature
-    double *e;                  // Internal energy
-    double *e_old;              // Previous time step internal energy
-    
-    // NEW COMPRESSIBLE VARIABLES - DERIVATIVES
-    double *drhodx, *drhody, *drhodz;     // Density gradients
-    double *dTdx, *dTdy, *dTdz;           // Temperature gradients
-    double *dedx, *dedy, *dedz;           // Internal energy gradients
-    
-    // NEW COMPRESSIBLE VARIABLES - VISCOUS TERMS
-    double *mu;                 // Dynamic viscosity (can be temperature-dependent)
-    double *kappa;              // Thermal conductivity
-    double *tau_xx, *tau_yy, *tau_zz;     // Normal stresses
-    double *tau_xy, *tau_xz, *tau_yz;     // Shear stresses
-    double *div_tau_x, *div_tau_y, *div_tau_z;  // Divergence of stress tensor
-    
-    // NEW COMPRESSIBLE VARIABLES - SOURCE TERMS
-    double *Q_visc;             // Viscous dissipation
-    double *Q_source;           // External heat source
-    
-    // Existing helper variables (reused)
-    double *dpdx, *dpdy, *dpdz;
-    double *dpdn;
-    double *source;
-    double *res;
-} FieldVariables;
-
-// ADDITIONAL PARAMETERS REQUIRED
-Add these to your parameters structure:
-
-    double gamma;               // Ratio of specific heats (1.4 for air)
-    double R_gas;               // Gas constant (287 J/kg-K for air)
-    double Pr;                  // Prandtl number (0.71 for air)
-    double T_ref;               // Reference temperature
-    double rho_ref;             // Reference density
-    double p_ref;               // Reference pressure (thermodynamic)
-    double cv;                  // Specific heat at constant volume
-    double cp;                  // Specific heat at constant pressure
-    double mu_ref;              // Reference viscosity
-    double T_sutherland;        // Sutherland's constant for viscosity (110.4 K for air)
-    double Mach;                // Reference Mach number
-    int energy_equation;        // Flag: 0=isothermal, 1=full energy equation
-    int viscosity_model;        // 0=constant, 1=Sutherland, 2=power-law
-*/
-
 /////////////////////////////////////////////////////////////////////////////
 // Thermodynamic and Transport Properties
 /////////////////////////////////////////////////////////////////////////////
@@ -944,34 +879,3 @@ void solve_energy_equation_2d(PointStructure* myPointStruct, FieldVariables* fie
     // Similar to 3D but without z-components
     // (Full implementation omitted for brevity)
 }
-
-/////////////////////////////////////////////////////////////////////////////
-// ADDITIONAL BOUNDARY CONDITION TYPES FOR COMPRESSIBLE FLOW
-/////////////////////////////////////////////////////////////////////////////
-/*
-Add these to your BC enum:
-
-typedef enum {
-    BC_VELOCITY_INLET,      // Specified u, v, w, T, rho (or p)
-    BC_PRESSURE_OUTLET,     // Specified p, extrapolate others
-    BC_WALL,                // No-slip: u=v=w=0, T specified or adiabatic
-    BC_ADIABATIC_WALL,      // No-slip + zero heat flux (∂T/∂n = 0)
-    BC_ISOTHERMAL_WALL,     // No-slip + fixed temperature
-    BC_SYMMETRY,            // Zero normal velocity, zero normal gradients
-    BC_SUPERSONIC_INLET,    // All variables specified
-    BC_SUPERSONIC_OUTLET,   // All variables extrapolated
-    BC_SUBSONIC_INLET,      // Specify T, p_total, direction
-    BC_SUBSONIC_OUTLET      // Specify p_static, extrapolate others
-} BoundaryConditionType;
-
-// Add to BC structure:
-typedef struct {
-    BoundaryConditionType type;
-    double u, v, w;        // Velocity
-    double p;              // Pressure
-    double T;              // Temperature
-    double rho;            // Density
-    double p_total;        // Total pressure
-    double T_total;        // Total temperature
-} BoundaryCondition;
-*/

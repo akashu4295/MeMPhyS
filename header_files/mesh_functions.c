@@ -85,6 +85,12 @@ void read_flow_parameters(char *filename) {
     printf("PARAMETERS: %s = %lf\n", ctemp, parameters.facdt);
     SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.poisson_solver_type), "Number of relaxations read error, Check flow_parameters.csv");
     printf("PARAMETERS: %s = %hd\n", ctemp, parameters.poisson_solver_type);
+    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &temp), "Compressible flow flag read error, Check flow_parameters.csv");
+    if (temp == 1)
+        parameters.compressible_flow = true;
+    else
+        parameters.compressible_flow = false;
+    printf("PARAMETERS: %s = %d\n", ctemp, parameters.compressible_flow);
     fclose(file);
     parameters.rho = 1;
     parameters.mu = parameters.rho / parameters.Re;

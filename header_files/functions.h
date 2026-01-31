@@ -117,14 +117,40 @@ void FS_calculate_residuals_vectorised(PointStructure* myPointStruct, FieldVaria
 void FS_restrict_residuals_vectorised(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);
 void FS_prolongate_corrections_vectorised(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);
 void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables* field);
-void FS_update_boundary_pressure_vectorised(PointStructure* myPointStruct, FieldVariables* field);
-void apply_velocity_bc_intermediate(PointStructure* myPointStruct, FieldVariables* field);
-
 double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
-void FS_calculate_boundary_dpdn_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
-void FS_update_boundary_pressure_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
+
+
+// Compressible flow
+double calculate_viscosity_sutherland(double T, double mu_ref, double T_ref, double T_s);
+double calculate_viscosity_powerlaw(double T, double mu_ref, double T_ref, double n);
+double calculate_thermal_conductivity(double mu, double cp, double Pr);
+void update_properties(PointStructure* myPointStruct, FieldVariables* field);
+double calculate_dt_compressible(PointStructure* myPointStruct, FieldVariables* field);
+double compressible_solver_explicit(PointStructure* myPointStruct, FieldVariables* field);
+void solve_continuity_equation(PointStructure* myPointStruct, FieldVariables* field);
+void solve_momentum_equations(PointStructure* myPointStruct, FieldVariables* field);
+void calculate_stress_tensor(PointStructure* myPointStruct, FieldVariables* field);
+void solve_energy_equation(PointStructure* myPointStruct, FieldVariables* field);
+void calculate_viscous_dissipation(PointStructure* myPointStruct, FieldVariables* field);
+void solve_pressure_correction(PointStructure* myPointStruct, FieldVariables* field);
+void update_velocity_compressible(PointStructure* myPointStruct, FieldVariables* field);
+double compressible_solver_explicit_2d(PointStructure* myPointStruct, FieldVariables* field);
+void solve_continuity_equation_2d(PointStructure* myPointStruct, FieldVariables* field);
+void solve_momentum_equations_2d(PointStructure* myPointStruct, FieldVariables* field);
+void solve_energy_equation_2d(PointStructure* myPointStruct, FieldVariables* field);
+
+
+
+
+
+
+
+
+
+
+
 
 #endif

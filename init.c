@@ -28,6 +28,17 @@ void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldva
             myfieldvariables[ii].p[i] = 0;
             myfieldvariables[ii].p_old[i] = 0;
         }
+        if (parameters.compressible_flow){
+            for (int i = 0; i < myPointStruct->num_nodes; i++) {
+                myPointStruct[ii].node_bc[i].T = 0.0;
+                myPointStruct[ii].node_bc[i].rho = 0.0;
+                myPointStruct[ii].node_bc[i].p_total = 0.0;
+                myPointStruct[ii].node_bc[i].T_total = 0.0;
+                myfieldvariables->T[i] = 0.0;  // e.g., 300 K
+                myfieldvariables->rho[i] = 0.0;           // Ideal gas law
+                myfieldvariables->e[i] = 0.0;             // Internal energy
+            }
+        }
     }
 }
 

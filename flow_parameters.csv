@@ -20,6 +20,19 @@ neumann_flag_boundary,1
 facRe,1
 facdt,1
 Poisson_solver_type,1
+compressible_flow,0
+gamma,1.4
+R_gas,287
+Pr,0.71
+T_ref,300
+rho_ref,1.225
+p_ref,101325
+mu_ref,1.81e-5
+T_sutherland,110.4
+viscosity_model,0
+Mach,0.4
+energy_equation,0
+
 
 
 /* 

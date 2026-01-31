@@ -528,7 +528,7 @@ void update_boundary_pressure_vectorised(PointStructure* myPointStruct, FieldVar
                 temp3 -= field->w_new[i]* field->w[myPointStruct->cloud_index[k]] * myPointStruct->Dz[k];
                 k +=1;
             }
-        field->dpdn[i] = field->rho * (temp1*myPointStruct->x_normal[i] + temp2*myPointStruct->y_normal[i] + temp3*myPointStruct->z_normal[i]);
+        field->dpdn[i] = parameters.rho * (temp1*myPointStruct->x_normal[i] + temp2*myPointStruct->y_normal[i] + temp3*myPointStruct->z_normal[i]);
 		
         sumx = 0; sumy = 0; sumz = 0; Ap = 0.0;
         # pragma acc loop reduction(+:sumx, sumy, sumz)

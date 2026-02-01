@@ -9,91 +9,274 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdbool.h>
+#include <ctype.h>
 
 // Safe guards for fscanf on reading 1 and 2 items
 #define SAFE_SCAN1(x, msg) if ((x) != 1) { puts(msg); exit(1); }
 #define SAFE_SCAN2(x, msg) if ((x) != 2) { puts(msg); exit(1); }
+#define LINE_LEN 512
 
 ///////////////////////////////////////////////////////////////////////////////
 // Function definitions
 ///////////////////////////////////////////////////////////////////////////////
 
-// Tested working well. all variables used have default allocated memory
-void read_flow_parameters(char *filename) {
-    FILE *file;
-    char ctemp[100]; int temp;
+static void trim(char *s)
+{
+    char *p = s;
+    while (isspace(*p)) p++;
+    memmove(s, p, strlen(p) + 1);
 
-    file = fopen(filename, "r");
-    if (file == NULL)
+    for (int i = strlen(s) - 1; i >= 0 && isspace(s[i]); i--)
+        s[i] = '\0';
+}
+
+// Remove // and block comments 
+static void strip_comments(char *line, bool *in_block_comment)
+{
+    char *p = line;
+
+    while (*p)
     {
-        printf("Error: Unable to open the file\n");
+        if (*in_block_comment)
+        {
+            if (p[0] == '*' && p[1] == '/')
+            {
+                *in_block_comment = false;
+                memmove(p, p + 2, strlen(p + 2) + 1);
+            }
+            else
+            {
+                memmove(p, p + 1, strlen(p + 1) + 1);
+            }
+        }
+        else
+        {
+            if (p[0] == '/' && p[1] == '*')
+            {
+                *in_block_comment = true;
+                memmove(p, p + 2, strlen(p + 2) + 1);
+            }
+            else if (p[0] == '/' && p[1] == '/')
+            {
+                *p = '\0';
+                break;
+            }
+            else
+            {
+                p++;
+            }
+        }
+    }
+}
+
+static int parse_key_value(char *line, char *key, char *value)
+{
+    char *comma = strchr(line, ',');
+    if (!comma) return 0;
+
+    *comma = '\0';
+    strcpy(key, line);
+    strcpy(value, comma + 1);
+
+    trim(key);
+    trim(value);
+
+    return 1;
+}
+
+void read_flow_parameters(const char *filename)
+{
+    FILE *file = fopen(filename, "r");
+    if (!file){
+        perror("Cannot open flow parameter file");
         exit(1);
     }
-    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.dimension), "Dimension read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.dimension);
-    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.poly_degree), "Polynomial degree read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.poly_degree);
-    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.phs_degree), "Phase degree read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.phs_degree);
-    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.cloud_size_multiplier), "Cloud size multiplier read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.cloud_size_multiplier);
-    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.test), "Test read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.test);
-    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.courant_number), "Courant number read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %lf\n", ctemp, parameters.courant_number);
-    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.steady_state_tolerance), "Steady state tolerance read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %e\n", ctemp, parameters.steady_state_tolerance);
-    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.poisson_solver_tolerance), "Poisson solver tolerance read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %e\n", ctemp, parameters.poisson_solver_tolerance);
-    SAFE_SCAN2(fscanf(file, "%[^,],%f\n", ctemp, &parameters.omega), "Omega read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %f\n", ctemp, parameters.omega);
-    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.dt), "Time step read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %lf\n", ctemp, parameters.dt);
-    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &parameters.num_time_steps), "Number of time steps read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %d\n", ctemp, parameters.num_time_steps);
-    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &parameters.write_interval), "Write interval read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %d\n", ctemp, parameters.write_interval);
-    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.Re), "Reynolds number read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %lf\n", ctemp, parameters.Re);
-    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.iter_momentum), "Momentum iteration read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.iter_momentum);
-    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.iter_timple), "Timple iteration read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.iter_timple);
-    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.num_vcycles), "Number of V-cycles read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.num_vcycles);
-    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.num_relax), "Number of relaxations read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.num_relax);
-    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &temp), "Fractional step flag read error, Check flow_parameters.csv");
-    if (temp == 1)
-        parameters.fractional_step = true;
-    else
-        parameters.fractional_step = false;
-    printf("PARAMETERS: %s = %d\n", ctemp, parameters.fractional_step);
-    if (temp == EOF){
-        printf("Error: Unable to read the file\n");
-        exit(1);
+
+    char line[LINE_LEN], key[128], val[128];
+    bool in_block_comment = false;
+
+    while (fgets(line, sizeof(line), file)){
+        strip_comments(line, &in_block_comment);
+        trim(line);
+
+        if (line[0] == '\0') continue;
+        if (!parse_key_value(line, key, val)) continue;
+
+        /* ---- dispatch table ---- */
+        if (!strcmp(key, "domain_dimensions")){
+            parameters.dimension = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.dimension);
+        }
+        else if (!strcmp(key, "poly_deg")){
+            parameters.poly_degree = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.poly_degree);
+        }
+        else if (!strcmp(key, "phs_deg")){
+            parameters.phs_degree = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.phs_degree);
+        }
+        else if (!strcmp(key, "cloud_size_multiplier")){
+            parameters.cloud_size_multiplier = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.cloud_size_multiplier);
+        }
+        else if (!strcmp(key, "test_derivative")){
+            parameters.test = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.test);
+        }
+        else if (!strcmp(key, "courant_number")){
+            parameters.courant_number = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.courant_number);
+        }
+        else if (!strcmp(key, "steady_tolerance")){
+            parameters.steady_state_tolerance = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.steady_state_tolerance);
+        }
+        else if (!strcmp(key, "poisson_solver_tolerance")){
+            parameters.poisson_solver_tolerance = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.poisson_solver_tolerance);
+        }
+        else if (!strcmp(key, "sor_parameter")){
+            parameters.omega = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.omega);
+        }
+        else if (!strcmp(key, "time_step")){
+            parameters.dt = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.dt);
+        }
+        else if (!strcmp(key, "num_time_steps")){
+            parameters.num_time_steps = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.num_time_steps);
+        }
+        else if (!strcmp(key, "write_interval")){
+            parameters.write_interval = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.write_interval);
+        }
+        else if (!strcmp(key, "Re")){
+            parameters.Re = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.Re);
+        }
+        else if (!strcmp(key, "iter_momentum")){
+            parameters.iter_momentum = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.iter_momentum);
+        }
+        else if (!strcmp(key, "iter_timple")){
+            parameters.iter_timple = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.iter_timple);
+        }
+        else if (!strcmp(key, "num_vcycles")){
+            parameters.num_vcycles = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.num_vcycles);
+        }
+        else if (!strcmp(key, "num_relax")){
+            parameters.num_relax = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.num_relax);
+        }
+        else if (!strcmp(key, "fractional_step")){
+            parameters.fractional_step = atoi(val) != 0;
+            printf("PARAMETERS: %s = %hd\n", key, parameters.fractional_step);
+        }
+        else if (!strcmp(key, "facRe")){
+            parameters.facRe = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.facRe);
+        }
+        else if (!strcmp(key, "facdt")){
+            parameters.facdt = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.facdt);
+        }
+        else if (!strcmp(key, "Poisson_solver_type")){
+            parameters.poisson_solver_type = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.poisson_solver_type);
+        }
+
+        /* ---- compressible block ---- */
+
+        else if (!strcmp(key, "compressible_flow")){
+            parameters.compressible_flow = atoi(val) != 0;
+            printf("PARAMETERS: %s = %hd\n", key, parameters.compressible_flow);
+        }
+        else if (!strcmp(key, "gamma")){
+            parameters.gamma = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.gamma);
+        }
+        else if (!strcmp(key, "R_gas")){
+            parameters.R_gas = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.R_gas);
+        }
+        else if (!strcmp(key, "Pr")){
+            parameters.Pr = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.Pr);
+        }
+        else if (!strcmp(key, "Cv")){
+            parameters.cv = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.cv);
+        }
+        else if (!strcmp(key, "Cp")){
+            parameters.cp = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.cp);
+        }
+        else if (!strcmp(key, "T_ref")){
+            parameters.T_ref = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.T_ref);
+        }
+        else if (!strcmp(key, "rho_ref")){
+            parameters.rho_ref = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.rho_ref);
+        }
+        else if (!strcmp(key, "p_ref")){
+            parameters.p_ref = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.p_ref);
+        }
+        else if (!strcmp(key, "mu_ref")){
+            parameters.mu_ref = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.mu_ref);
+        }
+        else if (!strcmp(key, "T_sutherland")){
+            parameters.T_sutherland = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.T_sutherland);
+        }
+        else if (!strcmp(key, "viscosity_model")){
+            parameters.viscosity_model = atoi(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %hd\n", key, parameters.viscosity_model);
+        }
+        else if (!strcmp(key, "Mach")){
+            parameters.Mach = atof(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %f\n", key, parameters.Mach);
+        }
+        else if (!strcmp(key, "energy_equation")){
+            parameters.energy_equation = atoi(val);
+            if (parameters.compressible_flow)
+                printf("PARAMETERS: %s = %hd\n", key, parameters.energy_equation);
+        }
+        else
+            printf("⚠️  Unknown parameter ignored: %s\n", key);
     }
-    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &temp), "Neumann boundary flag read error, Check flow_parameters.csv");
-    if (temp == 1)
-        parameters.neumann_flag_boundary = true;
-    else
-        parameters.neumann_flag_boundary = false;
-    printf("PARAMETERS: %s = %d\n", ctemp, parameters.neumann_flag_boundary);
-    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.facRe), "FacRe read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %lf\n", ctemp, parameters.facRe);
-    SAFE_SCAN2(fscanf(file, "%[^,],%lf\n", ctemp, &parameters.facdt), "Facdt read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %lf\n", ctemp, parameters.facdt);
-    SAFE_SCAN2(fscanf(file, "%[^,],%hd\n", ctemp, &parameters.poisson_solver_type), "Number of relaxations read error, Check flow_parameters.csv");
-    printf("PARAMETERS: %s = %hd\n", ctemp, parameters.poisson_solver_type);
-    SAFE_SCAN2(fscanf(file, "%[^,],%d\n", ctemp, &temp), "Compressible flow flag read error, Check flow_parameters.csv");
-    if (temp == 1)
-        parameters.compressible_flow = true;
-    else
-        parameters.compressible_flow = false;
-    printf("PARAMETERS: %s = %d\n", ctemp, parameters.compressible_flow);
+
     fclose(file);
-    parameters.rho = 1;
-    parameters.mu = parameters.rho / parameters.Re;
+
+    /* ---- derived quantities ---- */
+    if (parameters.compressible_flow)
+    {
+        parameters.rho = parameters.rho_ref;
+        parameters.mu  = parameters.mu_ref;
+    }
+    else
+    {
+        parameters.rho = 1.0;
+        parameters.mu  = 1.0 / parameters.Re;
+    }
     parameters.nu = parameters.mu / parameters.rho;
 }
 
@@ -132,7 +315,7 @@ void read_PointStructure(PointStructure* myPointStruct)
     printf("PARAMETERS: dimension = %d\n", parameters.dimension);
 
     FILE *file;
-    char filename[50];
+    char filename[250];
     double dtemp; int itemp; char temp[50]; // temporary variables used multiple times in the code
     strcpy(filename, myPointStruct->mesh_filename);
 
@@ -184,14 +367,12 @@ void read_PointStructure(PointStructure* myPointStruct)
             }
         }
 
-    bool flag_bc_file = false;
     FILE *bcf = fopen("bc.csv", "r");
     if (bcf != NULL)
     {
         fclose(bcf);  // close immediately, we just tested existence
         read_physical_names(filename, myPointStruct); // Read physical names from the mesh file
         read_boundary_conditions_file("bc.csv", myPointStruct);
-        flag_bc_file = true;
     }
     else
     {
@@ -270,8 +451,15 @@ void read_PointStructure(PointStructure* myPointStruct)
                 if (num_tags >= 2) fscanf(file, "%d", &geom_id);
                 for (int t = 2; t < num_tags; t++) fscanf(file, "%*d");
                 
-                BCValue bc = {0};
+                BCValue bc;
                 bc.type = BC_INTERIOR;
+                bc.u = 0.0; bc.v = 0.0; bc.w = 0.0; bc.p = 0.0; 
+                if (parameters.compressible_flow){
+                    bc.p_total = parameters.p_ref;
+                    bc.rho = parameters.rho_ref;
+                    bc.T = parameters.T_ref;
+                    bc.T_total = parameters.T_ref;
+                }
                 
                 if ((phys_id != 0))
                 {
@@ -351,8 +539,15 @@ void read_PointStructure(PointStructure* myPointStruct)
                 if (num_tags >= 2) fscanf(file, "%d", &geom_id);
                 for (int t = 2; t < num_tags; t++) fscanf(file, "%*d");
 
-                BCValue bc = {0};
+                BCValue bc;
                 bc.type = BC_INTERIOR;
+                bc.u = 0.0; bc.v = 0.0; bc.w = 0.0; bc.p = 0.0; 
+                if (parameters.compressible_flow){
+                    bc.p_total = parameters.p_ref;
+                    bc.rho = parameters.rho_ref;
+                    bc.T = parameters.T_ref;
+                    bc.T_total = parameters.T_ref;
+                }
 
                 if ((phys_id != 0))
                 {
@@ -599,9 +794,6 @@ void read_PointStructure(PointStructure* myPointStruct)
         }
     }
     printf("No of nodes = %d \nNo of elements = %d \n", myPointStruct->num_nodes, myPointStruct->num_elem);
-    printf("Types of boundaries identified from mesh file = %d \n", myPointStruct->num_boundary_types);
-    for (int i = 0; i < myPointStruct->num_boundary_types; i++)
-        printf("\tPhysical ID: %d\n", myPointStruct->boundary_map[i].physical_id);
 }
 
 void correct_normal_directions(PointStructure *myPointStruct)
@@ -885,9 +1077,8 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
     free(temp_node_bc);
 }
 
-void create_prolongation_and_restriction_matrices(PointStructure* myPointStruct, short num_levels){
-    
-    printf("\nIdentifying prolongation and restriction points\n");
+void create_prolongation_and_restriction_matrices(PointStructure* myPointStruct, short num_levels){  
+    printf("Identifying prolongation and restriction points\n");
     for (short ii = 0; ii<num_levels ; ii = ii +1){
         printf("Level %d\n", ii+1);
         if (ii == num_levels-1)
@@ -931,7 +1122,7 @@ void read_complete_mesh_data(PointStructure* myPointStruct, short num_levels)
     for (short ii = 0; ii<num_levels ; ii = ii +1){
         myPointStruct[ii].poly_degree = 3; 
     	myPointStruct[0].poly_degree = parameters.poly_degree;
-        printf("\nReading mesh data for level %d\n", ii+1);
+        printf("Reading mesh data for level %d\n", ii+1);
         read_PointStructure(&myPointStruct[ii]);
         printf("Identifying cloud indices\n");
         find_cloud_index(&myPointStruct[ii]);

@@ -42,43 +42,29 @@ void update_properties(PointStructure* myPointStruct, FieldVariables* field) {
         // Ideal gas law: p = rho * R * T
         // For low Mach: p = p_ref + p' where p' << p_ref
         // rho = p_ref / (R * T)
-        field->rho[i] = parameters.p_ref / (parameters.R_gas * field->T[i]);
-        
         // Internal energy: e = cv * T
+        field->rho[i] = parameters.p_ref / (parameters.R_gas * field->T[i]);
         field->e[i] = parameters.cv * field->T[i];
         
         // Viscosity (temperature-dependent)
         if (parameters.viscosity_model == 0) {
-            // Constant viscosity
-            field->mu[i] = parameters.mu_ref;
+            field->mu[i] = parameters.mu_ref;    // Constant viscosity
         } else if (parameters.viscosity_model == 1) {
             // Sutherland's law
-            field->mu[i] = calculate_viscosity_sutherland(
-                field->T[i], parameters.mu_ref, parameters.T_ref, parameters.T_sutherland
-            );
+            field->mu[i] = calculate_viscosity_sutherland(field->T[i], parameters.mu_ref, parameters.T_ref, parameters.T_sutherland);
         } else if (parameters.viscosity_model == 2) {
             // Power law (n = 0.7 typical)
-            field->mu[i] = calculate_viscosity_powerlaw(
-                field->T[i], parameters.mu_ref, parameters.T_ref, 0.7
-            );
+            field->mu[i] = calculate_viscosity_powerlaw(field->T[i], parameters.mu_ref, parameters.T_ref, 0.7);
         }
-        
         // Thermal conductivity
-        field->kappa[i] = calculate_thermal_conductivity(
-            field->mu[i], parameters.cp, parameters.Pr
-        );
+        field->kappa[i] = calculate_thermal_conductivity(field->mu[i], parameters.cp, parameters.Pr);
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// Time Step Calculation for Compressible Flow
-/////////////////////////////////////////////////////////////////////////////
 double calculate_dt_compressible(PointStructure* myPointStruct, FieldVariables* field) {
     double dt = 1e10;
     double d = myPointStruct->d_avg;
     int N = myPointStruct->num_nodes;
-    
-    // Find maximum values
     double u_max = 0.0, v_max = 0.0, w_max = 0.0;
     double a_max = 0.0;  // Speed of sound
     double nu_max = 0.0;
@@ -109,9 +95,6 @@ double calculate_dt_compressible(PointStructure* myPointStruct, FieldVariables* 
     return dt * parameters.courant_number;
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// Compressible Solver Main Loop
-/////////////////////////////////////////////////////////////////////////////
 double compressible_solver_explicit(PointStructure* myPointStruct, FieldVariables* field) {
     double steady_state_error = 0.0;
     
@@ -127,24 +110,12 @@ double compressible_solver_explicit(PointStructure* myPointStruct, FieldVariable
         field[0].p_old[i] = field[0].p[i];
     }
     
-    // Update properties
-    update_properties(&myPointStruct[0], &field[0]);
-    
-    // Step 1: Solve continuity equation for density
+    update_properties(&myPointStruct[0], &field[0]);    // Update properties
     solve_continuity_equation(&myPointStruct[0], &field[0]);
-    
-    // Step 2: Solve momentum equations
     solve_momentum_equations(&myPointStruct[0], &field[0]);
-    
-    // Step 3: Solve energy equation for temperature
-    if (parameters.energy_equation == 1) {
+    if (parameters.energy_equation == 1) 
         solve_energy_equation(&myPointStruct[0], &field[0]);
-    }
-    
-    // Step 4: Pressure correction (for low Mach, p' correction)
     solve_pressure_correction(&myPointStruct[0], &field[0]);
-    
-    // Step 5: Update velocity with pressure correction
     update_velocity_compressible(&myPointStruct[0], &field[0]);
     
     // Calculate steady state error

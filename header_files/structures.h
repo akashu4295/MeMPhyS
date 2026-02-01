@@ -57,7 +57,6 @@ struct parameters
     int num_time_steps; // Number of time steps
     short num_levels; // Number of levels in the multigrid
     int write_interval; // Interval for writing the data
-    bool neumann_flag_boundary; // Neumann boundary condition flag
     float omega; // relaxation parameter
     double dt; // time step
     short iter_momentum; // number of iterations for momentum equation
@@ -144,7 +143,6 @@ typedef struct FieldVariables {
     double* pprime; // pressure field
     double* res; // residual field
     double* source; // source field
-    double* T; // temperature field
     double* dpdn; // dpdn field
     double* dpdx; // dpdx field
     double* dpdy; // dpdy field
@@ -154,6 +152,7 @@ typedef struct FieldVariables {
     double* rho; // density field
     double* rho_old; // density old field
     double* rho_new; // density new field
+    double* T; // temperature field
     double* T_old; // Temperature old field
     double* T_new; // Temperature new field
     double* e; // Energy
@@ -168,18 +167,7 @@ typedef struct FieldVariables {
     double *div_tau_x, *div_tau_y, *div_tau_z;
     double *Q_visc;        // Viscous dissipation (heating)
     double *Q_source;      // External heat source term
-
-    double nu; // kinematic viscosity field
-    double Re; // Reynolds number field
-    //double facRe; // Re factor for defect correction
 } FieldVariables;
-
-// Structure to represent a point in 3-dimensional space
-typedef struct Point {
-    double coords[3];
-    int index; // Index of the point in the original dataset
-} Point;
-
 
 // All the functions, Assumes both init.c file and structures_vectors.c are linked to this header
 void AllocateMemoryPointStructure(PointStructure* myPointStruct, int nodes);

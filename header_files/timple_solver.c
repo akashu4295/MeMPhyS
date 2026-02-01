@@ -301,49 +301,49 @@ void multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, FieldVar
     }        
 }
 
-void update_boundary_pprime_vectorised(PointStructure* mypointstruct, FieldVariables* field){
-    double sumx, sumy, sumz, Ap;
-    int n = mypointstruct->num_cloud_points;
-    if (parameters.neumann_flag_boundary){
-        # pragma acc parallel loop gang vector present(field, parameters, mypointstruct)
-        for (int i = 0; i < mypointstruct->num_boundary_nodes; i++){
-            sumx = 0; sumy = 0; sumz = 0; Ap = 0;
-            # pragma acc loop reduction(+:sumx, sumy, sumz)
-            for (int j = 1; j < mypointstruct->num_cloud_points; j++){
-                int k = i*n + j;
-                sumx += mypointstruct->Dx[k]*field->pprime[mypointstruct->cloud_index[k]];
-                sumy += mypointstruct->Dy[k]*field->pprime[mypointstruct->cloud_index[k]];
-                sumz += mypointstruct->Dz[k]*field->pprime[mypointstruct->cloud_index[k]];
-            }
-            int k = i*n;
-            Ap += mypointstruct->Dx[k]*mypointstruct->x_normal[i];
-            Ap += mypointstruct->Dy[k]*mypointstruct->y_normal[i];
-            Ap += mypointstruct->Dz[k]*mypointstruct->z_normal[i];
-            field->pprime[i] = (-sumx*mypointstruct->x_normal[i] -sumy*mypointstruct->y_normal[i] -sumz*mypointstruct->z_normal[i])/Ap;
-        }
-    }
-}
+// void update_boundary_pprime_vectorised(PointStructure* mypointstruct, FieldVariables* field){
+//     double sumx, sumy, sumz, Ap;
+//     int n = mypointstruct->num_cloud_points;
+//     // if (parameters.neumann_flag_boundary){
+//         # pragma acc parallel loop gang vector present(field, parameters, mypointstruct)
+//         for (int i = 0; i < mypointstruct->num_boundary_nodes; i++){
+//             sumx = 0; sumy = 0; sumz = 0; Ap = 0;
+//             # pragma acc loop reduction(+:sumx, sumy, sumz)
+//             for (int j = 1; j < mypointstruct->num_cloud_points; j++){
+//                 int k = i*n + j;
+//                 sumx += mypointstruct->Dx[k]*field->pprime[mypointstruct->cloud_index[k]];
+//                 sumy += mypointstruct->Dy[k]*field->pprime[mypointstruct->cloud_index[k]];
+//                 sumz += mypointstruct->Dz[k]*field->pprime[mypointstruct->cloud_index[k]];
+//             }
+//             int k = i*n;
+//             Ap += mypointstruct->Dx[k]*mypointstruct->x_normal[i];
+//             Ap += mypointstruct->Dy[k]*mypointstruct->y_normal[i];
+//             Ap += mypointstruct->Dz[k]*mypointstruct->z_normal[i];
+//             field->pprime[i] = (-sumx*mypointstruct->x_normal[i] -sumy*mypointstruct->y_normal[i] -sumz*mypointstruct->z_normal[i])/Ap;
+//         }
+//     // }
+// }
 
-void update_boundary_pprime_vectorised_2d(PointStructure* mypointstruct, FieldVariables* field){
-    int n = mypointstruct->num_cloud_points;
-    if (parameters.neumann_flag_boundary){
-        # pragma acc parallel loop gang vector present(field, parameters, mypointstruct)
-        for (int i = 0; i < mypointstruct->num_boundary_nodes; i++){
-            double sumx = 0, sumy = 0, Ap = 0;
+// void update_boundary_pprime_vectorised_2d(PointStructure* mypointstruct, FieldVariables* field){
+//     int n = mypointstruct->num_cloud_points;
+//     // if (parameters.neumann_flag_boundary){
+//         # pragma acc parallel loop gang vector present(field, parameters, mypointstruct)
+//         for (int i = 0; i < mypointstruct->num_boundary_nodes; i++){
+//             double sumx = 0, sumy = 0, Ap = 0;
             
-            # pragma acc loop reduction(+:sumx, sumy)
-            for (int j = 1; j < mypointstruct->num_cloud_points; j++){
-                int k = i*n + j;
-                sumx += mypointstruct->Dx[k]*field->pprime[mypointstruct->cloud_index[k]];
-                sumy += mypointstruct->Dy[k]*field->pprime[mypointstruct->cloud_index[k]];
-            }
+//             # pragma acc loop reduction(+:sumx, sumy)
+//             for (int j = 1; j < mypointstruct->num_cloud_points; j++){
+//                 int k = i*n + j;
+//                 sumx += mypointstruct->Dx[k]*field->pprime[mypointstruct->cloud_index[k]];
+//                 sumy += mypointstruct->Dy[k]*field->pprime[mypointstruct->cloud_index[k]];
+//             }
             
-            Ap += mypointstruct->Dx[i*n]*mypointstruct->x_normal[i];
-            Ap += mypointstruct->Dy[i*n]*mypointstruct->y_normal[i];
-            field->pprime[i] = (-sumx*mypointstruct->x_normal[i] -sumy*mypointstruct->y_normal[i])/Ap;
-        }
-    }
-}
+//             Ap += mypointstruct->Dx[i*n]*mypointstruct->x_normal[i];
+//             Ap += mypointstruct->Dy[i*n]*mypointstruct->y_normal[i];
+//             field->pprime[i] = (-sumx*mypointstruct->x_normal[i] -sumy*mypointstruct->y_normal[i])/Ap;
+//         }
+//     // }
+// }
 
 void relaxation_vectorised(PointStructure* mypointstruct, FieldVariables* field){
      //double* zeros=create_vector(mypointstruct->num_nodes);

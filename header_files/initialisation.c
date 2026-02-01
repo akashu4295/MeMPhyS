@@ -24,19 +24,32 @@ BCType parse_bc_type(const char* s){
     if (!strcmp(s, "velocity_inlet")) return BC_VELOCITY_INLET;
     if (!strcmp(s, "velocity_outlet")) return BC_VELOCITY_OUTLET;
     if (!strcmp(s, "pressure_outlet")) return BC_PRESSURE_OUTLET;
+    if (!strcmp(s, "isothermal_wall")) return BC_ISOTHERMAL_WALL;
+    if (!strcmp(s, "adiabatic_wall")) return BC_ADIABATIC_WALL;
+    if (!strcmp(s, "symmetry")) return BC_SYMMETRY;
+    if (!strcmp(s, "supersonic_inlet")) return BC_SUPERSONIC_INLET;
+    if (!strcmp(s, "supersonic_outlet")) return BC_SUPERSONIC_OUTLET;
+    if (!strcmp(s, "subsonic_inlet")) return BC_SUBSONIC_INLET;
+    if (!strcmp(s, "subsonic_outlet")) return BC_SUBSONIC_OUTLET;
     return BC_INTERIOR;
 }
 
 void read_physical_names(char* meshfile, PointStructure* ps)
 {
-    FILE* file = fopen(meshfile, "r");
+    FILE* file_pn = fopen(meshfile, "r");
+    printf("%s\n",meshfile);
+    if (file_pn == NULL)
+    {
+        printf("Error: Unable to open the file\n");
+        exit(1);
+    }
     char temp[128];
     int n;
-    while (fscanf(file, "%s", temp) != EOF) {
+    while (fscanf(file_pn, "%s", temp) != EOF) {
         if (strcmp(temp, "$PhysicalNames") == 0)
             break;
     }
-    fscanf(file, "%d", &n);
+    fscanf(file_pn, "%d", &n);
     printf("Number of physical names: %d\n", n);
     ps->num_boundary_types = n;
     if (n == 0) {
@@ -47,14 +60,16 @@ void read_physical_names(char* meshfile, PointStructure* ps)
         ps->boundary_map[0].bc.v = 0.0;
         ps->boundary_map[0].bc.w = 0.0;
         ps->boundary_map[0].bc.p = 0.0;
+        ps->boundary_map[0].bc.T = parameters.T_ref;
+        ps->boundary_map[0].bc.rho = parameters.rho_ref;
         printf("No physical names found in mesh file.\n");
-        fclose(file);
+        fclose(file_pn);
         return;
     }
     for (int i = 0; i < n; i++) {
         int dim;
         char raw[64];
-        fscanf(file, "%d %hd %63s", &dim, &ps->boundary_map[i].physical_id, raw);
+        fscanf(file_pn, "%d %hd %63s", &dim, &ps->boundary_map[i].physical_id, raw);
         int len = strlen(raw);
         if (raw[0] == '"' && raw[len-1] == '"') {
             raw[len-1] = '\0';
@@ -63,13 +78,19 @@ void read_physical_names(char* meshfile, PointStructure* ps)
             strcpy(ps->boundary_map[i].name, raw);
         }
         printf("Physical ID: %d, Name: %s\n", ps->boundary_map[i].physical_id, ps->boundary_map[i].name);
-        ps->boundary_map[i].bc.type = BC_INTERIOR; // default
+        
+        // Initialize with default values
+        ps->boundary_map[i].bc.type = BC_INTERIOR;
         ps->boundary_map[i].bc.u = 0.0;
         ps->boundary_map[i].bc.v = 0.0;
         ps->boundary_map[i].bc.w = 0.0;
-        ps->boundary_map[i].bc.p = 0.0;
+        ps->boundary_map[i].bc.p = parameters.p_ref;
+        ps->boundary_map[i].bc.T = parameters.T_ref;
+        ps->boundary_map[i].bc.rho = parameters.rho_ref;
+        ps->boundary_map[i].bc.p_total = 0.0;
+        ps->boundary_map[i].bc.T_total = 0.0;
     }
-    fclose(file);
+    fclose(file_pn);
 }
 
 void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
@@ -95,8 +116,22 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
         if (*s == '\0' || *s == '#')
             continue;
 
-        BCValue bc = {0};
+        BCValue bc;
         bc.type = BC_INTERIOR;
+        bc.u = 0.0; bc.v = 0.0; bc.w = 0.0; bc.p = 0.0; 
+        if (parameters.compressible_flow){
+            bc.p_total = parameters.p_ref;
+            bc.rho = parameters.rho_ref;
+            bc.T = parameters.T_ref;
+            bc.T_total = parameters.T_ref;
+        }
+
+        // Set defaults for compressible flow
+        bc.T = parameters.T_ref;
+        bc.rho = parameters.rho_ref;
+        bc.p = parameters.p_ref;
+        bc.p_total = 0.0;
+        bc.T_total = 0.0;
 
         char* tokens[16];
         int ntok = 0;
@@ -124,6 +159,7 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
         }
 
         int have_u = 0, have_v = 0, have_w = 0, have_p = 0;
+        int have_T = 0, have_rho = 0, have_p_total = 0, have_T_total = 0;
 
         /* parse key=value pairs */
         for (int i = 2; i < ntok; i++) {
@@ -150,6 +186,18 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
             else if (!strcmp(key, "p")) {
                 bc.p = atof(val); have_p = 1;
             }
+            else if (!strcmp(key, "T")) {
+                bc.T = atof(val); have_T = 1;
+            }
+            else if (!strcmp(key, "rho")) {
+                bc.rho = atof(val); have_rho = 1;
+            }
+            else if (!strcmp(key, "p_total") || !strcmp(key, "ptotal")) {
+                bc.p_total = atof(val); have_p_total = 1;
+            }
+            else if (!strcmp(key, "T_total") || !strcmp(key, "Ttotal")) {
+                bc.T_total = atof(val); have_T_total = 1;
+            }
             else {
                 printf("BC CSV warning (line %d): unknown key '%s'\n",
                        lineno, key);
@@ -169,6 +217,34 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
         if (bc.type == BC_PRESSURE_OUTLET && !have_p) {
             printf("BC CSV error (line %d): pressure BC requires p\n", lineno);
             continue;
+        }
+        
+        // Compressible flow validations
+        if (parameters.compressible_flow) {
+            // For velocity inlets in compressible flow, need temperature
+            if (bc.type == BC_VELOCITY_INLET && !have_T && !have_rho) {
+                printf("BC CSV warning (line %d): velocity inlet in compressible flow should specify T or rho (using T_ref)\n", lineno);
+                bc.T = parameters.T_ref;
+            }
+            
+            // For isothermal walls, need temperature
+            if (bc.type == BC_ISOTHERMAL_WALL && !have_T) {
+                printf("BC CSV error (line %d): isothermal wall requires T\n", lineno);
+                continue;
+            }
+            
+            // For subsonic inlet, need total conditions
+            if (bc.type == BC_SUBSONIC_INLET && (!have_p_total || !have_T_total)) {
+                printf("BC CSV error (line %d): subsonic inlet requires p_total and T_total\n", lineno);
+                continue;
+            }
+            
+            // Calculate density from ideal gas if not specified
+            if (have_T && have_p && !have_rho) {
+                bc.rho = bc.p / (parameters.R_gas * bc.T);
+            } else if (have_rho && have_T && !have_p) {
+                bc.p = bc.rho * parameters.R_gas * bc.T;
+            }
         }
 
         /* map BC to physical name */
@@ -193,6 +269,8 @@ int bc_priority(BCType t){
     if (t == BC_VELOCITY_INLET) return 3;
     if (t == BC_WALL) return 2;
     if (t == BC_PRESSURE_OUTLET) return 1;
+    if (t == BC_ISOTHERMAL_WALL) return 2;
+    if (t == BC_ADIABATIC_WALL) return 2;
     return 0;
 }
 
@@ -201,31 +279,107 @@ void assign_node_bc(PointStructure* ps, int node, BCValue new_bc){
         ps->node_bc[node] = new_bc;
 }
 
-
-void apply_boundary_conditions(PointStructure* myPointStruct,FieldVariables* field, int numlevels){
+void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* field, int numlevels){
     for (int ii = 0; ii < numlevels; ii++)
     {
         for (int i = 0; i < myPointStruct[ii].num_nodes; i++)
         {
             if (!myPointStruct[ii].boundary_tag[i]) continue;
-            switch (myPointStruct[ii].node_bc[i].type)
+            
+            BCType bc_type = myPointStruct[ii].node_bc[i].type;
+            
+            switch (bc_type)
             {
                 case BC_VELOCITY_INLET:
                 case BC_VELOCITY_OUTLET:
                     field[ii].u[i] = myPointStruct[ii].node_bc[i].u;
                     field[ii].v[i] = myPointStruct[ii].node_bc[i].v;
                     field[ii].w[i] = myPointStruct[ii].node_bc[i].w;
+                    
+                    // For compressible flow
+                    if (parameters.compressible_flow) {
+                        field[ii].T[i] = myPointStruct[ii].node_bc[i].T;
+                        field[ii].rho[i] = myPointStruct[ii].node_bc[i].rho;
+                        field[ii].p[i] = myPointStruct[ii].node_bc[i].p;
+                    }
                     break;
 
                 case BC_PRESSURE_OUTLET:
                     field[ii].p[i] = myPointStruct[ii].node_bc[i].p;
                     myPointStruct[ii].flag_outlets = true;
+                    
+                    // For compressible flow - extrapolate other variables
+                    // (will be handled in solver)
                     break;
 
                 case BC_WALL:
                     field[ii].u[i] = 0.0;
                     field[ii].v[i] = 0.0;
                     field[ii].w[i] = 0.0;
+                    
+                    // Temperature depends on wall type for compressible
+                    // Will be handled by isothermal/adiabatic specific cases
+                    break;
+                
+                case BC_ISOTHERMAL_WALL:
+                    // No-slip + fixed temperature
+                    field[ii].u[i] = 0.0;
+                    field[ii].v[i] = 0.0;
+                    field[ii].w[i] = 0.0;
+                    
+                    if (parameters.compressible_flow) {
+                        field[ii].T[i] = myPointStruct[ii].node_bc[i].T;
+                        // Density from ideal gas law
+                        field[ii].rho[i] = parameters.p_ref / 
+                            (parameters.R_gas * field[ii].T[i]);
+                    }
+                    break;
+                
+                case BC_ADIABATIC_WALL:
+                    // No-slip + zero heat flux (∂T/∂n = 0)
+                    field[ii].u[i] = 0.0;
+                    field[ii].v[i] = 0.0;
+                    field[ii].w[i] = 0.0;
+                    
+                    // Temperature gradient will be enforced in solver
+                    // Keep current temperature value
+                    break;
+                
+                case BC_SYMMETRY:
+                    // Zero normal velocity and gradients
+                    // Will be handled in solver with normal vector
+                    break;
+                
+                case BC_SUPERSONIC_INLET:
+                    // All variables specified
+                    if (parameters.compressible_flow) {
+                        field[ii].u[i] = myPointStruct[ii].node_bc[i].u;
+                        field[ii].v[i] = myPointStruct[ii].node_bc[i].v;
+                        field[ii].w[i] = myPointStruct[ii].node_bc[i].w;
+                        field[ii].p[i] = myPointStruct[ii].node_bc[i].p;
+                        field[ii].T[i] = myPointStruct[ii].node_bc[i].T;
+                        field[ii].rho[i] = myPointStruct[ii].node_bc[i].rho;
+                    }
+                    break;
+                
+                case BC_SUPERSONIC_OUTLET:
+                    // All variables extrapolated (handled in solver)
+                    break;
+                
+                case BC_SUBSONIC_INLET:
+                    // Specify total pressure, total temperature, direction
+                    // (handled in solver with Riemann invariants)
+                    if (parameters.compressible_flow) {
+                        field[ii].T[i] = myPointStruct[ii].node_bc[i].T_total;
+                        field[ii].p[i] = myPointStruct[ii].node_bc[i].p_total;
+                    }
+                    break;
+                
+                case BC_SUBSONIC_OUTLET:
+                    // Specify static pressure, extrapolate others
+                    if (parameters.compressible_flow) {
+                        field[ii].p[i] = myPointStruct[ii].node_bc[i].p;
+                    }
                     break;
 
                 default:
@@ -233,6 +387,12 @@ void apply_boundary_conditions(PointStructure* myPointStruct,FieldVariables* fie
                     field[ii].v[i] = 0.0;
                     field[ii].w[i] = 0.0;
                     field[ii].p[i] = 0.0;
+                    
+                    if (parameters.compressible_flow) {
+                        field[ii].T[i] = parameters.T_ref;
+                        field[ii].rho[i] = parameters.rho_ref;
+                    }
+                    
                     printf("Applying default BC at node %d: u=v=w=p=0.0\n", i);
                     break;
             }

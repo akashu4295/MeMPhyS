@@ -38,10 +38,7 @@ void multiply_sparse_matrix_vector_vectorised_gpu(double *D_coeff, double *f, do
     // (or the function is called inside an acc data region where they are present).
 
     // Run the outer loop on the device in parallel
-    #pragma acc parallel loop gang present(D_coeff[0:n_rows_D * n_cols_D], \
-                                           f[0:n_rows_D], \
-                                           dfdx[0:n_rows_D], \
-                                           cloud[0:n_rows_D * n_cols_D])
+    #pragma acc parallel loop gang present(D_coeff, f, dfdx, cloud)
     for (int i = 0; i < n_rows_D; ++i) {
         double result = 0.0;
         int row_start = i * n_cols_D;

@@ -15,7 +15,7 @@
 
 // Mesh Function declarations
 void read_PointStructure(PointStructure* myPointStruct);
-void read_flow_parameters(char *filename);
+void read_flow_parameters(const char *filename);
 void calculate_parameters(PointStructure* myPointStruct);
 void correct_normal_directions(PointStructure* myPointStruct);
 void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* num_levels);

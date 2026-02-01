@@ -80,10 +80,7 @@ int main()
         if (parameters.dimension == 3){
             for (int it = 0; it<parameters.num_time_steps; it++ ) 
             {
-                #pragma acc data present(field[0], myPointStruct[0])
-                {
-                    steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
-                }
+                steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
                 fprintf(file2,"%d, %e\n", it, steady_state_error);
                 fflush(file2);
@@ -102,13 +99,9 @@ int main()
             }
         }
         else{
-            #pragma acc data present(field[:parameters.num_levels], myPointStruct[:parameters.num_levels], parameters)
             for (int it = 0; it<parameters.num_time_steps; it++ ) 
             {
-                // #pragma acc data present(field[0], myPointStruct[0])
-                {
-                    steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
-                }
+                steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
                 fprintf(file2,"%d, %e\n", it, steady_state_error);
                 fflush(file2);
@@ -130,10 +123,7 @@ int main()
         if (parameters.dimension == 3){
             for (int it = 0; it<parameters.num_time_steps; it++ ) 
             {
-                #pragma acc data present(field[0], myPointStruct[0])
-                {
-                    steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
-                }
+                steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
                 fprintf(file2,"%d, %e\n", it, steady_state_error);
                 fflush(file2);
@@ -154,10 +144,7 @@ int main()
         else{
             for (int it = 0; it<parameters.num_time_steps; it++ ) 
                 {
-                    #pragma acc data present(field[0], myPointStruct[0])
-                    {
-                        steady_state_error = time_implicit_solver_vectorised_2d(myPointStruct, field);
-                    }
+                    steady_state_error = time_implicit_solver_vectorised_2d(myPointStruct, field);
                     printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
                     fprintf(file2,"%d, %e\n", it, steady_state_error);
                     fflush(file2);

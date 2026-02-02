@@ -110,9 +110,7 @@ void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldV
 void FS_multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field);
 void FS_relaxation_vectorised_Gauss_Seidel(PointStructure* mypointstruct, FieldVariables* field);
 void FS_relaxation_vectorised_Jacobi(PointStructure* mypointstruct, FieldVariables* field);
-void FS_relaxation_vectorised_bicgstab(PointStructure* mypointstruct, FieldVariables* field);
-int BiCGStab_Solve(PointStructure* ps, const double* b, double* x, int max_iter, double tol);
-int BiCGStab_Solve_Preconditioned(PointStructure* ps, const double* b, double* x, int max_iter, double tol);
+void FS_relaxation_vectorised_BiCGStab(PointStructure* mypointstruct, const double* b, double* x, int max_iter, double tol);
 void FS_calculate_residuals_vectorised(PointStructure* myPointStruct, FieldVariables* field);
 void FS_restrict_residuals_vectorised(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);
 void FS_prolongate_corrections_vectorised(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);
@@ -141,16 +139,6 @@ double compressible_solver_explicit_2d(PointStructure* myPointStruct, FieldVaria
 void solve_continuity_equation_2d(PointStructure* myPointStruct, FieldVariables* field);
 void solve_momentum_equations_2d(PointStructure* myPointStruct, FieldVariables* field);
 void solve_energy_equation_2d(PointStructure* myPointStruct, FieldVariables* field);
-
-
-
-
-
-
-
-
-
-
 
 
 #endif

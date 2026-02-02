@@ -27,42 +27,31 @@ double calculate_dt(PointStructure* myPointStruct){
 }
 
 double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldVariables* field){   
-    double steady_state_error = 0.0;
     # pragma acc parallel loop present(field[0], myPointStruct[0])
     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
         field[0].u_old[i] = field[0].u[i];
         field[0].v_old[i] = field[0].v[i];
         field[0].w_old[i] = field[0].w[i];
-        // if (parameters.poisson_solver_type ==1)
-            field[0].p_old[i] = field[0].p[i];
+        field[0].p_old[i] = field[0].p[i];
     }
 
-    FS_calculate_intermediate_velocity_vectorised(&myPointStruct[0], &field[0]);
-    FS_calculate_mass_residual_vectorised(&myPointStruct[0], &field[0]);
-    FS_multigrid_Poisson_solver_vectorised(myPointStruct, field);
-    FS_update_velocity_vectorised(&myPointStruct[0], &field[0]);
-
-    // double steady_state_error_sq = 0.0;
-    // int num_nodes = myPointStruct[0].num_nodes;
-    // #pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error_sq)
-    // for (int i = 0; i < num_nodes; i++){
-    //     double du = field[0].u[i] - field[0].u_old[i];
-    //     double dv = field[0].v[i] - field[0].v_old[i];
-    //     steady_state_error_sq += du*du + dv*dv;
-    // }
-    // // Update the result to host, then compute sqrt on CPU
-    // #pragma acc update self(steady_state_error_sq)
-    // steady_state_error = sqrt(steady_state_error_sq / num_nodes);
-    # pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error)
+    #pragma acc data present(field[:parameters.num_levels], myPointStruct[:parameters.num_levels], parameters)
+    {
+        FS_calculate_intermediate_velocity_vectorised(&myPointStruct[0], &field[0]);
+        FS_calculate_mass_residual_vectorised(&myPointStruct[0], &field[0]);
+        FS_multigrid_Poisson_solver_vectorised(myPointStruct, field);
+        FS_update_velocity_vectorised(&myPointStruct[0], &field[0]);
+    }
+    
+    double steady_state_error_par = 0.0;
+    # pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error_par)
     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
         double du = field[0].u[i] - field[0].u_old[i];
         double dv = field[0].v[i] - field[0].v_old[i];
         double dw = field[0].w[i] - field[0].w_old[i];
-        steady_state_error += du*du + dv*dv + dw*dw;
+        steady_state_error_par += du*du + dv*dv + dw*dw;
     }
-    #pragma acc update self(steady_state_error)
-    steady_state_error = sqrt(steady_state_error/myPointStruct[0].num_nodes);
-    return steady_state_error;
+    return sqrt(steady_state_error_par/myPointStruct[0].num_nodes);
 }
 
 double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field)
@@ -93,78 +82,43 @@ double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, Fie
     return sqrt(steady_state_error_par / myPointStruct[0].num_nodes);
 }
 
-// double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field)
-// {   
-//     double steady_state_error = 0.0;
-
-//     #pragma acc parallel loop present(field[0], myPointStruct[0])
-//     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
-//         field[0].u_old[i] = field[0].u[i];
-//         field[0].v_old[i] = field[0].v[i];
-//         // if (parameters.poisson_solver_type == 1)
-//             field[0].p_old[i] = field[0].p[i];
-//     }
-
-//     #pragma acc data present(field[:parameters.num_levels], myPointStruct[:parameters.num_levels], parameters)
-//     {
-//         FS_calculate_intermediate_velocity_vectorised_2d(&myPointStruct[0], &field[0]);
-//         FS_calculate_mass_residual_vectorised_2d(&myPointStruct[0], &field[0]);
-//         FS_multigrid_Poisson_solver_vectorised(myPointStruct, field);
-//         FS_update_velocity_vectorised_2d(&myPointStruct[0], &field[0]);
-//     }
-
-//     #pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error)
-//     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
-//         double du = field[0].u[i] - field[0].u_old[i];
-//         double dv = field[0].v[i] - field[0].v_old[i];
-//         steady_state_error += du*du + dv*dv;
-//     }
-//     // printf("Steady state error (before sqrt): %e\n", steady_state_error);
-//     steady_state_error = sqrt(steady_state_error / myPointStruct[0].num_nodes);
-//     return steady_state_error;
-// }
-
 void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct, FieldVariables* field)
 {
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
     
 // x-momentum
-    #pragma acc data present(field, myPointStruct, parameters)
-    {
-        multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->u, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->u, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised(myPointStruct->lap, field->u, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    }    
-    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->u, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dz, field->u, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->lap, field->u, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+
+    # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++)
         field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] + field->w[i] * field->dpdz[i] - parameters.nu *field->dpdn[i]);
 
 // y-momentum
-    #pragma acc data present(field, myPointStruct, parameters)
-    {
-        multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->v, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->v, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised(myPointStruct->lap, field->v, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    }
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->v, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dz, field->v, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->lap, field->v, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+
     # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
     for (int i = 0; i < myPointStruct->num_nodes; i++)
         field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] + field->w[i] * field->dpdz[i] - parameters.nu * field->dpdn[i]);
 
 //  z-momentum
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->w, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->w, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->w, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->lap, field->w, field->dpdn, myPointStruct->cloud_index, myPointStruct->num_nodes,myPointStruct->num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->w, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->w, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dz, field->w, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->lap, field->w, field->dpdn, myPointStruct->cloud_index, myPointStruct->num_nodes,myPointStruct->num_cloud_points);
     
-    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
+    # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++)
         field->w_new[i] = field->w[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] + field->w[i] * field->dpdz[i] - parameters.nu * field->dpdn[i]);
 
     /* ---- ENFORCE BOUNDARY CONDITIONS ON u* ---- */
-    # pragma acc parallel loop gang vector present(field, myPointStruct)
+    # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
         if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i]){
             if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET 
@@ -185,39 +139,36 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
     int num_cloud_points = myPointStruct->num_cloud_points;
     
 // x-momentum
-    // #pragma acc data present(field, myPointStruct, parameters)
-    // {
-        multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->u, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->lap, field->u, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    
-        # pragma acc parallel loop gang vector default(present)
-        for (int i = 0; i < myPointStruct->num_nodes; i++){
-            field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] - parameters.nu *field->dpdn[i]);
-        }
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->u, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->lap, field->u, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+
+    # pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++){
+        field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] - parameters.nu *field->dpdn[i]);
+    }
 // y-momentum
-    
-        multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->v, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->lap, field->v, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
 
-        # pragma acc parallel loop gang vector default(present)
-        for (int i = 0; i < myPointStruct->num_nodes; i++)
-            field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] - parameters.nu * field->dpdn[i]);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->v, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->lap, field->v, field->dpdn, myPointStruct->cloud_index, num_nodes, num_cloud_points);
 
-        /* ---- ENFORCE BOUNDARY CONDITIONS ON u* ---- */
-        # pragma acc parallel loop gang vector default(present)
-        for (int i = 0; i < myPointStruct->num_nodes; i++){
-            if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i]){
-                if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET 
-                        || myPointStruct->node_bc[i].type == BC_WALL 
-                        || myPointStruct->node_bc[i].type == BC_VELOCITY_OUTLET){
-                    field->u_new[i] = myPointStruct->node_bc[i].u;
-                    field->v_new[i] = myPointStruct->node_bc[i].v;
-                }
+    # pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++)
+        field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dpdx[i] + field->v[i] * field->dpdy[i] - parameters.nu * field->dpdn[i]);
+
+    /* ---- ENFORCE BOUNDARY CONDITIONS ON u* ---- */
+    # pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++){
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i]){
+            if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET 
+                    || myPointStruct->node_bc[i].type == BC_WALL 
+                    || myPointStruct->node_bc[i].type == BC_VELOCITY_OUTLET){
+                field->u_new[i] = myPointStruct->node_bc[i].u;
+                field->v_new[i] = myPointStruct->node_bc[i].v;
             }
         }
-    // }
+    }
 }
 
 void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldVariables* field)
@@ -242,16 +193,13 @@ void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldV
     }
 }
 
-// # pragma acc routine
 void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field)
 {
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
-    // # pragma acc data present(field, myPointStruct, parameters)
-    // {
-        multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->u_new, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-        multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->v_new, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    // }
+
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->u_new, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->v_new, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
 
     # pragma acc parallel loop present(field, myPointStruct, parameters)
     for (int i = 0; i < num_nodes; i++){
@@ -275,7 +223,7 @@ void FS_multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, Field
             else if (parameters.poisson_solver_type == 2)
                 FS_relaxation_vectorised_Gauss_Seidel(&myPointStruct[ilev], &field[ilev]);
             else if (parameters.poisson_solver_type == 3)
-                FS_relaxation_vectorised_bicgstab(&myPointStruct[ilev], &field[ilev]);
+                FS_relaxation_vectorised_BiCGStab(&myPointStruct[ilev], field[ilev].source, field[ilev].p, parameters.num_relax, parameters.poisson_solver_tolerance);
             FS_calculate_residuals_vectorised(&myPointStruct[ilev], &field[ilev]);
             if (ilev != parameters.num_levels-1){
                 FS_restrict_residuals_vectorised(&myPointStruct[ilev], &myPointStruct[ilev+1], &field[ilev], &field[ilev+1]);
@@ -289,7 +237,7 @@ void FS_multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, Field
                 else if (parameters.poisson_solver_type == 2)
                     FS_relaxation_vectorised_Gauss_Seidel(&myPointStruct[ilev-1], &field[ilev-1]);
                 else if (parameters.poisson_solver_type == 3)
-                    FS_relaxation_vectorised_bicgstab(&myPointStruct[ilev-1], &field[ilev-1]);   
+                    FS_relaxation_vectorised_BiCGStab(&myPointStruct[ilev-1], field[ilev-1].source, field[ilev-1].p, parameters.num_relax, parameters.poisson_solver_tolerance);   
             } 
         }
     } 
@@ -299,7 +247,7 @@ void FS_relaxation_vectorised_Jacobi(PointStructure* mypointstruct, FieldVariabl
 {
     int n = mypointstruct->num_cloud_points;
     int N = mypointstruct->num_nodes;
-    #pragma acc parallel loop present(field)
+    #pragma acc parallel loop present(field->p[:N], field->p_old[:N])
     for (int i = 0; i < N; i++) {
         field->p_old[i] = field->p[i];
     }
@@ -308,8 +256,8 @@ void FS_relaxation_vectorised_Jacobi(PointStructure* mypointstruct, FieldVariabl
         for (int i = 0; i < N; i++) {
             double sum = 0.0;
             for (int j = 1; j < n; j++) {
-                int neighbor_idx = mypointstruct->cloud_index[i*n + j];
-                sum += mypointstruct->lap_Poison[i*n + j] * field->p_old[neighbor_idx];
+                int idx = i*n + j;
+                sum += mypointstruct->lap_Poison[idx] * field->p_old[mypointstruct->cloud_index[idx]];
             }
             field->p[i] = parameters.omega * (field->source[i] - sum) / mypointstruct->lap_Poison[i*n] 
                             + (1.0 - parameters.omega) * field->p_old[i];
@@ -325,7 +273,7 @@ void FS_relaxation_vectorised_Gauss_Seidel(PointStructure* mypointstruct, FieldV
 {
     int n = mypointstruct->num_cloud_points;
     int N = mypointstruct->num_nodes;
-    #pragma acc data present(field, mypointstruct, parameters)
+    
     for (int iter = 0; iter < parameters.num_relax; iter++) {
         #pragma acc parallel loop gang vector_length(128) present(field, mypointstruct, parameters)
         for (int i = 0; i < N; i++) {
@@ -339,11 +287,6 @@ void FS_relaxation_vectorised_Gauss_Seidel(PointStructure* mypointstruct, FieldV
                 + (1 - parameters.omega) * field->p[i];
         }
     }
-}
-
-void FS_relaxation_vectorised_bicgstab(PointStructure* mypointstruct, FieldVariables* field)
-{
-    int temp = BiCGStab_Solve_Preconditioned(mypointstruct, field->source, field->p, parameters.num_relax, parameters.poisson_solver_tolerance);
 }
 
 void FS_restrict_residuals_vectorised(PointStructure* mypointStruct_f, PointStructure* mypointStruct_c, FieldVariables* field_f, FieldVariables* field_c)
@@ -406,15 +349,14 @@ void FS_calculate_residuals_vectorised(PointStructure* mypointStruct, FieldVaria
 
 void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables* field)
 {
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->p, field->dpdz, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dz, field->p, field->dpdz, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
     
     // Update Interior nodes
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
+    # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
         if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
-            // normal velocity derivatve set to 0
             double sumux = 0.0, sumuy = 0.0, sumvx = 0.0, sumvy = 0.0, sumwx = 0.0, sumwy = 0.0;
             for (int j = 1; j < myPointStruct->num_cloud_points; j++){
                 int k = i*myPointStruct->num_cloud_points + j;
@@ -439,12 +381,12 @@ void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables
         }
     }
     
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->w, field->dpdz, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
+    multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dz, field->w, field->dpdz, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points);
     
     double sum = 0.0;
-    # pragma acc parallel loop gang vector present(field, parameters, myPointStruct) reduction(+:sum)
+    # pragma acc parallel loop gang vector default(present) reduction(+:sum)
     for (int i = 0; i < myPointStruct->num_nodes; i++)
         if (!myPointStruct->corner_tag[i])
             sum += parameters.rho*fabs(field->dpdx[i]+field->dpdy[i]+field->dpdz[i]);
@@ -462,7 +404,6 @@ void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariab
     multiply_sparse_matrix_vector_vectorised_gpu(myPointStruct->Dy, field->p, field->dpdy, 
                                                  myPointStruct->cloud_index, num_nodes, num_cloud_points);
     
-    // Update Interior nodes - ADD default(present)
     #pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < num_nodes; i++){
         if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
@@ -491,7 +432,7 @@ void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariab
                                                  myPointStruct->cloud_index, num_nodes, num_cloud_points);
     
     double sum = 0.0;
-    // ADD reduction clause AND default(present)
+
     #pragma acc parallel loop gang vector reduction(+:sum) default(present)
     for (int i = 0; i < num_nodes; i++)
         if (!myPointStruct->corner_tag[i])
@@ -500,324 +441,481 @@ void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariab
     printf("Mass residual: %e\n", sum/num_nodes);
 }
 
-int BiCGStab_Solve(PointStructure* ps, const double* b, double* x, int max_iter, double tol)
+void FS_relaxation_vectorised_BiCGStab(PointStructure* ps,
+                                      const double* b,
+                                      double* x,
+                                      int max_iter,
+                                      double tol)
 {
     int N = ps->num_nodes;
     int n = ps->num_cloud_points;
 
-    // Allocate temporary vectors
-    double *r = malloc(N * sizeof(double));
-    double *r0 = malloc(N * sizeof(double));
-    double *p = malloc(N * sizeof(double));
-    double *v = malloc(N * sizeof(double));
-    double *s = malloc(N * sizeof(double));
-    double *t = malloc(N * sizeof(double));
-
-    // Compute initial residual: r = b - A*x
-    for (int i = 0; i < N; i++) {
-        double sum = 0.0;
-        for (int j = 0; j < n; j++) {
-            int col = ps->cloud_index[i*n + j];
-            sum += ps->lap_Poison[i*n + j] * x[col];
-        }
-        r[i] = b[i] - sum;
-        r0[i] = r[i];
-        p[i] = 0.0;
-        v[i] = 0.0;
-    }
-
-    double rho = 1.0, alpha = 1.0, omega = 1.0;
-    double rho_new;
-
-    for (int iter = 0; iter < max_iter; iter++) {
-
-        // rho_new = r0^T * r
-        rho_new = 0.0;
-        for (int i = 0; i < N; i++) {
-            rho_new += r0[i] * r[i];
-        }
-
-        if (fabs(rho_new) < 1e-30) {
-            printf("BiCGStab: rho too small, breaking at iter %d\n", iter);
-            break;
-        }
-
-        // beta = (rho_new/rho) * (alpha/omega)
-        double beta = (rho_new / rho) * (alpha / omega);
-        
-        // p = r + beta*(p - omega*v)
-        for (int i = 0; i < N; i++) {
-            p[i] = r[i] + beta * (p[i] - omega * v[i]);
-        }
-
-        // v = A*p
-        for (int i = 0; i < N; i++) {
-            double sum = 0.0;
-            for (int j = 0; j < n; j++) {
-                int col = ps->cloud_index[i*n + j];
-                sum += ps->lap_Poison[i*n + j] * p[col];
-            }
-            v[i] = sum;
-        }
-
-        // alpha = rho_new / (r0^T * v)
-        double r0v = 0.0;
-        for (int i = 0; i < N; i++) {
-            r0v += r0[i] * v[i];
-        }
-
-        if (fabs(r0v) < 1e-30) {
-            printf("BiCGStab: r0v too small, breaking at iter %d\n", iter);
-            break;
-        }
-
-        alpha = rho_new / r0v;
-
-        // s = r - alpha*v
-        for (int i = 0; i < N; i++) {
-            s[i] = r[i] - alpha * v[i];
-        }
-
-        // Check if |s| small enough → converged early
-        double norm_s = 0.0;
-        for (int i = 0; i < N; i++) {
-            norm_s += s[i] * s[i];
-        }
-
-        if (sqrt(norm_s) < tol) {
-            for (int i = 0; i < N; i++) {
-                x[i] += alpha * p[i];
-            }
-            printf("BiCGStab converged early at iter %d, norm_s = %e\n", iter, sqrt(norm_s));
-            break;
-        }
-
-        // t = A*s
-        for (int i = 0; i < N; i++) {
-            double sum = 0.0;
-            for (int j = 0; j < n; j++) {
-                int col = ps->cloud_index[i*n + j];
-                sum += ps->lap_Poison[i*n + j] * s[col];
-            }
-            t[i] = sum;
-        }
-
-        // omega = (t^T * s) / (t^T * t)
-        double ts = 0.0, tt = 0.0;
-        for (int i = 0; i < N; i++) {
-            ts += t[i] * s[i];
-            tt += t[i] * t[i];
-        }
-
-        if (fabs(tt) < 1e-30) {
-            printf("BiCGStab: tt too small, breaking at iter %d\n", iter);
-            break;
-        }
-
-        omega = ts / tt;
-
-        // x = x + alpha*p + omega*s
-        for (int i = 0; i < N; i++) {
-            x[i] += alpha * p[i] + omega * s[i];
-        }
-
-        // r = s - omega*t
-        for (int i = 0; i < N; i++) {
-            r[i] = s[i] - omega * t[i];
-        }
-
-        // Check convergence
-        double norm_r = 0.0;
-        for (int i = 0; i < N; i++) {
-            norm_r += r[i] * r[i];
-        }
-
-        if (sqrt(norm_r) < tol) {
-            printf("BiCGStab converged at iter %d, residual = %e\n", iter, sqrt(norm_r));
-            break;
-        }
-
-        rho = rho_new;
-        
-        // Optional: print progress
-        if (iter % 100 == 0) {
-            printf("BiCGStab iter %d, residual = %e\n", iter, sqrt(norm_r));
-        }
-    }
-
-    free(r);
-    free(r0);
-    free(p);
-    free(v);
-    free(s);
-    free(t);
-
-    return 0; // success
-}
-
-int BiCGStab_Solve_Preconditioned(PointStructure* ps, const double* b, double* x, int max_iter, double tol)
-{
-    int N = ps->num_nodes;
-    int n = ps->num_cloud_points;
-
-    // Extract diagonal for preconditioning
     double *diag_inv = malloc(N * sizeof(double));
-    for (int i = 0; i < N; i++) {
-        double diag = ps->lap_Poison[i*n + 0];  // Assuming diagonal is at j=0
-        if (fabs(diag) < 1e-14) diag = 1.0;     // Avoid division by zero
-        diag_inv[i] = 1.0 / diag;
-    }
-
-    // Allocate temporary vectors
-    double *r = malloc(N * sizeof(double));
+    double *r  = malloc(N * sizeof(double));
     double *r0 = malloc(N * sizeof(double));
-    double *p = malloc(N * sizeof(double));
-    double *v = malloc(N * sizeof(double));
-    double *s = malloc(N * sizeof(double));
-    double *t = malloc(N * sizeof(double));
-    double *z = malloc(N * sizeof(double));  // For preconditioning
-    double *y = malloc(N * sizeof(double));  // For preconditioning
+    double *p  = malloc(N * sizeof(double));
+    double *v  = malloc(N * sizeof(double));
+    double *s  = malloc(N * sizeof(double));
+    double *t  = malloc(N * sizeof(double));
+    double *z  = malloc(N * sizeof(double));
+    double *y  = malloc(N * sizeof(double));
 
-    // Compute initial residual: r = b - A*x
-    for (int i = 0; i < N; i++) {
-        double sum = 0.0;
-        for (int j = 0; j < n; j++) {
-            int col = ps->cloud_index[i*n + j];
-            sum += ps->lap_Poison[i*n + j] * x[col];
-        }
-        r[i] = b[i] - sum;
-        r0[i] = r[i];
-        p[i] = 0.0;
-        v[i] = 0.0;
-    }
-
-    // Compute initial residual norm
-    double norm_r0 = 0.0;
-    for (int i = 0; i < N; i++) {
-        norm_r0 += r[i] * r[i];
-    }
-    norm_r0 = sqrt(norm_r0);
-    // printf("BiCGStab initial residual = %e\n", norm_r0);
-
-    double rho = 1.0, alpha = 1.0, omega = 1.0;
-    double rho_new;
-
-    for (int iter = 0; iter < max_iter; iter++) {
-
-        // rho_new = r0^T * r
-        rho_new = 0.0;
+    #pragma acc data copyin(b[0:N], ps->lap_Poison[0:N*n], ps->cloud_index[0:N*n]) \
+                     copy(x[0:N]) \
+                     create(diag_inv[0:N], r[0:N], r0[0:N], p[0:N], v[0:N], \
+                            s[0:N], t[0:N], z[0:N], y[0:N])
+    {
+        /* Diagonal inverse (Jacobi preconditioner) */
+        #pragma acc parallel loop
         for (int i = 0; i < N; i++) {
-            rho_new += r0[i] * r[i];
+            double diag = ps->lap_Poison[i*n];
+            if (fabs(diag) < 1e-14) diag = 1.0;
+            diag_inv[i] = 1.0 / diag;
         }
 
-        if (fabs(rho_new) < 1e-30) {
-            printf("BiCGStab: rho too small, breaking at iter %d\n", iter);
-            break;
-        }
-
-        // beta = (rho_new/rho) * (alpha/omega)
-        double beta = (rho_new / rho) * (alpha / omega);
-        
-        // p = r + beta*(p - omega*v)
-        for (int i = 0; i < N; i++) {
-            p[i] = r[i] + beta * (p[i] - omega * v[i]);
-        }
-
-        // Precondition: z = M^-1 * p (Jacobi: z = diag^-1 * p)
-        for (int i = 0; i < N; i++) {
-            z[i] = diag_inv[i] * p[i];
-        }
-
-        // v = A*z
+        /* Initial residual r = b - A*x */
+        #pragma acc parallel loop
         for (int i = 0; i < N; i++) {
             double sum = 0.0;
             for (int j = 0; j < n; j++) {
                 int col = ps->cloud_index[i*n + j];
-                sum += ps->lap_Poison[i*n + j] * z[col];
+                sum += ps->lap_Poison[i*n + j] * x[col];
             }
-            v[i] = sum;
+            r[i]  = b[i] - sum;
+            r0[i] = r[i];
+            p[i]  = 0.0;
+            v[i]  = 0.0;
         }
 
-        // alpha = rho_new / (r0^T * v)
-        double r0v = 0.0;
+        double norm_r0 = 0.0;
+        #pragma acc parallel loop reduction(+:norm_r0)
         for (int i = 0; i < N; i++) {
-            r0v += r0[i] * v[i];
+            norm_r0 += r[i] * r[i];
         }
+        norm_r0 = sqrt(norm_r0);
 
-        if (fabs(r0v) < 1e-30) {
-            printf("BiCGStab: r0v too small, breaking at iter %d\n", iter);
-            break;
-        }
+        double rho = 1.0, alpha = 1.0, omega = 1.0;
 
-        alpha = rho_new / r0v;
+        for (int iter = 0; iter < max_iter; iter++) {
 
-        // s = r - alpha*v
-        for (int i = 0; i < N; i++) {
-            s[i] = r[i] - alpha * v[i];
-        }
-
-        // Precondition: y = M^-1 * s
-        for (int i = 0; i < N; i++) {
-            y[i] = diag_inv[i] * s[i];
-        }
-
-        // t = A*y
-        for (int i = 0; i < N; i++) {
-            double sum = 0.0;
-            for (int j = 0; j < n; j++) {
-                int col = ps->cloud_index[i*n + j];
-                sum += ps->lap_Poison[i*n + j] * y[col];
+            double rho_new = 0.0;
+            #pragma acc parallel loop reduction(+:rho_new)
+            for (int i = 0; i < N; i++) {
+                rho_new += r0[i] * r[i];
             }
-            t[i] = sum;
+
+            if (fabs(rho_new) < 1e-30) break;
+
+            double beta = (rho_new / rho) * (alpha / omega);
+
+            #pragma acc parallel loop
+            for (int i = 0; i < N; i++) {
+                p[i] = r[i] + beta * (p[i] - omega * v[i]);
+            }
+
+            #pragma acc parallel loop
+            for (int i = 0; i < N; i++) {
+                z[i] = diag_inv[i] * p[i];
+            }
+
+            /* v = A*z */
+            #pragma acc parallel loop
+            for (int i = 0; i < N; i++) {
+                double sum = 0.0;
+                for (int j = 0; j < n; j++) {
+                    int col = ps->cloud_index[i*n + j];
+                    sum += ps->lap_Poison[i*n + j] * z[col];
+                }
+                v[i] = sum;
+            }
+
+            double r0v = 0.0;
+            #pragma acc parallel loop reduction(+:r0v)
+            for (int i = 0; i < N; i++) {
+                r0v += r0[i] * v[i];
+            }
+
+            if (fabs(r0v) < 1e-30) break;
+
+            alpha = rho_new / r0v;
+
+            #pragma acc parallel loop
+            for (int i = 0; i < N; i++) {
+                s[i] = r[i] - alpha * v[i];
+            }
+
+            #pragma acc parallel loop
+            for (int i = 0; i < N; i++) {
+                y[i] = diag_inv[i] * s[i];
+            }
+
+            /* t = A*y */
+            #pragma acc parallel loop
+            for (int i = 0; i < N; i++) {
+                double sum = 0.0;
+                for (int j = 0; j < n; j++) {
+                    int col = ps->cloud_index[i*n + j];
+                    sum += ps->lap_Poison[i*n + j] * y[col];
+                }
+                t[i] = sum;
+            }
+
+            double ts = 0.0, tt = 0.0;
+            #pragma acc parallel loop reduction(+:ts,tt)
+            for (int i = 0; i < N; i++) {
+                ts += t[i] * s[i];
+                tt += t[i] * t[i];
+            }
+
+            if (fabs(tt) < 1e-30) break;
+
+            omega = ts / tt;
+
+            #pragma acc parallel loop
+            for (int i = 0; i < N; i++) {
+                x[i] += alpha * z[i] + omega * y[i];
+            }
+
+            #pragma acc parallel loop
+            for (int i = 0; i < N; i++) {
+                r[i] = s[i] - omega * t[i];
+            }
+
+            double norm_r = 0.0;
+            #pragma acc parallel loop reduction(+:norm_r)
+            for (int i = 0; i < N; i++) {
+                norm_r += r[i] * r[i];
+            }
+            norm_r = sqrt(norm_r);
+
+            if (norm_r / norm_r0 < tol) break;
+
+            rho = rho_new;
         }
-
-        // omega = (t^T * s) / (t^T * t)
-        double ts = 0.0, tt = 0.0;
-        for (int i = 0; i < N; i++) {
-            ts += t[i] * s[i];
-            tt += t[i] * t[i];
-        }
-
-        if (fabs(tt) < 1e-30) {
-            printf("BiCGStab: tt too small, breaking at iter %d\n", iter);
-            break;
-        }
-
-        omega = ts / tt;
-
-        // x = x + alpha*z + omega*y
-        for (int i = 0; i < N; i++) {
-            x[i] += alpha * z[i] + omega * y[i];
-        }
-
-        // r = s - omega*t
-        for (int i = 0; i < N; i++) {
-            r[i] = s[i] - omega * t[i];
-        }
-
-        // Check convergence
-        double norm_r = 0.0;
-        for (int i = 0; i < N; i++) {
-            norm_r += r[i] * r[i];
-        }
-        norm_r = sqrt(norm_r);
-
-        if (norm_r / norm_r0 < tol) {
-            printf("BiCGStab converged at iter %d, relative residual = %e\n", 
-                   iter, norm_r/norm_r0);
-            break;
-        }
-
-        rho = rho_new;
-        
-        // Print progress
-        // if (iter % (max_iter-1) == 0) {
-        //     printf("BiCGStab iter %d, relative residual = %e\n", iter, norm_r/norm_r0);
-        // }
     }
 
-    free(r); free(r0); free(p); free(v); free(s); free(t);
-    free(z); free(y); free(diag_inv);
-
-    return 0;
+    free(r); free(r0); free(p); free(v);
+    free(s); free(t); free(z); free(y);
+    free(diag_inv);
 }
+
+
+// void FS_relaxation_vectorised_BiCGStab(PointStructure* ps, const double* b, double* x, int max_iter, double tol)
+// {
+//     int N = ps->num_nodes;
+//     int n = ps->num_cloud_points;
+
+//     // Extract diagonal for preconditioning
+//     double *diag_inv = malloc(N * sizeof(double));
+//     for (int i = 0; i < N; i++) {
+//         double diag = ps->lap_Poison[i*n + 0];  // Assuming diagonal is at j=0
+//         if (fabs(diag) < 1e-14) diag = 1.0;     // Avoid division by zero
+//         diag_inv[i] = 1.0 / diag;
+//     }
+
+//     // Allocate temporary vectors
+//     double *r = malloc(N * sizeof(double));
+//     double *r0 = malloc(N * sizeof(double));
+//     double *p = malloc(N * sizeof(double));
+//     double *v = malloc(N * sizeof(double));
+//     double *s = malloc(N * sizeof(double));
+//     double *t = malloc(N * sizeof(double));
+//     double *z = malloc(N * sizeof(double));  // For preconditioning
+//     double *y = malloc(N * sizeof(double));  // For preconditioning
+
+//     // Compute initial residual: r = b - A*x
+//     for (int i = 0; i < N; i++) {
+//         double sum = 0.0;
+//         for (int j = 0; j < n; j++) {
+//             int col = ps->cloud_index[i*n + j];
+//             sum += ps->lap_Poison[i*n + j] * x[col];
+//         }
+//         r[i] = b[i] - sum;
+//         r0[i] = r[i];
+//         p[i] = 0.0;
+//         v[i] = 0.0;
+//     }
+
+//     // Compute initial residual norm
+//     double norm_r0 = 0.0;
+//     for (int i = 0; i < N; i++) {
+//         norm_r0 += r[i] * r[i];
+//     }
+//     norm_r0 = sqrt(norm_r0);
+//     // printf("BiCGStab initial residual = %e\n", norm_r0);
+
+//     double rho = 1.0, alpha = 1.0, omega = 1.0;
+//     double rho_new;
+
+//     for (int iter = 0; iter < max_iter; iter++) {
+
+//         // rho_new = r0^T * r
+//         rho_new = 0.0;
+//         for (int i = 0; i < N; i++) {
+//             rho_new += r0[i] * r[i];
+//         }
+
+//         if (fabs(rho_new) < 1e-30) {
+//             printf("BiCGStab: rho too small, breaking at iter %d\n", iter);
+//             break;
+//         }
+
+//         // beta = (rho_new/rho) * (alpha/omega)
+//         double beta = (rho_new / rho) * (alpha / omega);
+        
+//         // p = r + beta*(p - omega*v)
+//         for (int i = 0; i < N; i++) {
+//             p[i] = r[i] + beta * (p[i] - omega * v[i]);
+//         }
+
+//         // Precondition: z = M^-1 * p (Jacobi: z = diag^-1 * p)
+//         for (int i = 0; i < N; i++) {
+//             z[i] = diag_inv[i] * p[i];
+//         }
+
+//         // v = A*z
+//         for (int i = 0; i < N; i++) {
+//             double sum = 0.0;
+//             for (int j = 0; j < n; j++) {
+//                 int col = ps->cloud_index[i*n + j];
+//                 sum += ps->lap_Poison[i*n + j] * z[col];
+//             }
+//             v[i] = sum;
+//         }
+
+//         // alpha = rho_new / (r0^T * v)
+//         double r0v = 0.0;
+//         for (int i = 0; i < N; i++) {
+//             r0v += r0[i] * v[i];
+//         }
+
+//         if (fabs(r0v) < 1e-30) {
+//             printf("BiCGStab: r0v too small, breaking at iter %d\n", iter);
+//             break;
+//         }
+
+//         alpha = rho_new / r0v;
+
+//         // s = r - alpha*v
+//         for (int i = 0; i < N; i++) {
+//             s[i] = r[i] - alpha * v[i];
+//         }
+
+//         // Precondition: y = M^-1 * s
+//         for (int i = 0; i < N; i++) {
+//             y[i] = diag_inv[i] * s[i];
+//         }
+
+//         // t = A*y
+//         for (int i = 0; i < N; i++) {
+//             double sum = 0.0;
+//             for (int j = 0; j < n; j++) {
+//                 int col = ps->cloud_index[i*n + j];
+//                 sum += ps->lap_Poison[i*n + j] * y[col];
+//             }
+//             t[i] = sum;
+//         }
+
+//         // omega = (t^T * s) / (t^T * t)
+//         double ts = 0.0, tt = 0.0;
+//         for (int i = 0; i < N; i++) {
+//             ts += t[i] * s[i];
+//             tt += t[i] * t[i];
+//         }
+
+//         if (fabs(tt) < 1e-30) {
+//             printf("BiCGStab: tt too small, breaking at iter %d\n", iter);
+//             break;
+//         }
+
+//         omega = ts / tt;
+
+//         // x = x + alpha*z + omega*y
+//         for (int i = 0; i < N; i++) {
+//             x[i] += alpha * z[i] + omega * y[i];
+//         }
+
+//         // r = s - omega*t
+//         for (int i = 0; i < N; i++) {
+//             r[i] = s[i] - omega * t[i];
+//         }
+
+//         // Check convergence
+//         double norm_r = 0.0;
+//         for (int i = 0; i < N; i++) {
+//             norm_r += r[i] * r[i];
+//         }
+//         norm_r = sqrt(norm_r);
+
+//         if (norm_r / norm_r0 < tol) {
+//             printf("BiCGStab converged at iter %d, relative residual = %e\n", 
+//                    iter, norm_r/norm_r0);
+//             break;
+//         }
+
+//         rho = rho_new;
+        
+//         // Print progress
+//         // if (iter % (max_iter-1) == 0) {
+//         //     printf("BiCGStab iter %d, relative residual = %e\n", iter, norm_r/norm_r0);
+//         // }
+//     }
+
+//     free(r); free(r0); free(p); free(v); free(s); free(t);
+//     free(z); free(y); free(diag_inv);
+// }
+
+// int BiCGStab_Solve(PointStructure* ps, const double* b, double* x, int max_iter, double tol)
+// {
+//     int N = ps->num_nodes;
+//     int n = ps->num_cloud_points;
+
+//     // Allocate temporary vectors
+//     double *r = malloc(N * sizeof(double));
+//     double *r0 = malloc(N * sizeof(double));
+//     double *p = malloc(N * sizeof(double));
+//     double *v = malloc(N * sizeof(double));
+//     double *s = malloc(N * sizeof(double));
+//     double *t = malloc(N * sizeof(double));
+
+//     // Compute initial residual: r = b - A*x
+//     for (int i = 0; i < N; i++) {
+//         double sum = 0.0;
+//         for (int j = 0; j < n; j++) {
+//             int col = ps->cloud_index[i*n + j];
+//             sum += ps->lap_Poison[i*n + j] * x[col];
+//         }
+//         r[i] = b[i] - sum;
+//         r0[i] = r[i];
+//         p[i] = 0.0;
+//         v[i] = 0.0;
+//     }
+
+//     double rho = 1.0, alpha = 1.0, omega = 1.0;
+//     double rho_new;
+
+//     for (int iter = 0; iter < max_iter; iter++) {
+
+//         // rho_new = r0^T * r
+//         rho_new = 0.0;
+//         for (int i = 0; i < N; i++) {
+//             rho_new += r0[i] * r[i];
+//         }
+
+//         if (fabs(rho_new) < 1e-30) {
+//             printf("BiCGStab: rho too small, breaking at iter %d\n", iter);
+//             break;
+//         }
+
+//         // beta = (rho_new/rho) * (alpha/omega)
+//         double beta = (rho_new / rho) * (alpha / omega);
+        
+//         // p = r + beta*(p - omega*v)
+//         for (int i = 0; i < N; i++) {
+//             p[i] = r[i] + beta * (p[i] - omega * v[i]);
+//         }
+
+//         // v = A*p
+//         for (int i = 0; i < N; i++) {
+//             double sum = 0.0;
+//             for (int j = 0; j < n; j++) {
+//                 int col = ps->cloud_index[i*n + j];
+//                 sum += ps->lap_Poison[i*n + j] * p[col];
+//             }
+//             v[i] = sum;
+//         }
+
+//         // alpha = rho_new / (r0^T * v)
+//         double r0v = 0.0;
+//         for (int i = 0; i < N; i++) {
+//             r0v += r0[i] * v[i];
+//         }
+
+//         if (fabs(r0v) < 1e-30) {
+//             printf("BiCGStab: r0v too small, breaking at iter %d\n", iter);
+//             break;
+//         }
+
+//         alpha = rho_new / r0v;
+
+//         // s = r - alpha*v
+//         for (int i = 0; i < N; i++) {
+//             s[i] = r[i] - alpha * v[i];
+//         }
+
+//         // Check if |s| small enough → converged early
+//         double norm_s = 0.0;
+//         for (int i = 0; i < N; i++) {
+//             norm_s += s[i] * s[i];
+//         }
+
+//         if (sqrt(norm_s) < tol) {
+//             for (int i = 0; i < N; i++) {
+//                 x[i] += alpha * p[i];
+//             }
+//             printf("BiCGStab converged early at iter %d, norm_s = %e\n", iter, sqrt(norm_s));
+//             break;
+//         }
+
+//         // t = A*s
+//         for (int i = 0; i < N; i++) {
+//             double sum = 0.0;
+//             for (int j = 0; j < n; j++) {
+//                 int col = ps->cloud_index[i*n + j];
+//                 sum += ps->lap_Poison[i*n + j] * s[col];
+//             }
+//             t[i] = sum;
+//         }
+
+//         // omega = (t^T * s) / (t^T * t)
+//         double ts = 0.0, tt = 0.0;
+//         for (int i = 0; i < N; i++) {
+//             ts += t[i] * s[i];
+//             tt += t[i] * t[i];
+//         }
+
+//         if (fabs(tt) < 1e-30) {
+//             printf("BiCGStab: tt too small, breaking at iter %d\n", iter);
+//             break;
+//         }
+
+//         omega = ts / tt;
+
+//         // x = x + alpha*p + omega*s
+//         for (int i = 0; i < N; i++) {
+//             x[i] += alpha * p[i] + omega * s[i];
+//         }
+
+//         // r = s - omega*t
+//         for (int i = 0; i < N; i++) {
+//             r[i] = s[i] - omega * t[i];
+//         }
+
+//         // Check convergence
+//         double norm_r = 0.0;
+//         for (int i = 0; i < N; i++) {
+//             norm_r += r[i] * r[i];
+//         }
+
+//         if (sqrt(norm_r) < tol) {
+//             printf("BiCGStab converged at iter %d, residual = %e\n", iter, sqrt(norm_r));
+//             break;
+//         }
+
+//         rho = rho_new;
+        
+//         // Optional: print progress
+//         if (iter % 100 == 0) {
+//             printf("BiCGStab iter %d, residual = %e\n", iter, sqrt(norm_r));
+//         }
+//     }
+
+//     free(r);
+//     free(r0);
+//     free(p);
+//     free(v);
+//     free(s);
+//     free(t);
+
+//     return 0; // success
+// }

@@ -13,7 +13,7 @@ from .logger import (
     logger, 
     # append_log, 
     # append_log_file, 
-    # clear_logs
+    clear_logs
 )
 
 __all__ = [
@@ -26,5 +26,5 @@ __all__ = [
     'logger',
     # 'append_log',
     # 'append_log_file',
-    # 'clear_logs',
+    'clear_logs',
 ]

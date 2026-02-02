@@ -17,6 +17,7 @@ from src.callbacks import (
     show_options_callback,
     load_config_file_callback,
     save_config_file_callback,
+    toggle_theme_callback,
 )
 
 
@@ -69,15 +70,25 @@ def create_menu_bar(themes: dict) -> int:
                 label="Preferences",
                 callback=show_preferences_callback
             )
-        
+
         # Spacer to push remaining items
         dpg.add_spacer(width=20)
-        
+
         # Options Menu
         with dpg.menu(label="Options"):
             dpg.add_menu_item(
                 label="Application Options",
                 callback=show_options_callback
+            )
+        
+        # Spacer to push remaining items
+        dpg.add_spacer(width=20)
+        
+        # View Menu
+        with dpg.menu(label="View"):
+            dpg.add_menu_item(
+                label="Toggle Dark/Light Theme",
+                callback=toggle_theme_callback
             )
         
         # Spacer to push Help to the right

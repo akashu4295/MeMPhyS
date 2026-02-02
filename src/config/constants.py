@@ -47,10 +47,45 @@ DEFAULT_OPTIONS = {
     # UI options
     "show_tooltips": True,
     "confirm_on_exit": False,
+    "dark_theme": True,  # Dark theme by default
     
     # Solver options
     "auto_open_plot_on_complete": False,
     "play_sound_on_complete": False,
+}
+
+# ============================================================
+# Gmsh Configuration
+# ============================================================
+
+GMSH_EXECUTABLE = "gmsh"  # Command to launch Gmsh
+GMSH_FILE_EXTENSION = ".geo"
+DEFAULT_GMSH_PATH = ""  # Will be set when user creates/opens a geometry
+
+# ============================================================
+# Boundary Condition Configuration
+# ============================================================
+
+BC_CSV_FILE = "bc.csv"
+
+# Available boundary condition types
+BC_TYPES = [
+    "velocity_inlet",
+    "pressure_outlet",
+    "wall",
+    "symmetry",
+    "periodic",
+    "outflow",
+]
+
+# Variables that can be set for each BC type
+BC_VARIABLES = {
+    "velocity_inlet": ["u", "v", "w"],
+    "pressure_outlet": ["p"],
+    "wall": ["u", "v", "w"],
+    "symmetry": [],
+    "periodic": [],
+    "outflow": [],
 }
 
 # ============================================================

@@ -91,6 +91,14 @@ from .constants import (
     # Validation
     PARAMETER_CONSTRAINTS,
     
+    # Gmsh and BC
+    GMSH_EXECUTABLE,
+    GMSH_FILE_EXTENSION,
+    DEFAULT_GMSH_PATH,
+    BC_CSV_FILE,
+    BC_TYPES,
+    BC_VARIABLES,
+    
     # Compiler
     COMPILER,
     COMPILER_FLAGS,
@@ -125,6 +133,8 @@ from .themes import (
     create_error_button_theme,
     initialize_all_themes,
     apply_global_theme,
+    apply_light_theme,
+    toggle_theme,
 )
 
 __all__ = [

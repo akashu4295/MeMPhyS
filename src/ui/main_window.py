@@ -10,6 +10,7 @@ from src.config import APP_FULL_NAME
 from .menu_bar import create_menu_bar
 from .parameters_panel import create_parameters_panel
 from .visualization_panel import create_visualization_panel
+from .bc_panel import create_bc_panel
 
 
 def create_main_window(themes: dict) -> int:
@@ -37,7 +38,15 @@ def create_main_window(themes: dict) -> int:
             # Left Panel: Parameters and Controls
             create_parameters_panel(themes)
             
-            # Right Panel: Visualization and Logs
-            create_visualization_panel(themes)
+            # Right Panel: Visualization, BC, and Logs
+            with dpg.child_window(width=-1, border=True):
+                # Visualization panel (plots and controls)
+                create_visualization_panel(themes)
+                
+                dpg.add_separator()
+                dpg.add_spacer(height=10)
+                
+                # Boundary Conditions panel
+                create_bc_panel(themes)
     
     return main_window

@@ -232,6 +232,31 @@ def show_options_callback(sender, app_data, user_data):
     create_options_dialog()
 
 
+def toggle_theme_callback(sender, app_data, user_data):
+    """
+    Toggle between dark and light themes
+    
+    Args:
+        sender: Menu item tag
+        app_data: Application data (unused)
+        user_data: User data (unused)
+    """
+    from src.config.themes import toggle_theme
+    
+    # Get current theme state
+    current_dark = app_state.get_option("dark_theme", True)
+    
+    # Toggle
+    new_dark = toggle_theme(current_dark)
+    
+    # Save new state
+    app_state.set_option("dark_theme", new_dark)
+    
+    theme_name = "Dark" if new_dark else "Light"
+    logger.success(f"Switched to {theme_name} theme")
+    logger.info("Theme preference will be saved on exit")
+
+
 def exit_application_callback(sender, app_data, user_data):
     """
     Exit the application with cleanup
@@ -263,9 +288,10 @@ def open_config_callback(sender, app_data, user_data):
         app_data: Application data (unused)
         user_data: User data (unused)
     """
-    # logger.info("Configuration loading not yet implemented")
-    if dpg.does_item_exist("file_dialog_config_load"):
-        dpg.configure_item("file_dialog_config_load", show=True)
+    logger.info("Configuration loading not yet implemented")
+    
+    if dpg.does_item_exist("file_dialog_config"):
+        dpg.configure_item("file_dialog_config", show=True)
 
 
 def save_config_callback(sender, app_data, user_data):

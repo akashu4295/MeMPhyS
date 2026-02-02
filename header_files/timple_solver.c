@@ -95,10 +95,13 @@ void calculate_intermediate_velocity_implicit_vectorised(PointStructure* myPoint
     double temp1, temp2, temp3, temp4;
     double advection_x, advection_y, advection_z, advection, diffusion, unsteady;
 
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->p, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-  
+    # pragma acc data present(field, parameters, myPointStruct)
+    {
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->p, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
+    }
+    # pragma acc wait(1,2,3)
     
     for (int iter = 0; iter<parameters.iter_momentum; iter++){
         # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
@@ -180,8 +183,12 @@ void calculate_intermediate_velocity_implicit_vectorised_2d(PointStructure* myPo
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
 
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    # pragma acc data present(field, parameters, myPointStruct)
+    {
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+    }
+    # pragma acc wait(1,2)
     
     for (int iter = 0; iter<parameters.iter_momentum; iter++){
         # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
@@ -241,11 +248,15 @@ void calculate_mass_residual_implicit_vectorised(PointStructure* myPointStruct, 
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
 
+    # pragma acc data present(field, parameters, myPointStruct)
+    {
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
+    }
+    # pragma acc wait(1,2,3)
+    
     double sum = 0.0;
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->w, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-
     # pragma acc parallel loop gang vector present(field, parameters, myPointStruct) reduction(+:sum)
     for (int i = 0; i < num_nodes; i++){
         if(!myPointStruct->boundary_tag[i]){
@@ -265,10 +276,14 @@ void calculate_mass_residual_implicit_vectorised_2d(PointStructure* myPointStruc
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
 
-    double sum = 0.0;
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    # pragma acc data present(field, parameters, myPointStruct)
+    {
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+    }
+    # pragma acc wait(1,2)
 
+    double sum = 0.0;
     # pragma acc parallel loop gang vector present(field, parameters, myPointStruct) reduction(+:sum)
     for (int i = 0; i < num_nodes; i++){
         if(!myPointStruct->boundary_tag[i]){
@@ -454,9 +469,13 @@ void update_velocity_implicit_vectorised(PointStructure* myPointStruct, FieldVar
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
 
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->pprime, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->pprime, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dz, field->pprime, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    # pragma acc data present(field, parameters, myPointStruct)
+    {
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->pprime, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->pprime, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->pprime, field->dpdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
+    }
+    # pragma acc wait(1,2,3)
 
     // Update Interior nodes
     # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
@@ -479,8 +498,12 @@ void update_velocity_implicit_vectorised_2d(PointStructure* myPointStruct, Field
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
 
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dx, field->pprime, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points);
-    multiply_sparse_matrix_vector_vectorised(myPointStruct->Dy, field->pprime, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points);
+    # pragma acc data present(field, parameters, myPointStruct)
+    {
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->pprime, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->pprime, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+    }
+    # pragma acc wait(1,2)
 
     // Update Interior nodes
     # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)

@@ -353,6 +353,6 @@ logger = Logger()
 #             print(f"Error writing to log file: {e}")
 
 
-# def clear_logs():
-#     """Clear the log window (backward compatible)"""
-#     logger.clear()
+def clear_logs():
+    """Clear the log window (backward compatible)"""
+    logger.clear()

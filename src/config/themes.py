@@ -1,5 +1,5 @@
 """
-DearPyGUI theme definitions
+DearPyGUI theme definitions for MeMPhyS GUI
 Contains all visual styling and theme configurations
 """
 
@@ -240,7 +240,7 @@ def apply_global_theme():
     """
     with dpg.theme() as global_theme:
         with dpg.theme_component(dpg.mvAll):
-            # Global colors
+            # Global colors - Dark theme
             dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (25, 25, 30))
             dpg.add_theme_color(dpg.mvThemeCol_Border, (60, 60, 70))
             dpg.add_theme_color(dpg.mvThemeCol_Text, (220, 220, 220))
@@ -256,3 +256,50 @@ def apply_global_theme():
     
     dpg.bind_theme(global_theme)
     return global_theme
+
+
+def apply_light_theme():
+    """
+    Apply light theme settings
+    """
+    with dpg.theme() as light_theme:
+        with dpg.theme_component(dpg.mvAll):
+            # Global colors - Light theme
+            dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (240, 240, 245))
+            dpg.add_theme_color(dpg.mvThemeCol_Border, (180, 180, 190))
+            dpg.add_theme_color(dpg.mvThemeCol_Text, (20, 20, 20))
+            dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (255, 255, 255))
+            dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, (245, 245, 250))
+            dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, (235, 235, 245))
+            dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (250, 250, 252))
+            dpg.add_theme_color(dpg.mvThemeCol_MenuBarBg, (230, 230, 235))
+            
+            # Global styles
+            dpg.add_theme_style(dpg.mvStyleVar_WindowPadding, 10, 10)
+            dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, 8, 4)
+            dpg.add_theme_style(dpg.mvStyleVar_ItemInnerSpacing, 4, 4)
+            dpg.add_theme_style(dpg.mvStyleVar_ScrollbarSize, 14)
+            dpg.add_theme_style(dpg.mvStyleVar_ScrollbarRounding, 8)
+            dpg.add_theme_style(dpg.mvStyleVar_GrabMinSize, 10)
+            dpg.add_theme_style(dpg.mvStyleVar_GrabRounding, 4)
+    
+    dpg.bind_theme(light_theme)
+    return light_theme
+
+
+def toggle_theme(current_dark: bool):
+    """
+    Toggle between dark and light themes
+    
+    Args:
+        current_dark: True if currently dark theme
+        
+    Returns:
+        New theme state (True = dark, False = light)
+    """
+    if current_dark:
+        apply_light_theme()
+        return False
+    else:
+        apply_global_theme()
+        return True

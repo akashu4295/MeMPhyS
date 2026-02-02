@@ -104,6 +104,23 @@ from .config_manager import (
     auto_save_on_exit,
 )
 
+# Gmsh and BC management
+from .gmsh_bc_manager import (
+    launch_gmsh,
+    read_physical_names_from_msh,
+    get_physical_names,
+    set_boundary_condition,
+    get_boundary_condition,
+    get_all_boundary_conditions,
+    clear_boundary_conditions,
+    write_bc_csv,
+    read_bc_csv,
+    get_last_gmsh_file,
+    set_last_gmsh_file,
+    get_mesh_from_gmsh_file,
+    validate_bc_assignment,
+)
+
 __all__ = [
     # Font utilities
     'find_system_font',

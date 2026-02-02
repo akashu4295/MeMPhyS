@@ -54,6 +54,26 @@ void multiply_sparse_matrix_vector_vectorised_gpu(double *D_coeff, double *f, do
     }
 }
 
+void multiply_sparse_matrix_vector_vectorised_gpu_async(double *D_coeff, double *f, double *dfdx,
+                                                  int *cloud, int n_rows_D, int n_cols_D, int async_queue)
+{
+    // Run the outer loop on the device in parallel
+    #pragma acc parallel loop gang async(async_queue) present(D_coeff, f, dfdx, cloud)
+    for (int i = 0; i < n_rows_D; ++i) {
+        double result = 0.0;
+        int row_start = i * n_cols_D;
+
+        // inner loop is sequential for each i (you can change to "vector" if beneficial)
+        #pragma acc loop seq
+        for (int j = 0; j < n_cols_D; ++j) {
+            int idx = cloud[row_start + j];
+            // sanity: idx should be within bounds of f[] on device
+            result += D_coeff[row_start + j] * f[idx];
+        }
+        dfdx[i] = result;
+    }
+}
+
 double** create_matrix1(int n_rows, int n_cols)
 {
     int i;

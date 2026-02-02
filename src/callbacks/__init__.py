@@ -58,6 +58,8 @@ from .plot_callbacks import (
     change_variable_callback,
     open_plot_settings_callback,
     close_all_plot_windows_callback,
+    browse_output_folder_callback,
+    set_vtk_from_latest_output_callback,
 )
 
 # Menu callbacks
@@ -77,6 +79,15 @@ from .menu_callbacks import (
     show_application_state_callback,
     check_for_updates_callback,
     report_bug_callback,
+    toggle_theme_callback,
+)
+
+# Geometry callbacks
+from .geometry_callbacks import (
+    launch_gmsh_callback,
+    browse_geometry_file_callback,
+    select_geometry_file_callback,
+    set_mesh_from_geometry_callback,
 )
 
 __all__ = [
@@ -117,6 +128,8 @@ __all__ = [
     'change_variable_callback',
     'open_plot_settings_callback',
     'close_all_plot_windows_callback',
+    'browse_output_folder_callback',
+    'set_vtk_from_latest_output_callback',
     
     # Menu callbacks
     'open_logs_callback',

@@ -39,11 +39,26 @@ def update_plot_callback(sender, app_data, user_data):
     else:
         dimension = "2"
     
-    # Validate VTK file exists
+    # Check if VTK file exists in current directory
     if not validate_file_path(vtk_path, must_exist=True):
-        logger.error(f"VTK file not found: {vtk_path}")
-        logger.info("Please ensure the solver has run and generated output")
-        return
+        # Try to find it in the output folder
+        from src.utils.output_manager import get_latest_output_folder
+        latest_folder = get_latest_output_folder()
+        
+        if latest_folder:
+            # Try in latest output folder
+            alt_path = os.path.join(latest_folder, os.path.basename(vtk_path))
+            if os.path.exists(alt_path):
+                vtk_path = alt_path
+                logger.info(f"Using VTK file from output folder: {vtk_path}")
+            else:
+                logger.error(f"VTK file not found: {os.path.basename(vtk_path)}")
+                logger.info("Please run the solver first or check the output folder")
+                return
+        else:
+            logger.error(f"VTK file not found: {vtk_path}")
+            logger.info("Please ensure the solver has run and generated output")
+            return
     
     logger.info(f"Plotting {var_choice} from {vtk_path}")
     logger.info(f"Colormap: {cmap}, Dimension: {dimension}")
@@ -215,17 +230,77 @@ def export_convergence_data_callback(sender, app_data, user_data):
         logger.log_exception(e, "Error exporting convergence data")
 
 
-def browse_vtk_file_callback(sender, app_data, user_data):
+def browse_output_folder_callback(sender, app_data, user_data):
     """
-    Open file dialog for VTK file selection
+    Open the output folder in file explorer
     
     Args:
         sender: Button tag
         app_data: Application data (unused)
         user_data: User data (unused)
     """
-    if dpg.does_item_exist("file_dialog_vtk"):
-        dpg.configure_item("file_dialog_vtk", show=True)
+    from src.utils import open_folder
+    from src.utils.output_manager import get_latest_output_folder
+    from src.config import OUTPUT_DIR
+    
+    # Try to open latest output folder
+    latest_folder = get_latest_output_folder()
+    
+    if latest_folder and os.path.exists(latest_folder):
+        success = open_folder(latest_folder)
+        if success:
+            logger.info(f"Opened latest output folder: {latest_folder}")
+    else:
+        # Fall back to main output directory
+        if os.path.exists(OUTPUT_DIR):
+            success = open_folder(OUTPUT_DIR)
+            if success:
+                logger.info(f"Opened output directory: {OUTPUT_DIR}")
+        else:
+            logger.warning("No output folder found yet. Run the solver first.")
+
+
+def set_vtk_from_latest_output_callback(sender, app_data, user_data):
+    """
+    Automatically set VTK path from latest output folder
+    
+    Args:
+        sender: Button tag
+        app_data: Application data (unused)
+        user_data: User data (unused)
+    """
+    from src.utils.output_manager import get_latest_output_folder
+    from src.config import DEFAULT_VTK
+    
+    latest_folder = get_latest_output_folder()
+    
+    if not latest_folder:
+        logger.warning("No output folder found. Run the solver first.")
+        return
+    
+    # Look for VTK files in latest output
+    vtk_files = []
+    for file in os.listdir(latest_folder):
+        if file.endswith('.vtk'):
+            vtk_files.append(file)
+    
+    if not vtk_files:
+        logger.warning(f"No VTK files found in {latest_folder}")
+        return
+    
+    # Use the first VTK file found (or Solution.vtk if it exists)
+    if DEFAULT_VTK in vtk_files:
+        vtk_file = DEFAULT_VTK
+    else:
+        vtk_file = vtk_files[0]
+    
+    vtk_path = os.path.join(latest_folder, vtk_file)
+    
+    if dpg.does_item_exist("contour_vtk_path"):
+        dpg.set_value("contour_vtk_path", vtk_path)
+        logger.success(f"VTK path set to: {vtk_path}")
+    else:
+        logger.error("Could not set VTK path widget")
 
 
 def select_vtk_file_callback(sender, app_data, user_data):
@@ -312,3 +387,89 @@ def close_all_plot_windows_callback(sender, app_data, user_data):
     
     if not closed:
         logger.info("No plot windows to close")
+
+
+def browse_vtk_file_callback(sender, app_data, user_data):
+    """
+    Open file dialog for VTK file selection
+    
+    Args:
+        sender: Button tag
+        app_data: Application data (unused)
+        user_data: User data (unused)
+    """
+    if dpg.does_item_exist("file_dialog_vtk"):
+        dpg.configure_item("file_dialog_vtk", show=True)
+
+
+def browse_output_folder_callback(sender, app_data, user_data):
+    """
+    Open the output folder in file explorer
+    
+    Args:
+        sender: Button tag
+        app_data: Application data (unused)
+        user_data: User data (unused)
+    """
+    from src.utils import open_folder
+    from src.utils.output_manager import get_latest_output_folder
+    from src.config import OUTPUT_DIR
+    
+    # Try to open latest output folder
+    latest_folder = get_latest_output_folder()
+    
+    if latest_folder and os.path.exists(latest_folder):
+        success = open_folder(latest_folder)
+        if success:
+            logger.info(f"Opened latest output folder: {latest_folder}")
+    else:
+        # Fall back to main output directory
+        if os.path.exists(OUTPUT_DIR):
+            success = open_folder(OUTPUT_DIR)
+            if success:
+                logger.info(f"Opened output directory: {OUTPUT_DIR}")
+        else:
+            logger.warning("No output folder found yet. Run the solver first.")
+
+
+def set_vtk_from_latest_output_callback(sender, app_data, user_data):
+    """
+    Automatically set VTK path from latest output folder
+    
+    Args:
+        sender: Button tag
+        app_data: Application data (unused)
+        user_data: User data (unused)
+    """
+    from src.utils.output_manager import get_latest_output_folder
+    from src.config import DEFAULT_VTK
+    
+    latest_folder = get_latest_output_folder()
+    
+    if not latest_folder:
+        logger.warning("No output folder found. Run the solver first.")
+        return
+    
+    # Look for VTK files in latest output
+    vtk_files = []
+    for file in os.listdir(latest_folder):
+        if file.endswith('.vtk'):
+            vtk_files.append(file)
+    
+    if not vtk_files:
+        logger.warning(f"No VTK files found in {latest_folder}")
+        return
+    
+    # Use the first VTK file found (or Solution.vtk if it exists)
+    if DEFAULT_VTK in vtk_files:
+        vtk_file = DEFAULT_VTK
+    else:
+        vtk_file = vtk_files[0]
+    
+    vtk_path = os.path.join(latest_folder, vtk_file)
+    
+    if dpg.does_item_exist("contour_vtk_path"):
+        dpg.set_value("contour_vtk_path", vtk_path)
+        logger.success(f"VTK path set to: {vtk_path}")
+    else:
+        logger.error("Could not set VTK path widget")

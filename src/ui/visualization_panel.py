@@ -31,8 +31,10 @@ from src.callbacks import (
     select_vtk_file_callback,
     change_colormap_callback,
     change_variable_callback,
+    browse_output_folder_callback,
+    set_vtk_from_latest_output_callback,
 )
-# from src.core import clear_logs
+from src.core import clear_logs
 
 
 def create_visualization_panel(themes: dict) -> int:
@@ -43,13 +45,9 @@ def create_visualization_panel(themes: dict) -> int:
         themes: Dictionary of theme IDs
     
     Returns:
-        Child window tag/ID
+        Group tag/ID
     """
-    with dpg.child_window(
-        width=-1,
-        border=True,
-        tag="visualization_panel"
-    ) as panel:
+    with dpg.group(tag="visualization_panel") as panel:
         
         # Convergence Plot Section
         _create_convergence_plot_section(themes)
@@ -133,6 +131,17 @@ def _create_plotting_options_section(themes: dict):
             show=True
         )
         
+        # Add button to use latest output
+        use_latest_btn = dpg.add_button(
+            label="Use Latest",
+            callback=set_vtk_from_latest_output_callback,
+            tag="use_latest_vtk_button"
+        )
+        if "button_secondary" in themes:
+            dpg.bind_item_theme(use_latest_btn, themes["button_secondary"])
+        with dpg.tooltip(use_latest_btn):
+            dpg.add_text("Automatically use VTK from latest output folder")
+        
         dpg.add_text("Variable:")
         
         dpg.add_combo(
@@ -165,26 +174,40 @@ def _create_plotting_options_section(themes: dict):
         if "button_secondary" in themes:
             dpg.bind_item_theme(plot_btn, themes["button_secondary"])
     
-    # # Second row: Save image controls
-    # with dpg.group(horizontal=True):
-    #     dpg.add_text("Save Image as:")
+    # Second row: Save image and open output folder
+    with dpg.group(horizontal=True):
+        dpg.add_text("Save Image as:")
         
-    #     dpg.add_input_text(
-    #         hint="Save Path",
-    #         default_value=DEFAULT_SAVE_PATH,
-    #         tag="contour_save_path",
-    #         width=SAVE_PATH_INPUT_WIDTH
-    #     )
+        dpg.add_input_text(
+            hint="Save Path",
+            default_value=DEFAULT_SAVE_PATH,
+            tag="contour_save_path",
+            width=SAVE_PATH_INPUT_WIDTH
+        )
         
-    #     save_btn = dpg.add_button(
-    #         label="Save",
-    #         callback=save_plot_image_callback,
-    #         tag="save_plot_button"
-    #     )
+        save_btn = dpg.add_button(
+            label="Save",
+            callback=save_plot_image_callback,
+            tag="save_plot_button"
+        )
         
-    #     # Apply theme to save button
-    #     if "button_secondary" in themes:
-    #         dpg.bind_item_theme(save_btn, themes["button_secondary"])
+        # Apply theme to save button
+        if "button_secondary" in themes:
+            dpg.bind_item_theme(save_btn, themes["button_secondary"])
+        
+        # Add spacer
+        dpg.add_spacer(width=20)
+        
+        # Add button to open output folder
+        open_output_btn = dpg.add_button(
+            label="Open Output Folder",
+            callback=browse_output_folder_callback,
+            tag="open_output_folder_button"
+        )
+        if "button_secondary" in themes:
+            dpg.bind_item_theme(open_output_btn, themes["button_secondary"])
+        with dpg.tooltip(open_output_btn):
+            dpg.add_text("Open the output folder in file explorer")
     
     # File dialog for VTK file
     dpg.add_file_dialog(

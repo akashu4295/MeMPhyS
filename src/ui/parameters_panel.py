@@ -32,6 +32,10 @@ from src.callbacks import (
     update_mesh_inputs_callback,
     open_file_dialog_callback,
     select_mesh_file_callback,
+    launch_gmsh_callback,
+    set_mesh_from_geometry_callback,
+    browse_geometry_file_callback,
+    select_geometry_file_callback,
 )
 
 
@@ -50,7 +54,8 @@ def create_parameters_panel(themes: dict) -> int:
         border=True,
         tag="parameters_panel"
     ) as panel:
-        
+                
+
         # Header
         dpg.add_text("Input & Parameters", color=COLORS["header"])
         dpg.add_spacer(height=5)
@@ -71,6 +76,12 @@ def create_parameters_panel(themes: dict) -> int:
         # Multigrid Section
         _create_multigrid_section()
         
+        # Header
+        dpg.add_text("Create Geometry or Browse", color=COLORS["header"])
+        
+        # Solver Method Selection
+        _create_geometry_section(themes)
+
         # Mesh File Selection
         _create_mesh_files_section()
         
@@ -169,6 +180,53 @@ def _create_multigrid_section():
             tag="num_mesh_levels",
             callback=update_mesh_inputs_callback
         )
+
+
+def _create_geometry_section(themes: dict):
+    """Create geometry/Gmsh section"""
+    dpg.add_text("Geometry (Gmsh)", color=COLORS["success"])
+    
+    with dpg.group(horizontal=True):
+        new_geo_btn = dpg.add_button(
+            label="Open Gmsh",
+            callback=launch_gmsh_callback,
+            width=120
+        )
+        
+        open_geo_btn = dpg.add_button(
+            label="Open Geometry",
+            callback=browse_geometry_file_callback,
+            width=120
+        )
+
+        # Apply themes
+        if "button_secondary" in themes:
+            dpg.bind_item_theme(new_geo_btn, themes["button_secondary"])
+            dpg.bind_item_theme(open_geo_btn, themes["button_secondary"])
+        
+    # set_mesh_btn = dpg.add_button(
+    #     label="Set Mesh from Geo",
+    #     callback=set_mesh_from_geometry_callback,
+    #     width=140
+    # )
+        
+    # # Apply themes
+    # if "button_secondary" in themes:
+    #     dpg.bind_item_theme(set_mesh_btn, themes["button_secondary"])
+    
+    # File dialog for .geo files
+    dpg.add_file_dialog(
+        directory_selector=False,
+        tag="file_dialog_geometry",
+        callback=select_geometry_file_callback,
+        show=False,
+        width=FILE_DIALOG_WIDTH,
+        height=FILE_DIALOG_HEIGHT
+    )
+    dpg.add_file_extension(".geo", parent="file_dialog_geometry", color=(150, 255, 150, 255))
+    dpg.add_file_extension(".geo_unrolled", parent="file_dialog_geometry", color=(150, 255, 150, 255))
+    
+    dpg.add_spacer(height=5)
 
 
 def _create_mesh_files_section():

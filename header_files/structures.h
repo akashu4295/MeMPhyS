@@ -147,7 +147,18 @@ typedef struct FieldVariables {
     double* dpdx; // dpdx field
     double* dpdy; // dpdy field
     double* dpdz; // dpdz field
-
+    double* dudx; // du/dx field
+    double* dudy; // du/dy field
+    double* dudz; // du/dz field
+    double* dvdx; // dv/dx field
+    double* dvdy; // dv/dy field
+    double* dvdz; // dv/dz field
+    double* dwdx; // dw/dx field
+    double* dwdy; // dw/dy field
+    double* dwdz; // dw/dz field
+    double* lapu; // laplacian of u
+    double* lapv; // laplacian of v
+    double* lapw; // laplacian of w
     // Compressible flow variables
     double* rho; // density field
     double* rho_old; // density old field

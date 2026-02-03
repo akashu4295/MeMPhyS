@@ -294,7 +294,8 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                 case BC_VELOCITY_OUTLET:
                     field[ii].u[i] = myPointStruct[ii].node_bc[i].u;
                     field[ii].v[i] = myPointStruct[ii].node_bc[i].v;
-                    field[ii].w[i] = myPointStruct[ii].node_bc[i].w;
+                    if (parameters.dimension == 3)
+                        field[ii].w[i] = myPointStruct[ii].node_bc[i].w;
                     
                     // For compressible flow
                     if (parameters.compressible_flow) {
@@ -315,7 +316,8 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                 case BC_WALL:
                     field[ii].u[i] = 0.0;
                     field[ii].v[i] = 0.0;
-                    field[ii].w[i] = 0.0;
+                    if (parameters.dimension == 3)
+                        field[ii].w[i] = 0.0;
                     
                     // Temperature depends on wall type for compressible
                     // Will be handled by isothermal/adiabatic specific cases
@@ -325,7 +327,8 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                     // No-slip + fixed temperature
                     field[ii].u[i] = 0.0;
                     field[ii].v[i] = 0.0;
-                    field[ii].w[i] = 0.0;
+                    if (parameters.dimension == 3)
+                        field[ii].w[i] = 0.0;
                     
                     if (parameters.compressible_flow) {
                         field[ii].T[i] = myPointStruct[ii].node_bc[i].T;
@@ -339,7 +342,8 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                     // No-slip + zero heat flux (∂T/∂n = 0)
                     field[ii].u[i] = 0.0;
                     field[ii].v[i] = 0.0;
-                    field[ii].w[i] = 0.0;
+                    if (parameters.dimension == 3)
+                        field[ii].w[i] = 0.0;
                     
                     // Temperature gradient will be enforced in solver
                     // Keep current temperature value
@@ -355,7 +359,8 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                     if (parameters.compressible_flow) {
                         field[ii].u[i] = myPointStruct[ii].node_bc[i].u;
                         field[ii].v[i] = myPointStruct[ii].node_bc[i].v;
-                        field[ii].w[i] = myPointStruct[ii].node_bc[i].w;
+                        if (parameters.dimension == 3)
+                            field[ii].w[i] = myPointStruct[ii].node_bc[i].w;
                         field[ii].p[i] = myPointStruct[ii].node_bc[i].p;
                         field[ii].T[i] = myPointStruct[ii].node_bc[i].T;
                         field[ii].rho[i] = myPointStruct[ii].node_bc[i].rho;
@@ -385,7 +390,8 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                 default:
                     field[ii].u[i] = 0.0;
                     field[ii].v[i] = 0.0;
-                    field[ii].w[i] = 0.0;
+                    if (parameters.dimension == 3)
+                        field[ii].w[i] = 0.0;
                     field[ii].p[i] = 0.0;
                     
                     if (parameters.compressible_flow) {

@@ -350,7 +350,10 @@ int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS)
     }
     for (i = num_corner; i < num_nodes; i++) {
         int k = myPS[0].rcm_order[i-num_corner];
-        fprintf(fp_out, "%.16e %.16e %.16e\n", field->u[k], field->v[k], field->w[k]);
+        if (parameters.dimension == 2)
+            fprintf(fp_out, "%.16e %.16e %.16e\n", field->u[k], field->v[k], 0.0);
+        else
+            fprintf(fp_out, "%.16e %.16e %.16e\n", field->u[k], field->v[k], field->w[k]);
     }
     
     // Write pressure scalar field

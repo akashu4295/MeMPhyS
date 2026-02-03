@@ -106,7 +106,19 @@ void copyin_field_to_gpu(FieldVariables *field,
             field[l].u_old[:N], \
             field[l].v_old[:N], \
             field[l].u_new[:N], \
-            field[l].v_new[:N] )
+            field[l].v_new[:N], \
+            field[l].dudx[:N], \
+            field[l].dudy[:N], \
+            field[l].dvdx[:N], \
+            field[l].dvdy[:N], \
+            field[l].lapu[:N], \
+            field[l].lapv[:N], \
+            field[l].p[:N], \
+            field[l].p_old[:N], \
+            field[l].pprime[:N], \
+            field[l].dpdn[:N], \
+            field[l].dpdx[:N], \
+            field[l].dpdy[:N]  )
 
         #pragma acc enter data attach( \
             field[l].u, \
@@ -114,37 +126,44 @@ void copyin_field_to_gpu(FieldVariables *field,
             field[l].u_old, \
             field[l].v_old, \
             field[l].u_new, \
-            field[l].v_new )
-
-        if (parameters.dimension == 3) {
-            #pragma acc enter data copyin( \
-                field[l].w[:N], \
-                field[l].w_old[:N], \
-                field[l].w_new[:N], \
-                field[l].dpdz[:N] )
-            #pragma acc enter data attach( \
-                field[l].w, \
-                field[l].w_old, \
-                field[l].w_new, \
-                field[l].dpdz )
-        }
-
-        /* ---------------- pressure ---------------- */
-        #pragma acc enter data copyin( \
-            field[l].p[:N], \
-            field[l].p_old[:N], \
-            field[l].pprime[:N], \
-            field[l].dpdn[:N], \
-            field[l].dpdx[:N], \
-            field[l].dpdy[:N] )
-
-        #pragma acc enter data attach( \
+            field[l].v_new, \
+            field[l].dudx, \
+            field[l].dudy, \
+            field[l].dvdx, \
+            field[l].dvdy, \
+            field[l].lapu, \
+            field[l].lapv, \
             field[l].p, \
             field[l].p_old, \
             field[l].pprime, \
             field[l].dpdn, \
             field[l].dpdx, \
             field[l].dpdy )
+
+        if (parameters.dimension == 3) {
+            #pragma acc enter data copyin( \
+                field[l].w[:N], \
+                field[l].w_old[:N], \
+                field[l].w_new[:N], \
+                field[l].dwdx[:N], \
+                field[l].dwdy[:N], \
+                field[l].dwdz[:N], \
+                field[l].dvdz[:N], \
+                field[l].dudz[:N], \
+                field[l].lapw[:N], \
+                field[l].dpdz[:N] )
+            #pragma acc enter data attach( \
+                field[l].w, \
+                field[l].w_old, \
+                field[l].w_new, \
+                field[l].dwdx, \
+                field[l].dwdy, \
+                field[l].dwdz, \
+                field[l].dvdz, \
+                field[l].dudz, \
+                field[l].lapw, \
+                field[l].dpdz )
+        }
 
         /* ---------------- res, source ---------------- */
         #pragma acc enter data copyin( \
@@ -185,43 +204,6 @@ void copyin_field_to_gpu(FieldVariables *field,
         }
     }
 }
-
-
-// void copyin_field_to_gpu(FieldVariables* field, PointStructure* myPointStruct) {
-//     #pragma acc enter data copyin(field[:parameters.num_levels])
-
-//     for (int i = 0; i < parameters.num_levels; i++) {
-
-//         // Copy in field arrays
-//         #pragma acc enter data copyin( field[i].u[:myPointStruct[i].num_nodes],  \
-//                                        field[i].v[:myPointStruct[i].num_nodes],  \
-//                                        field[i].w[:myPointStruct[i].num_nodes],  \
-//                                        field[i].p[:myPointStruct[i].num_nodes],  \
-//                                        field[i].u_new[:myPointStruct[i].num_nodes], \
-//                                        field[i].v_new[:myPointStruct[i].num_nodes], \
-//                                        field[i].w_new[:myPointStruct[i].num_nodes], \
-//                                        field[i].u_old[:myPointStruct[i].num_nodes], \
-//                                        field[i].v_old[:myPointStruct[i].num_nodes], \
-//                                        field[i].w_old[:myPointStruct[i].num_nodes], \
-//                                        field[i].p_old[:myPointStruct[i].num_nodes], \
-//                                        field[i].pprime[:myPointStruct[i].num_nodes], \
-//                                        field[i].res[:myPointStruct[i].num_nodes], \
-//                                        field[i].source[:myPointStruct[i].num_nodes], \
-//                                        field[i].T[:myPointStruct[i].num_nodes], \
-//                                        field[i].dpdn[:myPointStruct[i].num_nodes], \
-//                                        field[i].dpdx[:myPointStruct[i].num_nodes], \
-//                                        field[i].dpdy[:myPointStruct[i].num_nodes], \
-//                                        field[i].dpdz[:myPointStruct[i].num_nodes] )
-
-//         // Attach pointer members
-//         #pragma acc enter data attach( field[i].u, field[i].v, field[i].w, field[i].p,  \
-//                                        field[i].u_new, field[i].v_new, field[i].w_new,  \
-//                                        field[i].u_old, field[i].v_old, field[i].w_old,  \
-//                                        field[i].p_old, field[i].pprime, field[i].res,   \
-//                                        field[i].source, field[i].T, field[i].dpdn, field[i].dpdx, \
-//                                        field[i].dpdy, field[i].dpdz )
-//     }
-// }
 
 void copypout_pointstructure_from_gpu(PointStructure* myPointStruct){
     # pragma acc exit data copyout(myPointStruct[:parameters.num_levels])

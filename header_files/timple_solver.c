@@ -92,7 +92,7 @@ void calculate_intermediate_velocity_implicit_vectorised(PointStructure* myPoint
     int num_cloud_points = myPointStruct->num_cloud_points;
 
     double denom = 0;
-    double temp1, temp2, temp3, temp4;
+    double temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8, temp9, temp10, temp11, temp12;
     double advection_x, advection_y, advection_z, advection, diffusion, unsteady;
 
     # pragma acc data present(field, parameters, myPointStruct)
@@ -109,7 +109,10 @@ void calculate_intermediate_velocity_implicit_vectorised(PointStructure* myPoint
             int k = i*num_cloud_points;
             if(!myPointStruct->boundary_tag[i]){
         // u-velocity
-                temp1 = 0; temp2 = 0; temp3 = 0; temp4 = 0;			
+                temp1 = 0; temp2 = 0; temp3 = 0; temp4 = 0;
+                temp5 = 0; temp6 = 0; temp7 = 0; temp8 = 0;
+                temp9 = 0; temp10 = 0; temp11 = 0; temp12 = 0;
+
                 advection_x = field->u_new[i] * myPointStruct->Dx[k];                      
                 advection_y = field->v_new[i] * myPointStruct->Dy[k]; 
                 advection_z = field->w_new[i] * myPointStruct->Dz[k];
@@ -123,120 +126,99 @@ void calculate_intermediate_velocity_implicit_vectorised(PointStructure* myPoint
                     temp2  += myPointStruct->Dy[k] * field->u[myPointStruct->cloud_index[k]];
                     temp3  += myPointStruct->Dz[k] * field->u[myPointStruct->cloud_index[k]];
                     temp4  += myPointStruct->lap[k] * field->u[myPointStruct->cloud_index[k]];
+                    temp5  += myPointStruct->Dx[k] * field->v[myPointStruct->cloud_index[k]];
+                    temp6  += myPointStruct->Dy[k] * field->v[myPointStruct->cloud_index[k]];
+                    temp7  += myPointStruct->Dz[k] * field->v[myPointStruct->cloud_index[k]];
+                    temp8  += myPointStruct->lap[k] * field->v[myPointStruct->cloud_index[k]];
+                    temp9  += myPointStruct->Dx[k] * field->w[myPointStruct->cloud_index[k]];
+                    temp10 += myPointStruct->Dy[k] * field->w[myPointStruct->cloud_index[k]];
+                    temp11 += myPointStruct->Dz[k] * field->w[myPointStruct->cloud_index[k]];
+                    temp12 += myPointStruct->lap[k] * field->w[myPointStruct->cloud_index[k]];
                 }
                 k = i*num_cloud_points;
                 advection = field->u_new[i] * temp1 + field->v_new[i] * temp2 + field->w_new[i] * temp3;
                 unsteady  = field->u_old[i]/(parameters.dt*parameters.facdt);
-                field->u[i] = (parameters.rho * (unsteady - advection) - (parameters.facRe-1) *   parameters.mu* myPointStruct->lap[i*num_cloud_points] * field->u[i] + 
+                field->u[i] = (parameters.rho * (unsteady - advection) - (parameters.facRe-1) *   parameters.mu* myPointStruct->lap[k] * field->u[i] + 
                                parameters.mu*temp4 - field->dpdx[i]) / denom;
         // v-velocity
-                temp1 = 0; temp2 = 0; temp3 = 0; temp4 = 0;			
-	            advection_x = field->u_new[i] * myPointStruct->Dx[k];                      
-	            advection_y = field->v_new[i] * myPointStruct->Dy[k]; 
-                advection_z = field->w_new[i] * myPointStruct->Dz[k];  
-                diffusion   = - parameters.facRe * parameters.mu * myPointStruct->lap[k];
-                unsteady    = 1./(parameters.dt*parameters.facdt);			
-                denom       = parameters.rho* (advection_x + advection_y + advection_z + unsteady) + diffusion; 
-                # pragma acc loop
-                int k = i *num_cloud_points;
-                # pragma acc loop reduction(+:temp1, temp2, temp3, temp4)
-                for (int j = 1; j < num_cloud_points; j++){
-                    k +=1;
-                    temp1 += myPointStruct->Dx[k] * field->v[myPointStruct->cloud_index[k]];
-                    temp2 += myPointStruct->Dy[k] * field->v[myPointStruct->cloud_index[k]];
-                    temp3 += myPointStruct->Dz[k] * field->v[myPointStruct->cloud_index[k]];
-                    temp4 += myPointStruct->lap[k] * field->v[myPointStruct->cloud_index[k]];
-                }
-                advection = field->u_new[i] * temp1 + field->v_new[i] * temp2 + field->w_new[i] * temp3;
+                
+                advection = field->u_new[i] * temp5 + field->v_new[i] * temp6 + field->w_new[i] * temp7;
                 unsteady  = field->v_old[i]/(parameters.dt*parameters.facdt);
-                field->v[i] = (parameters.rho * (unsteady - advection) - (parameters.facRe-1) * parameters.mu* myPointStruct->lap[i*num_cloud_points] * field->v[i] +
-                                    parameters.mu*temp4 - field->dpdy[i]) / denom;
+                field->v[i] = (parameters.rho * (unsteady - advection) - (parameters.facRe-1) * parameters.mu* myPointStruct->lap[k] * field->v[i] +
+                                    parameters.mu*temp8 - field->dpdy[i]) / denom;
 
             // w-velocity
-                temp1 = 0; temp2 = 0; temp3 = 0; temp4 = 0;	
-                k = i*num_cloud_points;		
-                advection_x = field->u_new[i] * myPointStruct->Dx[k];                      
-                advection_y = field->v_new[i] * myPointStruct->Dy[k];
-                advection_z = field->w_new[i] * myPointStruct->Dz[k];  
-                diffusion   = - parameters.facRe * parameters.mu * myPointStruct->lap[k];
-                unsteady    = 1./(parameters.dt*parameters.facdt);			
-                denom       = parameters.rho* (advection_x + advection_y + advection_z + unsteady) + diffusion; 
-                # pragma acc loop reduction(+:temp1, temp2, temp3, temp4)
-                for (int j = 1; j < num_cloud_points; j++){
-                    k += 1;
-                    temp1 += myPointStruct->Dx[k] * field->w[myPointStruct->cloud_index[k]];
-                    temp2 += myPointStruct->Dy[k] * field->w[myPointStruct->cloud_index[k]];
-                    temp3 += myPointStruct->Dz[k] * field->w[myPointStruct->cloud_index[k]];
-                    temp4 += myPointStruct->lap[k]* field->w[myPointStruct->cloud_index[k]];
-                }
-                advection = field->u_new[i] * temp1 + field->v_new[i] * temp2 + field->w_new[i] * temp3;
+                advection = field->u_new[i] * temp9 + field->v_new[i] * temp10 + field->w_new[i] * temp11;
                 unsteady  = field->w_old[i]/(parameters.dt*parameters.facdt);
-                field->w[i] = (parameters.rho * (unsteady - advection)- (parameters.facRe-1) * parameters.mu* myPointStruct->lap[i*num_cloud_points] * field->w[i] + 
-                                parameters.mu*temp4 - field->dpdz[i]) / denom;
+                field->w[i] = (parameters.rho * (unsteady - advection)- (parameters.facRe-1) * parameters.mu* myPointStruct->lap[k] * field->w[i] + 
+                                parameters.mu*temp12 - field->dpdz[i]) / denom;
             }
         }
     }
 }
 
-void calculate_intermediate_velocity_implicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field){
-    
-    int num_nodes = myPointStruct->num_nodes;
+void calculate_intermediate_velocity_implicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field)
+{
+    int num_nodes        = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
 
-    # pragma acc data present(field, parameters, myPointStruct)
+    #pragma acc data present(field, parameters, myPointStruct)
     {
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p, field->dpdx,
+            myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p, field->dpdy,
+            myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
     }
-    # pragma acc wait(1,2)
-    
-    for (int iter = 0; iter<parameters.iter_momentum; iter++){
-        # pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
-        for (int i = 0; i < num_nodes; i++){
-            if(!myPointStruct->boundary_tag[i]){
-                double temp1 = 0, temp2 = 0, temp4 = 0;
-                double advection_x, advection_y, advection, diffusion, unsteady, denom;
-                
-        // u-velocity
-                advection_x = field->u_new[i] * myPointStruct->Dx[i*num_cloud_points];                      
-                advection_y = field->v_new[i] * myPointStruct->Dy[i*num_cloud_points]; 
-                diffusion   = - parameters.facRe * parameters.mu * myPointStruct->lap[i*num_cloud_points];
-                unsteady    = 1./(parameters.dt*parameters.facdt);			
-                denom       = parameters.rho* (advection_x + advection_y + unsteady) + diffusion; 
-                
-                # pragma acc loop reduction(+:temp1, temp2, temp4)
-                for (int j = 1; j < num_cloud_points; j++){
-                    int k = i*num_cloud_points + j;
-                    temp1  += myPointStruct->Dx[k] * field->u[myPointStruct->cloud_index[k]];
-                    temp2  += myPointStruct->Dy[k] * field->u[myPointStruct->cloud_index[k]];
-                    temp4  += myPointStruct->lap[k]* field->u[myPointStruct->cloud_index[k]];
+    #pragma acc wait(1,2)
+
+    for (int iter = 0; iter < parameters.iter_momentum; iter++)
+    {
+        #pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
+        for (int i = 0; i < num_nodes; i++)
+        {
+            if (!myPointStruct->boundary_tag[i])
+            {
+                double temp1, temp2, temp3, temp4, temp5, temp6;
+                double advection_x, advection_y;
+                double advection, diffusion, unsteady, denom;
+
+                int c = i * num_cloud_points;
+
+                /* ---- coefficients common to u and v ---- */
+                advection_x = field->u_new[i] * myPointStruct->Dx[c];
+                advection_y = field->v_new[i] * myPointStruct->Dy[c];
+                diffusion   = -parameters.facRe * parameters.mu * myPointStruct->lap[c];
+                unsteady    = 1.0 / (parameters.dt * parameters.facdt);
+
+                denom = parameters.rho * (advection_x + advection_y + unsteady) + diffusion;
+
+                /* ================= u-momentum ================= */
+                temp1 = 0.0; temp2 = 0.0; temp3 = 0.0; temp4 = 0.0; temp5 = 0.0; temp6 = 0.0; 
+
+                #pragma acc loop reduction(+:temp1, temp2, temp3, temp4, temp5, temp6)
+                for (int j = 1; j < num_cloud_points; j++)
+                {
+                    int k = c + j;
+                    int n = myPointStruct->cloud_index[k];
+                    temp1 += myPointStruct->Dx[k]  * field->u[n];
+                    temp2 += myPointStruct->Dy[k]  * field->u[n];
+                    temp3 += myPointStruct->lap[k] * field->u[n];
+                    temp4 += myPointStruct->Dx[k]  * field->v[n];
+                    temp5 += myPointStruct->Dy[k]  * field->v[n];
+                    temp6 += myPointStruct->lap[k] * field->v[n];
                 }
-                
+
                 advection = field->u_new[i] * temp1 + field->v_new[i] * temp2;
-                unsteady  = field->u_old[i]/(parameters.dt*parameters.facdt);
-                field->u[i] = (parameters.rho * (unsteady - advection) - (parameters.facRe-1) * parameters.mu* myPointStruct->lap[i*num_cloud_points] * field->u[i] + 
-                               parameters.mu*temp4 - field->dpdx[i]) / denom;
-                
-        // v-velocity
-                temp1 = 0; temp2 = 0; temp4 = 0;
-                advection_x = field->u_new[i] * myPointStruct->Dx[i*num_cloud_points];                      
-                advection_y = field->v_new[i] * myPointStruct->Dy[i*num_cloud_points]; 
-                diffusion   = - parameters.facRe * parameters.mu * myPointStruct->lap[i*num_cloud_points];
-                unsteady    = 1./(parameters.dt*parameters.facdt);			
-                denom       = parameters.rho* (advection_x + advection_y + unsteady) + diffusion; 
-                
-                # pragma acc loop reduction(+:temp1, temp2, temp4)
-                for (int j = 1; j < num_cloud_points; j++){
-                    int k = i*num_cloud_points + j;
-                    temp1 += myPointStruct->Dx[k] * field->v[myPointStruct->cloud_index[k]];
-                    temp2 += myPointStruct->Dy[k] * field->v[myPointStruct->cloud_index[k]];
-                    temp4 += myPointStruct->lap[k]* field->v[myPointStruct->cloud_index[k]];
-                }
-                
-                advection = field->u_new[i] * temp1 + field->v_new[i] * temp2;
-                unsteady  = field->v_old[i]/(parameters.dt*parameters.facdt);
-                field->v[i] = (parameters.rho * (unsteady - advection) - (parameters.facRe-1) * parameters.mu* myPointStruct->lap[i*num_cloud_points] * field->v[i] +
-                                    parameters.mu*temp4 - field->dpdy[i]) / denom;                  
+                unsteady = field->u_old[i] / (parameters.dt * parameters.facdt);
+
+                field->u[i] = ( parameters.rho * (unsteady - advection) - (parameters.facRe - 1.0) * parameters.mu
+                      * myPointStruct->lap[c] * field->u[i] + parameters.mu * temp3 - field->dpdx[i] ) / denom;
+
+                advection = field->u_new[i] * temp4 + field->v_new[i] * temp5;
+                unsteady = field->v_old[i] / (parameters.dt * parameters.facdt);
+
+                field->v[i] = ( parameters.rho * (unsteady - advection) - (parameters.facRe - 1.0) * parameters.mu
+                      * myPointStruct->lap[c] * field->v[i] + parameters.mu * temp6 - field->dpdy[i] ) / denom;
             }
         }
     }
@@ -315,50 +297,6 @@ void multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, FieldVar
         }
     }        
 }
-
-// void update_boundary_pprime_vectorised(PointStructure* mypointstruct, FieldVariables* field){
-//     double sumx, sumy, sumz, Ap;
-//     int n = mypointstruct->num_cloud_points;
-//     // if (parameters.neumann_flag_boundary){
-//         # pragma acc parallel loop gang vector present(field, parameters, mypointstruct)
-//         for (int i = 0; i < mypointstruct->num_boundary_nodes; i++){
-//             sumx = 0; sumy = 0; sumz = 0; Ap = 0;
-//             # pragma acc loop reduction(+:sumx, sumy, sumz)
-//             for (int j = 1; j < mypointstruct->num_cloud_points; j++){
-//                 int k = i*n + j;
-//                 sumx += mypointstruct->Dx[k]*field->pprime[mypointstruct->cloud_index[k]];
-//                 sumy += mypointstruct->Dy[k]*field->pprime[mypointstruct->cloud_index[k]];
-//                 sumz += mypointstruct->Dz[k]*field->pprime[mypointstruct->cloud_index[k]];
-//             }
-//             int k = i*n;
-//             Ap += mypointstruct->Dx[k]*mypointstruct->x_normal[i];
-//             Ap += mypointstruct->Dy[k]*mypointstruct->y_normal[i];
-//             Ap += mypointstruct->Dz[k]*mypointstruct->z_normal[i];
-//             field->pprime[i] = (-sumx*mypointstruct->x_normal[i] -sumy*mypointstruct->y_normal[i] -sumz*mypointstruct->z_normal[i])/Ap;
-//         }
-//     // }
-// }
-
-// void update_boundary_pprime_vectorised_2d(PointStructure* mypointstruct, FieldVariables* field){
-//     int n = mypointstruct->num_cloud_points;
-//     // if (parameters.neumann_flag_boundary){
-//         # pragma acc parallel loop gang vector present(field, parameters, mypointstruct)
-//         for (int i = 0; i < mypointstruct->num_boundary_nodes; i++){
-//             double sumx = 0, sumy = 0, Ap = 0;
-            
-//             # pragma acc loop reduction(+:sumx, sumy)
-//             for (int j = 1; j < mypointstruct->num_cloud_points; j++){
-//                 int k = i*n + j;
-//                 sumx += mypointstruct->Dx[k]*field->pprime[mypointstruct->cloud_index[k]];
-//                 sumy += mypointstruct->Dy[k]*field->pprime[mypointstruct->cloud_index[k]];
-//             }
-            
-//             Ap += mypointstruct->Dx[i*n]*mypointstruct->x_normal[i];
-//             Ap += mypointstruct->Dy[i*n]*mypointstruct->y_normal[i];
-//             field->pprime[i] = (-sumx*mypointstruct->x_normal[i] -sumy*mypointstruct->y_normal[i])/Ap;
-//         }
-//     // }
-// }
 
 void relaxation_vectorised(PointStructure* mypointstruct, FieldVariables* field){
      //double* zeros=create_vector(mypointstruct->num_nodes);

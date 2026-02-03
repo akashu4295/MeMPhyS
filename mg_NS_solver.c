@@ -113,7 +113,7 @@ int main()
                     file1 = fopen("Solution.csv", "w"); // Write data to a file
                     #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
                     for (int i = 0; i < myPointStruct[0].num_nodes; i++)
-                        fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
+                        fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], field[0].u[i], field[0].v[i], field[0].p[i]);
                     fflush(file1);	
                     fclose(file1);
                 }
@@ -156,7 +156,7 @@ int main()
                         file1 = fopen("Solution.csv", "w"); // Write data to a file
                         #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
                         for (int i = 0; i < myPointStruct[0].num_nodes; i++)
-                            fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
+                            fprintf(file1, "%lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], field[0].u[i], field[0].v[i], field[0].p[i]);
                         fflush(file1);	
                         fclose(file1);
                     }

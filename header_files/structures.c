@@ -30,13 +30,10 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
         // ========== INCOMPRESSIBLE FLOW VARIABLES (ALWAYS ALLOCATED) ==========
         (*field)[ii].u = (double*) malloc(N * sizeof(double));
         (*field)[ii].v = (double*) malloc(N * sizeof(double));
-        (*field)[ii].w = (double*) malloc(N * sizeof(double));
         (*field)[ii].u_new = (double*) malloc(N * sizeof(double));
         (*field)[ii].v_new = (double*) malloc(N * sizeof(double));
-        (*field)[ii].w_new = (double*) malloc(N * sizeof(double));
         (*field)[ii].u_old = (double*) malloc(N * sizeof(double));
         (*field)[ii].v_old = (double*) malloc(N * sizeof(double));
-        (*field)[ii].w_old = (double*) malloc(N * sizeof(double));
         (*field)[ii].p = (double*) malloc(N * sizeof(double));
         (*field)[ii].p_old = (double*) malloc(N * sizeof(double));
         (*field)[ii].pprime = (double*) malloc(N * sizeof(double));
@@ -45,8 +42,37 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
         (*field)[ii].dpdn = (double*) malloc(N * sizeof(double));
         (*field)[ii].dpdx = (double*) malloc(N * sizeof(double));
         (*field)[ii].dpdy = (double*) malloc(N * sizeof(double));
-        (*field)[ii].dpdz = (double*) malloc(N * sizeof(double));
-        (*field)[ii].T = (double*) malloc(N * sizeof(double));
+        (*field)[ii].dudx = (double*) malloc(N * sizeof(double));
+        (*field)[ii].dudy = (double*) malloc(N * sizeof(double));
+        (*field)[ii].dvdx = (double*) malloc(N * sizeof(double));
+        (*field)[ii].dvdy = (double*) malloc(N * sizeof(double));
+        (*field)[ii].lapu = (double*) malloc(N * sizeof(double));
+        (*field)[ii].lapv = (double*) malloc(N * sizeof(double));
+        
+        if (parameters.dimension == 3) {
+            (*field)[ii].w = (double*) malloc(N * sizeof(double));
+            (*field)[ii].w_new = (double*) malloc(N * sizeof(double));
+            (*field)[ii].w_old = (double*) malloc(N * sizeof(double));
+            (*field)[ii].dpdz = (double*) malloc(N * sizeof(double));
+            (*field)[ii].dudz = (double*) malloc(N * sizeof(double));
+            (*field)[ii].dvdz = (double*) malloc(N * sizeof(double));
+            (*field)[ii].dwdx = (double*) malloc(N * sizeof(double));
+            (*field)[ii].dwdy = (double*) malloc(N * sizeof(double));
+            (*field)[ii].dwdz = (double*) malloc(N * sizeof(double));
+            (*field)[ii].lapw = (double*) malloc(N * sizeof(double));
+        }
+        else {
+            (*field)[ii].w = NULL;
+            (*field)[ii].w_new = NULL;
+            (*field)[ii].w_old = NULL;
+            (*field)[ii].dpdz = NULL;
+            (*field)[ii].dudz = NULL;
+            (*field)[ii].dvdz = NULL;
+            (*field)[ii].dwdx = NULL;
+            (*field)[ii].dwdy = NULL;
+            (*field)[ii].dwdz = NULL;
+            (*field)[ii].lapw = NULL;
+        }
         
         // ========== COMPRESSIBLE FLOW VARIABLES (CONDITIONAL) ==========
         if (parameters.compressible_flow) {
@@ -54,6 +80,7 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             (*field)[ii].rho = (double*) malloc(N * sizeof(double));
             (*field)[ii].rho_old = (double*) malloc(N * sizeof(double));
             (*field)[ii].rho_new = (double*) malloc(N * sizeof(double));
+            (*field)[ii].T = (double*) malloc(N * sizeof(double));
             (*field)[ii].T_old = (double*) malloc(N * sizeof(double));
             (*field)[ii].T_new = (double*) malloc(N * sizeof(double));
             (*field)[ii].e = (double*) malloc(N * sizeof(double));
@@ -126,13 +153,10 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             // Incompressible variables
             (*field)[ii].u[i] = 0.0;
             (*field)[ii].v[i] = 0.0;
-            (*field)[ii].w[i] = 0.0;
             (*field)[ii].u_new[i] = 0.0;
             (*field)[ii].v_new[i] = 0.0;
-            (*field)[ii].w_new[i] = 0.0;
             (*field)[ii].u_old[i] = 0.0;
             (*field)[ii].v_old[i] = 0.0;
-            (*field)[ii].w_old[i] = 0.0;
             (*field)[ii].p[i] = 0.0;
             (*field)[ii].p_old[i] = 0.0;
             (*field)[ii].pprime[i] = 0.0;
@@ -141,14 +165,32 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             (*field)[ii].dpdn[i] = 0.0;
             (*field)[ii].dpdx[i] = 0.0;
             (*field)[ii].dpdy[i] = 0.0;
-            (*field)[ii].dpdz[i] = 0.0;
-            (*field)[ii].T[i] = parameters.T_ref;  // Initialize to reference temperature
+            (*field)[ii].lapu[i] = 0.0;
+            (*field)[ii].lapv[i] = 0.0;
+            (*field)[ii].dudx[i] = 0.0;
+            (*field)[ii].dudy[i] = 0.0;
+            (*field)[ii].dvdx[i] = 0.0;
+            (*field)[ii].dvdy[i] = 0.0;
+
+            if (parameters.dimension == 3) {
+                (*field)[ii].w[i] = 0.0;
+                (*field)[ii].w_new[i] = 0.0;
+                (*field)[ii].w_old[i] = 0.0;
+                (*field)[ii].dpdz[i] = 0.0;
+                (*field)[ii].dudz[i] = 0.0;
+                (*field)[ii].dvdz[i] = 0.0;
+                (*field)[ii].dwdx[i] = 0.0;
+                (*field)[ii].dwdy[i] = 0.0;
+                (*field)[ii].dwdz[i] = 0.0;
+                (*field)[ii].lapw[i] = 0.0;
+            }
             
             // Compressible variables (if allocated)
             if (parameters.compressible_flow) {
                 (*field)[ii].rho[i] = parameters.rho_ref;
                 (*field)[ii].rho_old[i] = parameters.rho_ref;
                 (*field)[ii].rho_new[i] = parameters.rho_ref;
+                (*field)[ii].T[i] = parameters.T_ref;  // Initialize to reference temperature
                 (*field)[ii].T_old[i] = parameters.T_ref;
                 (*field)[ii].T_new[i] = parameters.T_ref;
                 (*field)[ii].e[i] = parameters.cv * parameters.T_ref;
@@ -224,13 +266,10 @@ void free_field(FieldVariables* field, int num_levels) {
         // Free incompressible variables (always allocated)
         free(field[i].u);
         free(field[i].v);
-        free(field[i].w);
         free(field[i].u_new);
         free(field[i].v_new);
-        free(field[i].w_new);
         free(field[i].u_old);
         free(field[i].v_old);
-        free(field[i].w_old);
         free(field[i].p);
         free(field[i].p_old);
         free(field[i].pprime);
@@ -239,11 +278,29 @@ void free_field(FieldVariables* field, int num_levels) {
         free(field[i].dpdn);
         free(field[i].dpdx);
         free(field[i].dpdy);
-        free(field[i].dpdz);
-        free(field[i].T);
-        
+        free(field[i].dudx);
+        free(field[i].dudy);
+        free(field[i].dvdx);
+        free(field[i].dvdy);
+        free(field[i].lapu);
+        free(field[i].lapv);
+
+        if (parameters.dimension == 3) {
+            free(field[i].w);
+            free(field[i].w_new);
+            free(field[i].w_old);
+            free(field[i].dpdz);
+            free(field[i].dudz);
+            free(field[i].dvdz);
+            free(field[i].dwdx);
+            free(field[i].dwdy);
+            free(field[i].dwdz);
+            free(field[i].lapw);
+        }
+
         // Free compressible variables (if allocated)
         if (parameters.compressible_flow) {
+            free(field[i].T);
             free(field[i].rho);
             free(field[i].rho_old);
             free(field[i].rho_new);

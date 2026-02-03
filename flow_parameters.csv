@@ -15,7 +15,7 @@ iter_momentum,5
 iter_timple,1
 num_vcycles,1
 num_relax,1000
-fractional_step,1
+fractional_step,0
 facRe,1
 facdt,1
 Poisson_solver_type,1

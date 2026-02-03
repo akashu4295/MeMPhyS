@@ -1,98 +1,57 @@
-############################################
 # Compiler Mode Selection
-############################################
-
-# ----- CUDA mode (nvcc) -----
-ifeq ($(CUDA),1)
-    CC = nvcc
-    MODE = cuda
-    CFLAGS = -O3          # Minimal safe flags for nvcc
-    GPU_MSG = "Compiling with NVCC (CUDA mode)"
-endif
-
-# ----- OpenACC mode (NVIDIA HPC SDK) -----
+# Usage:
+#   make OPENACC=1    # for OpenACC GPU mode
+#   make DEBUG=1      # to include debug symbols
+#   make              # for default CPU mode
+# ----- OpenACC mode -----
 ifeq ($(OPENACC),1)
     CC = nvc
     MODE = openacc
-    CFLAGS = -acc -Minfo=accel
+    CFLAGS = -acc -Minfo=accel -O3 -Wall -Wextra -Wshadow -Wpointer-arith
     GPU_MSG = "Compiling with NVC (OpenACC GPU mode)"
 endif
 
-# ----- Default CPU mode (gcc) -----
+# ----- Default CPU mode -----
 ifeq ($(MODE),)
     CC = gcc
     MODE = cpu
+    CFLAGS = -O3 -march=native -Wall -Wextra -Wshadow -Wpointer-arith
+    LDFLAGS = -lm
     GPU_MSG = "Compiling with GCC (CPU mode)"
-    CFLAGS = -lm -O3
 endif
 
 
-############################################
-# Optional Features (added only if valid)
-############################################
+# Setting Debug flag
 
-# ------- Warnings (only for gcc/nvc, NOT nvcc) ------
-ifeq ($(WARN),1)
-    ifneq ($(MODE),cuda)
-        CFLAGS += -Wall -Wextra -Wshadow -Wpointer-arith
-    endif
-endif
-
-# ------- Optimisation flags -------
-ifeq ($(OPT),1)
-    ifeq ($(MODE),cpu)
-        CFLAGS += -O3 -march=native
-    endif
-    ifeq ($(MODE),openacc)
-        CFLAGS += -fast
-    endif
-    # nvcc already has -O3 by default (added above)
-endif
-
-# ------- Debugging -------
 ifeq ($(DEBUG),1)
     CFLAGS += -g
 endif
 
-# ------- Unified Memory (OpenACC or CUDA only) -------
-ifeq ($(UM),1)
-    ifeq ($(MODE),openacc)
-        CFLAGS += -gpu=managed
-    endif
-    ifeq ($(MODE),cuda)
-        CFLAGS += -Xcompiler -rdc=true -arch=sm_80
-    endif
-endif
 
-
-############################################
-# Directories and Files
-############################################
+# Files
 
 SRC_DIR = header_files
+SRC = $(wildcard $(SRC_DIR)/*.c)
 INIT = init.c
 MAIN = mg_NS_solver.c
-SRC = $(wildcard $(SRC_DIR)/*.c)
-
 TARGET = a.out
 MODE_FILE = .build_mode
 
 
-############################################
 # Build Rules
-############################################
 
-$(TARGET): $(SRC) $(INIT) $(MAIN) $(MODE_FILE)
+all: check_mode $(TARGET)
+
+$(TARGET): $(SRC) $(INIT) $(MAIN)
 	@echo $(GPU_MSG)
-	$(CC) $(SRC) $(INIT) $(MAIN) $(CFLAGS) -o $(TARGET)
+	$(CC) $(SRC) $(INIT) $(MAIN) $(CFLAGS) -o $(TARGET) $(LDFLAGS)
 
-$(MODE_FILE):
+check_mode:
+	@if [ -f $(MODE_FILE) ] && [ "`cat $(MODE_FILE)`" != "$(MODE)" ]; then \
+	    echo "Build mode changed → full rebuild"; \
+	    rm -f $(TARGET); \
+	fi
 	@echo $(MODE) > $(MODE_FILE)
-
-ifeq ($(MODE),$(shell cat $(MODE_FILE) 2>/dev/null))
-else
-$(TARGET): clean $(MODE_FILE)
-endif
 
 clean:
 	rm -f $(TARGET) $(MODE_FILE)

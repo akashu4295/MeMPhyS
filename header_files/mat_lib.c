@@ -211,7 +211,7 @@ double vector_norm(double *A, int n_rows_A)
 
 void matrixInverse_Gauss_Jordan(double** matrix1, double** inverse, int order)
 {
-    double temp;
+    double temp1;
     double** matrix;
     create_matrix(&matrix, order, 2 * order);
     for (int i = 0; i < order; i++) {
@@ -251,10 +251,10 @@ void matrixInverse_Gauss_Jordan(double** matrix1, double** inverse, int order)
  
             if (j != i) {
  
-                temp = matrix[j][i] / matrix[i][i];
+                temp1 = matrix[j][i] / matrix[i][i];
                 for (int k = 0; k < 2 * order; k++) {
  
-                    matrix[j][k] -= matrix[i][k] * temp;
+                    matrix[j][k] -= matrix[i][k] * temp1;
                 }
             }
         }
@@ -264,10 +264,10 @@ void matrixInverse_Gauss_Jordan(double** matrix1, double** inverse, int order)
     // Divide row element by the diagonal element
     for (int i = 0; i < order; i++) {
  
-        temp = matrix[i][i];
+        temp1 = matrix[i][i];
         for (int j = 0; j < 2 * order; j++) {
  
-            matrix[i][j] = matrix[i][j] / temp;
+            matrix[i][j] = matrix[i][j] / temp1;
         }
     }
 

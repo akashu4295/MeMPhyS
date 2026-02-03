@@ -98,8 +98,9 @@ void calculate_intermediate_velocity_implicit_vectorised_2d(PointStructure* myPo
 void calculate_mass_residual_implicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void update_velocity_implicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void update_boundary_pressure_vectorised_2d(PointStructure* mypointstruct, FieldVariables* field);
-void update_boundary_pprime_vectorised_2d(PointStructure* mypointstruct, FieldVariables* field);
-
+void relaxation_vectorised_Jacobi(PointStructure* mypointstruct, const double* source, double* pprime, double* p_old);
+void relaxation_vectorised_BiCGStab(PointStructure* mypointstruct, const double* b, double* x, int max_iter, double tol);
+void relaxation_vectorised_GaussSeidel(PointStructure* mypointstruct, const double* source, double* pprime);
 
 
 // Fractional Step Explicit Solver Modules

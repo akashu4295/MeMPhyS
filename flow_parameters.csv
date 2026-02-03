@@ -8,7 +8,7 @@ steady_tolerance,1e-08
 poisson_solver_tolerance,1e-8
 sor_parameter,0.5
 time_step,0.1
-num_time_steps,100
+num_time_steps,5000
 write_interval,50
 Re,10
 iter_momentum,5

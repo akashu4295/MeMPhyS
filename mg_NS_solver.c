@@ -39,6 +39,7 @@ int main()
     read_complete_mesh_data(myPointStruct, parameters.num_levels);
     printf("Time taken to read the grids and flow parameters: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
     AllocateMemoryFieldVariables(&field, myPointStruct, parameters.num_levels);
+    check_restart_file(&myPointStruct[0], &field[0]);
     parameters.dt = calculate_dt(&myPointStruct[0]);
 
     clock_start = clock();    // Start the clock

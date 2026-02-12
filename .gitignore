@@ -50,3 +50,4 @@ test*
 COMP*
 bc2*
 .build*
+header_files/legacy

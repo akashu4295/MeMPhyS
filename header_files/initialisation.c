@@ -405,3 +405,30 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
         }
     }
 }
+
+void check_restart_file(PointStructure* myPointStruct, FieldVariables *field) {
+    if (parameters.restart) {
+        printf("Checking restart file: %s\n", parameters.restart_filename);
+        FILE *file = fopen(parameters.restart_filename, "r");
+        if (file) {
+            printf("Restart file found: %s\n", parameters.restart_filename);
+            for (int i = 0; i < myPointStruct->num_nodes; i++) {
+                double x, y, z, u, v, w, p;
+                if (fscanf(file, "%lf, %lf, %lf, %lf, %lf, %lf, %lf", &x, &y, &z, &u, &v, &w, &p) != 7) {
+                    fprintf(stderr, "Error reading restart file at line %d\n", i);
+                    fclose(file);
+                    exit(1);
+                }
+                field->u[i] = u;
+                field->v[i] = v;
+                field->w[i] = w;
+                field->p[i] = p;
+            }
+            
+        } 
+        else {
+            printf("Restart file not found: %s\n", parameters.restart_filename);
+            exit(1);
+        }
+    }
+}    

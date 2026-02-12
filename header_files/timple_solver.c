@@ -16,22 +16,21 @@
 ////////////////////////////////////////////////////////////////////////////////////
 // Time-Implicit Solver Modules
 ////////////////////////////////////////////////////////////////////////////////////
-double time_implicit_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field) {
-    int num_nodes = myPointStruct[0].num_nodes;
+double time_implicit_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field){
+    double steady_state_error = 0.0;
 
-    #pragma acc parallel loop present(field[0], myPointStruct[0])
-    for (int i = 0; i < num_nodes; i++) {
+    # pragma acc parallel loop present(field[0], myPointStruct[0])
+    for (int i = 0; i < myPointStruct->num_nodes; i++){
         field[0].u_old[i] = field[0].u[i]; 
         field[0].v_old[i] = field[0].v[i]; 
         field[0].w_old[i] = field[0].w[i];
     }
-
-    // Unified data region for the entire implicit step
-    #pragma acc data present(field[:parameters.num_levels], myPointStruct[:parameters.num_levels], parameters)
+    
+    # pragma acc data present(field[:parameters.num_levels], myPointStruct[:parameters.num_levels], parameters)
     {
-        for (int iter = 0; iter < parameters.iter_timple; iter++) { 
+        for (int iter = 0; iter<parameters.iter_timple; iter++){ 
             #pragma acc parallel loop
-            for (int i = 0; i < num_nodes; i++) {
+            for (int i = 0; i < myPointStruct->num_nodes; i++){
                 field[0].u_new[i] = field[0].u[i];
                 field[0].v_new[i] = field[0].v[i];
                 field[0].w_new[i] = field[0].w[i];
@@ -46,17 +45,12 @@ double time_implicit_solver_vectorised(PointStructure* myPointStruct, FieldVaria
         }
     }
 
-    double steady_state_error_par = 0.0;
-    #pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error_par)
-    for (int i = 0; i < num_nodes; i++) {
-        double du = field[0].u[i] - field[0].u_old[i];
-        double dv = field[0].v[i] - field[0].v_old[i];
-        double dw = field[0].w[i] - field[0].w_old[i];
-        steady_state_error_par += du*du + dv*dv + dw*dw;
+    # pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error)
+    for (int i=0; i<myPointStruct[0].num_nodes; i++){
+        steady_state_error += pow(field[0].u[i]-field[0].u_old[i],2) + pow(field[0].v[i]-field[0].v_old[i],2) + pow(field[0].w[i]-field[0].w_old[i],2);
     }
-    return sqrt(steady_state_error_par / num_nodes);
+    return sqrt(steady_state_error/myPointStruct[0].num_nodes);
 }
-
 
 double time_implicit_solver_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field){
     double steady_state_error = 0.0;

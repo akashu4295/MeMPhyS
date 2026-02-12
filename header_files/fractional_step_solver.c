@@ -106,8 +106,8 @@ void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct
     }
     # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
-        field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dudx[i] + field->v[i] * field->dudy[i] + field->w[i] * field->dwdz[i] - parameters.nu *field->lapu[i]);
-        field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dvdx[i] + field->v[i] * field->dvdy[i] + field->w[i] * field->dwdz[i] - parameters.nu * field->lapv[i]);
+        field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dudx[i] + field->v[i] * field->dudy[i] + field->w[i] * field->dudz[i] - parameters.nu *field->lapu[i]);
+        field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dvdx[i] + field->v[i] * field->dvdy[i] + field->w[i] * field->dvdz[i] - parameters.nu * field->lapv[i]);
         field->w_new[i] = field->w[i] - parameters.dt * (field->u[i] * field->dwdx[i] + field->v[i] * field->dwdy[i] + field->w[i] * field->dwdz[i] - parameters.nu * field->lapw[i]);
     }
     /* ---- ENFORCE BOUNDARY CONDITIONS ON u* ---- */
@@ -173,8 +173,6 @@ void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldV
         multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w_new, field->dwdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
         # pragma acc wait(1,2,3)
     }
-    
-    
     # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
     for (int i = 0; i < num_nodes; i++){
         if (myPointStruct->corner_tag[i]) // skip corners
@@ -358,22 +356,36 @@ void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables
     # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
         if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
-            double sumux = 0.0, sumuy = 0.0, sumvx = 0.0, sumvy = 0.0, sumwx = 0.0, sumwy = 0.0;
+            double sumux = 0.0, sumuy = 0.0, sumuz = 0.0;
+            double sumvx = 0.0, sumvy = 0.0, sumvz = 0.0;
+            double sumwx = 0.0, sumwy = 0.0, sumwz = 0.0;
+
             for (int j = 1; j < myPointStruct->num_cloud_points; j++){
-                int k = i*myPointStruct->num_cloud_points + j;
-                sumux -= myPointStruct->Dx[k] * field->u[myPointStruct->cloud_index[k]];
-                sumuy -= myPointStruct->Dy[k] * field->u[myPointStruct->cloud_index[k]];
-                sumvx -= myPointStruct->Dx[k] * field->v[myPointStruct->cloud_index[k]];
-                sumvy -= myPointStruct->Dy[k] * field->v[myPointStruct->cloud_index[k]];
-                sumwx -= myPointStruct->Dx[k] * field->w[myPointStruct->cloud_index[k]];
-                sumwy -= myPointStruct->Dy[k] * field->w[myPointStruct->cloud_index[k]];
-                }
+                int k = i * myPointStruct->num_cloud_points + j;
+                int neighbor = myPointStruct->cloud_index[k];
+                
+                // Collect all neighbor contributions for u, v, and w
+                sumux -= myPointStruct->Dx[k] * field->u[neighbor];
+                sumuy -= myPointStruct->Dy[k] * field->u[neighbor];
+                sumuz -= myPointStruct->Dz[k] * field->u[neighbor];
+
+                sumvx -= myPointStruct->Dx[k] * field->v[neighbor];
+                sumvy -= myPointStruct->Dy[k] * field->v[neighbor];
+                sumvz -= myPointStruct->Dz[k] * field->v[neighbor];
+
+                sumwx -= myPointStruct->Dx[k] * field->w[neighbor];
+                sumwy -= myPointStruct->Dy[k] * field->w[neighbor];
+                sumwz -= myPointStruct->Dz[k] * field->w[neighbor];
+            }
+
             double Ap = myPointStruct->Dx[i*myPointStruct->num_cloud_points] * myPointStruct->x_normal[i]
-                        + myPointStruct->Dy[i*myPointStruct->num_cloud_points] * myPointStruct->y_normal[i]
-                        + myPointStruct->Dz[i*myPointStruct->num_cloud_points] * myPointStruct->z_normal[i];
-            field->u[i] = (sumux * myPointStruct->x_normal[i] + sumuy * myPointStruct->y_normal[i]) / Ap;
-            field->v[i] = (sumvx * myPointStruct->x_normal[i] + sumvy * myPointStruct->y_normal[i]) / Ap;
-            field->w[i] = (sumwx * myPointStruct->x_normal[i] + sumwy * myPointStruct->y_normal[i]) / Ap;
+                    + myPointStruct->Dy[i*myPointStruct->num_cloud_points] * myPointStruct->y_normal[i]
+                    + myPointStruct->Dz[i*myPointStruct->num_cloud_points] * myPointStruct->z_normal[i];
+
+            // Ensure the velocity update projects correctly along the normals
+            field->u[i] = (sumux * myPointStruct->x_normal[i] + sumuy * myPointStruct->y_normal[i] + sumuz * myPointStruct->z_normal[i]) / Ap;
+            field->v[i] = (sumvx * myPointStruct->x_normal[i] + sumvy * myPointStruct->y_normal[i] + sumvz * myPointStruct->z_normal[i]) / Ap;
+            field->w[i] = (sumwx * myPointStruct->x_normal[i] + sumwy * myPointStruct->y_normal[i] + sumwz * myPointStruct->z_normal[i]) / Ap;
         }
         else if (!myPointStruct->boundary_tag[i]){
             field->u[i] = field->u_new[i] - parameters.dt * field->dpdx[i]/parameters.rho;

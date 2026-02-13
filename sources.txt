@@ -11,5 +11,6 @@ header_files/timple_solver.c
 header_files/fractional_step_solver.c
 header_files/write_functions.c
 header_files/initialisation.c
+header_files/openACC_functions.c
 -lm
 -O3

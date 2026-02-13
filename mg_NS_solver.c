@@ -20,7 +20,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "header_files/functions.h"
-#include "header_files/openACC_functions.h"
 
 struct parameters parameters;
 

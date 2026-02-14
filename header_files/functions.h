@@ -73,7 +73,7 @@ void write_processed_grid_data(PointStructure* myPointStruct, int num_levels);
 void make_directory(const char* name);
 int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS);
 int write_vtk_test(char *gmsh_filename, FieldVariables *field, PointStructure* myPS) ;
-
+void check_restart_file(PointStructure* myPointStruct, FieldVariables* field);
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Function Declarations
@@ -140,6 +140,13 @@ double compressible_solver_explicit_2d(PointStructure* myPointStruct, FieldVaria
 void solve_continuity_equation_2d(PointStructure* myPointStruct, FieldVariables* field);
 void solve_momentum_equations_2d(PointStructure* myPointStruct, FieldVariables* field);
 void solve_energy_equation_2d(PointStructure* myPointStruct, FieldVariables* field);
+
+// OpenACC Function Declarations
+void copyin_parameters_to_gpu();
+void copyin_pointstructure_to_gpu(PointStructure* myPointStruct);
+void copyin_field_to_gpu(FieldVariables* field, PointStructure* myPointStruct);
+void copypout_pointstructure_from_gpu(PointStructure* myPointStruct);
+void copypout_field_from_gpu(FieldVariables* field, PointStructure* myPointStruct);
 
 
 #endif

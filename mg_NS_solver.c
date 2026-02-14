@@ -1,15 +1,25 @@
-// Author :  Akash Unnikrishnan and Prof. Surya Pratap Vanka
-// Affiliation : Indian Institute of Technology Gandhinagar
-//                University of Illinois at Urbana Champaign
-//                 Faculty of Physics, University of Warsaw
-// Date : June 2025
-// Version : 2.0
+// Authors: Dr. Akash Unnikrishnan (1,*) and Prof. Surya Pratap Vanka (2)
+//
+// Affiliations:
+// (1) Faculty of Physics, University of Warsaw, Poland
+// (2) University of Illinois at Urbana-Champaign, USA
+//
+// Contribution note:
+// Initial development during PhD research at
+// Indian Institute of Technology Gandhinagar, India
+//
+// Date: February 2026
+// Version: 2.3
+//
+// License: MIT License
+// Contact: akash.unnikrishnan@iitgn.ac.in
 
 ///////////////////////////////////////////////////////////////////////////////
-// NOTES: This code is work in progress for parallelization using OpenACC directives.
-//        However it runs on cpu as well.
-//        compile command: gcc @sources.txt -o a.out  (Linux/MacOS)
-//        compile command: gcc @sources.txt -o a.exe  (Windows)
+// NOTES: To run on CPU compile with the command: gcc @sources.txt -o a.out  (Linux/MacOS) or gcc @sources.txt -o a.exe  (Windows)
+//        To run on GPU compile with the command: gcc -fopenacc @sources.txt -o a.out  (Linux/MacOS) or gcc -fopenacc @sources.txt -o a.exe  (Windows)
+//        For Nvidia GPU, make sure to have the CUDA toolkit installed and properly configured. For AMD GPU, make sure to have the ROCm toolkit installed and properly configured.
+//        For Nvidia GPU, it is recommended to compile with nvc for better performance, but it is not mandatory. For AMD GPU, it is recommended to compile with hipcc for better performance, but it is not mandatory.
+//        Compile command: nvc -acc @sources.txt -o a.out  (Linux/MacOS) or nvc -acc @sources.txt -o a.exe  (Windows) for Nvidia GPU
 //        Run command: ./a.out or ./a.exe (depending on the OS)
 //        The code solves the incompressible Navier-Stokes equations using a fractional step method or time implicit method.
 //        The spatial discretization is done using polyharmonic spline radial basis functions (PHS-RBF) with appended polynomial basis functions.
@@ -20,7 +30,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "header_files/functions.h"
-#include "header_files/openACC_functions.h"
 
 struct parameters parameters;
 
@@ -39,6 +48,7 @@ int main()
     read_complete_mesh_data(myPointStruct, parameters.num_levels);
     printf("Time taken to read the grids and flow parameters: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
     AllocateMemoryFieldVariables(&field, myPointStruct, parameters.num_levels);
+    check_restart_file(&myPointStruct[0], &field[0]);
     parameters.dt = calculate_dt(&myPointStruct[0]);
 
     clock_start = clock();    // Start the clock

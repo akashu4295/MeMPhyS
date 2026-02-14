@@ -188,7 +188,15 @@ void read_flow_parameters(const char *filename)
             parameters.poisson_solver_type = atoi(val);
             printf("PARAMETERS: %s = %hd\n", key, parameters.poisson_solver_type);
         }
-
+        else if (!strcmp(key, "restart")){
+            parameters.restart = atoi(val) != 0;
+            printf("PARAMETERS: %s = %hd\n", key, parameters.restart);
+        }
+        else if (!strcmp(key, "restart_filename")){
+            strncpy(parameters.restart_filename, val, 249);
+            parameters.restart_filename[249] = '\0';
+            printf("PARAMETERS: %s = %s\n", key, parameters.restart_filename);
+        }
         /* ---- compressible block ---- */
 
         else if (!strcmp(key, "compressible_flow")){
@@ -280,7 +288,6 @@ void read_flow_parameters(const char *filename)
     parameters.nu = parameters.mu / parameters.rho;
 }
 
-//tested and working well. Allocation of Pointstructure pointer memory and not the whole structure
 void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* num_levels)
 {   
     FILE *file;
@@ -604,31 +611,72 @@ void read_PointStructure(PointStructure* myPointStruct)
                             assign_node_bc(myPointStruct, e_node4 - 1, bc);
                         }
                     }
+                    if (e_type == 2)  // triangle
+                    {
+                        dx  = myPointStruct->x[e_node2 - 1] - myPointStruct->x[e_node1 - 1];
+                        dy  = myPointStruct->y[e_node2 - 1] - myPointStruct->y[e_node1 - 1];
+                        dz  = myPointStruct->z[e_node2 - 1] - myPointStruct->z[e_node1 - 1];
+                        dx1 = myPointStruct->x[e_node3 - 1] - myPointStruct->x[e_node1 - 1];
+                        dy1 = myPointStruct->y[e_node3 - 1] - myPointStruct->y[e_node1 - 1];
+                        dz1 = myPointStruct->z[e_node3 - 1] - myPointStruct->z[e_node1 - 1];
 
-                    dx  = myPointStruct->x[e_node2 - 1] - myPointStruct->x[e_node1 - 1];
-                    dy  = myPointStruct->y[e_node2 - 1] - myPointStruct->y[e_node1 - 1];
-                    dz  = myPointStruct->z[e_node2 - 1] - myPointStruct->z[e_node1 - 1];
-                    dx1 = myPointStruct->x[e_node3 - 1] - myPointStruct->x[e_node1 - 1];
-                    dy1 = myPointStruct->y[e_node3 - 1] - myPointStruct->y[e_node1 - 1];
-                    dz1 = myPointStruct->z[e_node3 - 1] - myPointStruct->z[e_node1 - 1];
+                        dtemp = dy*dz1 - dz*dy1;
+                        myPointStruct->x_normal[e_node1 - 1] += dtemp;
+                        myPointStruct->x_normal[e_node2 - 1] += dtemp;
+                        myPointStruct->x_normal[e_node3 - 1] += dtemp;
 
-                    dtemp = dy*dz1 - dz*dy1;
-                    myPointStruct->x_normal[e_node1 - 1] += dtemp;
-                    myPointStruct->x_normal[e_node2 - 1] += dtemp;
-                    myPointStruct->x_normal[e_node3 - 1] += dtemp;
-                    if (e_type == 3) myPointStruct->x_normal[e_node4 - 1] += dtemp;
+                        dtemp = dz*dx1 - dx*dz1;
+                        myPointStruct->y_normal[e_node1 - 1] += dtemp;
+                        myPointStruct->y_normal[e_node2 - 1] += dtemp;
+                        myPointStruct->y_normal[e_node3 - 1] += dtemp;
 
-                    dtemp = dz*dx1 - dx*dz1;
-                    myPointStruct->y_normal[e_node1 - 1] += dtemp;
-                    myPointStruct->y_normal[e_node2 - 1] += dtemp;
-                    myPointStruct->y_normal[e_node3 - 1] += dtemp;
-                    if (e_type == 3) myPointStruct->y_normal[e_node4 - 1] += dtemp;
+                        dtemp = dx*dy1 - dy*dx1;
+                        myPointStruct->z_normal[e_node1 - 1] += dtemp;
+                        myPointStruct->z_normal[e_node2 - 1] += dtemp;
+                        myPointStruct->z_normal[e_node3 - 1] += dtemp;
+                    }
+                    else  // e_type == 3 (quad) - split into two triangles
+                    {
+                        // First triangle: nodes 1-2-3
+                        dx  = myPointStruct->x[e_node2 - 1] - myPointStruct->x[e_node1 - 1];
+                        dy  = myPointStruct->y[e_node2 - 1] - myPointStruct->y[e_node1 - 1];
+                        dz  = myPointStruct->z[e_node2 - 1] - myPointStruct->z[e_node1 - 1];
+                        dx1 = myPointStruct->x[e_node3 - 1] - myPointStruct->x[e_node1 - 1];
+                        dy1 = myPointStruct->y[e_node3 - 1] - myPointStruct->y[e_node1 - 1];
+                        dz1 = myPointStruct->z[e_node3 - 1] - myPointStruct->z[e_node1 - 1];
 
-                    dtemp = dx*dy1 - dy*dx1;
-                    myPointStruct->z_normal[e_node1 - 1] += dtemp;
-                    myPointStruct->z_normal[e_node2 - 1] += dtemp;
-                    myPointStruct->z_normal[e_node3 - 1] += dtemp;
-                    if (e_type == 3) myPointStruct->z_normal[e_node4 - 1] += dtemp;
+                        double nx1 = dy*dz1 - dz*dy1;
+                        double ny1 = dz*dx1 - dx*dz1;
+                        double nz1 = dx*dy1 - dy*dx1;
+
+                        // Second triangle: nodes 1-3-4
+                        dx  = myPointStruct->x[e_node3 - 1] - myPointStruct->x[e_node1 - 1];
+                        dy  = myPointStruct->y[e_node3 - 1] - myPointStruct->y[e_node1 - 1];
+                        dz  = myPointStruct->z[e_node3 - 1] - myPointStruct->z[e_node1 - 1];
+                        dx1 = myPointStruct->x[e_node4 - 1] - myPointStruct->x[e_node1 - 1];
+                        dy1 = myPointStruct->y[e_node4 - 1] - myPointStruct->y[e_node1 - 1];
+                        dz1 = myPointStruct->z[e_node4 - 1] - myPointStruct->z[e_node1 - 1];
+
+                        double nx2 = dy*dz1 - dz*dy1;
+                        double ny2 = dz*dx1 - dx*dz1;
+                        double nz2 = dx*dy1 - dy*dx1;
+
+                        // Average and accumulate
+                        myPointStruct->x_normal[e_node1 - 1] += (nx1 + nx2) * 0.5;
+                        myPointStruct->x_normal[e_node2 - 1] += nx1 * 0.5;
+                        myPointStruct->x_normal[e_node3 - 1] += (nx1 + nx2) * 0.5;
+                        myPointStruct->x_normal[e_node4 - 1] += nx2 * 0.5;
+
+                        myPointStruct->y_normal[e_node1 - 1] += (ny1 + ny2) * 0.5;
+                        myPointStruct->y_normal[e_node2 - 1] += ny1 * 0.5;
+                        myPointStruct->y_normal[e_node3 - 1] += (ny1 + ny2) * 0.5;
+                        myPointStruct->y_normal[e_node4 - 1] += ny2 * 0.5;
+
+                        myPointStruct->z_normal[e_node1 - 1] += (nz1 + nz2) * 0.5;
+                        myPointStruct->z_normal[e_node2 - 1] += nz1 * 0.5;
+                        myPointStruct->z_normal[e_node3 - 1] += (nz1 + nz2) * 0.5;
+                        myPointStruct->z_normal[e_node4 - 1] += nz2 * 0.5;
+                    }
                 }
                 else if (e_type == 1)   // line → corners
                 {
@@ -781,14 +829,8 @@ void read_PointStructure(PointStructure* myPointStruct)
         myPointStruct->boundary_tag = temp_boundary_tag;
         myPointStruct->corner_tag = temp_corner_tag;
         myPointStruct->node_bc = temp_node_bc;
-
-        // Update counts
         myPointStruct->num_boundary_nodes -= myPointStruct->num_corners;
         myPointStruct->num_nodes = new_size;
-        // myPointStruct->num_corners is now effectively 0
-
-        // Reindex point_index array if needed
-        // (Depends on what point_index represents in your application)
         for (int i = 0; i < new_size; i++) {
             myPointStruct->point_index[i] = i;
         }

@@ -1,9 +1,6 @@
 // Author :  Akash Unnikrishnan and Prof. Surya Pratap Vanka
 // Affiliation : Indian Institute of Technology Gandhinagar and University of Illinois at Urbana Champaign
 
-#ifndef OPENACC_FUNCTIONS_H
-#define OPENACC_FUNCTIONS_H
-
 #include "structures.h"
 #include "functions.h"
 #include "mat_lib.h"
@@ -212,5 +209,3 @@ void copypout_pointstructure_from_gpu(PointStructure* myPointStruct){
 void copypout_field_from_gpu(FieldVariables* field, PointStructure* myPointStruct){
     # pragma acc exit data copyout(field[:parameters.num_levels])
 }
-
-#endif

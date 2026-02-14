@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: MeMPhyS : Research code by Akash Unnikrishnan
+title: MeMPhyS : Meshless Multi-Physics Solver
 authors:
   - family-names: 
     given-names: Akash Unnikrishnan

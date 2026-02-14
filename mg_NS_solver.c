@@ -1,10 +1,18 @@
-// Author :  Akash Unnikrishnan (1,3) and Prof. Surya Pratap Vanka(2)
+// Authors: Dr. Akash Unnikrishnan (1,*) and Prof. Surya Pratap Vanka (2)
+//
 // Affiliations:
-// (1) PhD student at Indian Institute of Technology Gandhinagar, India
-// (2) Professor at University of Illinois at Urbana Champaign, USA
-// (3) Research Assistant Professor at Faculty of Physics, University of Warsaw, Poland
-// Date : February 2026
-// Version : 2.3
+// (1) Faculty of Physics, University of Warsaw, Poland
+// (2) University of Illinois at Urbana-Champaign, USA
+//
+// Contribution note:
+// Initial development during PhD research at
+// Indian Institute of Technology Gandhinagar, India
+//
+// Date: February 2026
+// Version: 2.3
+//
+// License: MIT License
+// Contact: akash.unnikrishnan@iitgn.ac.in
 
 ///////////////////////////////////////////////////////////////////////////////
 // NOTES: To run on CPU compile with the command: gcc @sources.txt -o a.out  (Linux/MacOS) or gcc @sources.txt -o a.exe  (Windows)

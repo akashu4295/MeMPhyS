@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+title: MeMPhyS : Research code by Akash Unnikrishnan
+authors:
+  - family-names: 
+    given-names: Akash Unnikrishnan
+  - family-names: Vanka
+    given-names: Surya Pratap
+version: 2.3
+date-released: 2026-02

@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "MeMPhyS : Meshless Multi-Physics Solver"
 authors:
-  - family-names: 
-    given-names: "Akash Unnikrishnan"
+  - family-names: "Unnikrishnan"
+    given-names: "Akash"
     orcid: "https://orcid.org/0000-0001-6071-8688"
   - family-names: "Vanka"
     given-names: "Surya Pratap"

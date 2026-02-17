@@ -19,6 +19,13 @@ from src.utils import get_platform
 from src.core import app_state
 from src.callbacks import apply_preferences_callback
 
+from src.config import BC_TYPES, BC_VARIABLES, COLORS
+from src.utils.gmsh_bc_manager import (
+    get_physical_names,
+    get_boundary_condition,
+    set_boundary_condition,
+)
+
 
 def create_about_dialog():
     """

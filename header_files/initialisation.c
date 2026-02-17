@@ -31,6 +31,7 @@ BCType parse_bc_type(const char* s){
     if (!strcmp(s, "supersonic_outlet")) return BC_SUPERSONIC_OUTLET;
     if (!strcmp(s, "subsonic_inlet")) return BC_SUBSONIC_INLET;
     if (!strcmp(s, "subsonic_outlet")) return BC_SUBSONIC_OUTLET;
+    if (!strcmp(s, "interior")) return BC_INTERIOR;
     return BC_INTERIOR;
 }
 

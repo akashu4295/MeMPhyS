@@ -76,6 +76,7 @@ BC_TYPES = [
     "symmetry",
     "periodic",
     "outflow",
+    "interior",
 ]
 
 # Variables that can be set for each BC type
@@ -86,6 +87,7 @@ BC_VARIABLES = {
     "symmetry": [],
     "periodic": [],
     "outflow": [],
+    "interior": [],
 }
 
 # ============================================================
@@ -169,7 +171,7 @@ DEFAULT_MESH_LEVELS = 1
 # Window dimensions
 MAIN_WINDOW_WIDTH = 1280
 MAIN_WINDOW_HEIGHT = 800
-LEFT_PANEL_WIDTH = 320
+LEFT_PANEL_WIDTH = 350
 
 # Plot dimensions
 CONVERGENCE_PLOT_HEIGHT = 300

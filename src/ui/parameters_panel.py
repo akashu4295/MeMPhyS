@@ -36,6 +36,7 @@ from src.callbacks import (
     set_mesh_from_geometry_callback,
     browse_geometry_file_callback,
     select_geometry_file_callback,
+    show_bc_window_callback,
 )
 
 
@@ -204,15 +205,15 @@ def _create_geometry_section(themes: dict):
             dpg.bind_item_theme(new_geo_btn, themes["button_secondary"])
             dpg.bind_item_theme(open_geo_btn, themes["button_secondary"])
         
-    # set_mesh_btn = dpg.add_button(
-    #     label="Set Mesh from Geo",
-    #     callback=set_mesh_from_geometry_callback,
-    #     width=140
-    # )
+    associate_bc_btn = dpg.add_button(
+        label="Set Boundary Conditions",
+        callback=show_bc_window_callback,
+        width=250
+    )
         
-    # # Apply themes
-    # if "button_secondary" in themes:
-    #     dpg.bind_item_theme(set_mesh_btn, themes["button_secondary"])
+    # Apply themes
+    if "button_secondary" in themes:
+        dpg.bind_item_theme(associate_bc_btn, themes["button_secondary"])
     
     # File dialog for .geo files
     dpg.add_file_dialog(

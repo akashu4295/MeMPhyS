@@ -224,17 +224,14 @@ def main():
         
         # Create GUI
         print("\n--- GUI Creation Phase ---")
-        print("Creating GUI components...")
         create_gui(themes)
         
         # Setup viewport
         print("\n--- Viewport Setup Phase ---")
-        print("Setting up viewport...")
         setup_viewport()
         
         # Setup DearPyGUI
         print("\n--- DearPyGUI Setup Phase ---")
-        print("Setting up DearPyGUI...")
         dpg.setup_dearpygui()
         print("DearPyGUI setup complete")
         

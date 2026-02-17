@@ -90,6 +90,11 @@ from .geometry_callbacks import (
     set_mesh_from_geometry_callback,
 )
 
+# Boundary Conditions callbacks
+from .bc_window_callbacks import (
+    show_bc_window_callback,
+)
+
 __all__ = [
     # Solver callbacks
     'run_solver_callback',
@@ -147,4 +152,7 @@ __all__ = [
     'show_application_state_callback',
     'check_for_updates_callback',
     'report_bug_callback',
+
+    # boundary conditions callbacks
+    'show_bc_window_callback',
 ]

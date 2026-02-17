@@ -51,3 +51,4 @@ COMP*
 bc2*
 .build*
 header_files/legacy
+*_pycache_*

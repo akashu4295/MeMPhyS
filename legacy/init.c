@@ -4,14 +4,10 @@
 #ifndef INIT_C
 #define INIT_C
 
-#include "structures.h"
+#include "src/c_header_files/structures.h" // Make sure to include the correct path to structures.h
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-
-
-void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
-void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
 
 void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels)
 {

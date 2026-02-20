@@ -29,7 +29,7 @@
 //        Please send your feedbacks and suggestions to akash.unnikrishnan@iitgn.ac.in
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "header_files/functions.h"
+#include "src/c_header_files/functions.h"
 
 struct parameters parameters;
 

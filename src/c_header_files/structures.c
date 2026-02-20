@@ -226,6 +226,42 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
     }
 }
 
+__attribute__((weak)) // This function can be overridden by a user-defined function in another file
+void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels)
+{
+    for (int ii = 0; ii < numlevels; ii++){
+        for (int i = 0; i < myPointStruct[ii].num_nodes; i++){
+            myPointStruct[ii].node_bc[i].type = BC_INTERIOR;
+            myPointStruct[ii].node_bc[i].u = 0;
+            myPointStruct[ii].node_bc[i].v = 0;
+            myPointStruct[ii].node_bc[i].w = 0;
+            myPointStruct[ii].node_bc[i].p = 0;
+            myfieldvariables[ii].u[i] = 0;
+            myfieldvariables[ii].v[i] = 0;
+            myfieldvariables[ii].w[i] = 0;
+            myfieldvariables[ii].p[i] = 0;
+            myfieldvariables[ii].p_old[i] = 0;
+        }
+        if (parameters.compressible_flow){
+            for (int i = 0; i < myPointStruct->num_nodes; i++) {
+                myPointStruct[ii].node_bc[i].T = 0.0;
+                myPointStruct[ii].node_bc[i].rho = 0.0;
+                myPointStruct[ii].node_bc[i].p_total = 0.0;
+                myPointStruct[ii].node_bc[i].T_total = 0.0;
+                myfieldvariables->T[i] = 0.0;  // e.g., 300 K
+                myfieldvariables->rho[i] = 0.0;           // Ideal gas law
+                myfieldvariables->e[i] = 0.0;             // Internal energy
+            }
+        }
+    }
+}
+
+__attribute__((weak)) // This function can be overridden by a user-defined function in another file
+void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels)
+{
+    // Do Nothing for now - this function will be used to set specific boundary conditions after initialization
+}
+
 void free_PointStructure(PointStructure* myPointStruct, int num_levels) {
     for (int i = 0; i < num_levels; i++) {
         free(myPointStruct[i].x);

@@ -1,4 +1,5 @@
-Outlet,pressure_outlet,p=0.0
-Fluid,interior
-Wall,wall,u=0.0,v=0.0,w=0.0
-Inlet,velocity_inlet,u=0.0,v=0.0,w=1.0
+bottom,wall,u=0.0,v=0.0,w=0.0
+outlet,pressure_outlet,p=0.0
+top,wall,u=0.0,v=0.0,w=0.0
+fluid,interior
+inlet,velocity_inlet,u=1.0,v=0.0,w=0.0

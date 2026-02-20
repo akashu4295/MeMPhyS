@@ -4,7 +4,7 @@
 #ifndef INIT_C
 #define INIT_C
 
-#include "header_files/structures.h"
+#include "structures.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>

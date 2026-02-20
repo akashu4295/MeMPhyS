@@ -31,7 +31,7 @@ from .constants import (
     # Solver
     SOLVER_METHODS,
     DEFAULT_SOLVER_METHOD,
-    
+    Poisson_SOLVER_METHODS,
     # File names
     PARAMS_CSV,
     GRID_CSV,

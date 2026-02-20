@@ -110,7 +110,7 @@ BASE_PARAMETERS = {
     "courant_number": 0.3,
     "steady_tolerance": 1e-8,
     "poisson_solver_tolerance": 1e-8,
-    "sor_parameter": 1.6,
+    "sor_parameter": 0.5,
     "time_step": 0.1,
     "num_time_steps": 100000,
     "write_interval": 50,
@@ -134,11 +134,16 @@ FIXED_PARAMETERS = {
     "facdt": "1",
 }
 
+RESTART_PARAMETERS = {
+    "restart": "0",
+    "restart_filename": "Solution.csv",
+}
 # ============================================================
 # Solver Method Options
 # ============================================================
 
 SOLVER_METHODS = ["Fractional Step", "Time Implicit"]
+Poisson_SOLVER_METHODS = ["Jacobi", "Gauss-Seidel", "BiCGStab"]
 DEFAULT_SOLVER_METHOD = "Fractional Step"
 
 # ============================================================

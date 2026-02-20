@@ -1,48 +1,23 @@
-domain_dimensions,3
+domain_dimensions,2
 poly_deg,3
 phs_deg,3
 cloud_size_multiplier,2
 test_derivative,0
 courant_number,0.3
 steady_tolerance,1e-08
-poisson_solver_tolerance,1e-8
+poisson_solver_tolerance,1e-08
 sor_parameter,0.5
 time_step,0.1
-num_time_steps,1000
+num_time_steps,100000
 write_interval,50
 Re,10
 iter_momentum,5
 iter_timple,1
-num_vcycles,1
-num_relax,1000
-fractional_step,0
+num_vcycles,10
+num_relax,50
+fractional_step,1
+Poisson_solver_type,1
+neumann_flag_boundary,1
 facRe,1
 facdt,1
-Poisson_solver_type,1
-
-/* 
-Poisson_solver_type = 
-1 - Jacobi
-2 - Gauss Seidel
-3 - Bicgstab
-*/
-
-// Restart parameters
 restart,0
-restart_filename,Solution.csv
-
-// Compressible flow parameters
-compressible_flow,0
-gamma,1.4
-R_gas,287
-Pr,0.71
-Cv,717.5
-Cp,1004.5
-T_ref,300
-rho_ref,1.117
-p_ref,101325
-mu_ref,1.85e-5
-T_sutherland,110.4
-viscosity_model,0
-Mach,0.4
-energy_equation,0

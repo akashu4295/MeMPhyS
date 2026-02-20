@@ -19,6 +19,7 @@ Example:
 # Solver callbacks
 from .solver_callbacks import (
     run_solver_callback,
+    run_solver_callback_gpu,
     on_solver_complete,
     validate_numeric_input,
     show_implicit_callback,

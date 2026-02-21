@@ -30,9 +30,14 @@ endif
 
 # Files
 
-SRC_DIR = header_files
+# Files
+
+SRC_DIR = src/c_header_files
 SRC = $(wildcard $(SRC_DIR)/*.c)
+
 INIT = init.c
+INIT_SRC := $(wildcard $(INIT))   # Will be empty if file doesn't exist
+
 MAIN = mg_NS_solver.c
 TARGET = a.out
 MODE_FILE = .build_mode
@@ -42,9 +47,12 @@ MODE_FILE = .build_mode
 
 all: check_mode $(TARGET)
 
-$(TARGET): $(SRC) $(INIT) $(MAIN)
+$(TARGET): $(SRC) $(MAIN) $(INIT_SRC)
 	@echo $(GPU_MSG)
-	$(CC) $(SRC) $(INIT) $(MAIN) $(CFLAGS) -o $(TARGET) $(LDFLAGS)
+	@if [ -z "$(INIT_SRC)" ]; then \
+	    echo "WARNING: $(INIT) not found. Using zero-initialisation fallback."; \
+	fi
+	$(CC) $(SRC) $(INIT_SRC) $(MAIN) $(CFLAGS) -o $(TARGET) $(LDFLAGS)
 
 check_mode:
 	@if [ -f $(MODE_FILE) ] && [ "`cat $(MODE_FILE)`" != "$(MODE)" ]; then \

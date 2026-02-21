@@ -12,6 +12,7 @@ from src.config import (
     IMPLICIT_PARAMETERS,
     MULTIGRID_PARAMETERS,
     SOLVER_METHODS,
+    Poisson_SOLVER_METHODS,
     DEFAULT_SOLVER_METHOD,
     MAX_MESH_LEVELS,
     LEFT_PANEL_WIDTH,
@@ -39,82 +40,99 @@ from src.callbacks import (
     show_bc_window_callback,
 )
 
-
 def create_parameters_panel(themes: dict) -> int:
-    """
-    Create the left panel with parameters and controls
-    
-    Args:
-        themes: Dictionary of theme IDs
-    
-    Returns:
-        Child window tag/ID
-    """
     with dpg.child_window(
         width=LEFT_PANEL_WIDTH,
         border=True,
         tag="parameters_panel"
     ) as panel:
-                
 
-        # Header
-        dpg.add_text("Input & Parameters", color=COLORS["header"])
-        dpg.add_spacer(height=5)
-        
-        # Solver Method Selection
-        _create_solver_method_section()
-        
-        dpg.add_separator()
-        
-        # Flow Parameters
-        _create_flow_parameters_section()
-        
-        # Implicit Parameters (hidden by default)
-        _create_implicit_parameters_section()
-        
-        dpg.add_separator()
-        
-        # Multigrid Section
-        _create_multigrid_section()
-        
-        # Header
-        dpg.add_text("Create Geometry or Browse", color=COLORS["header"])
-        
-        # Solver Method Selection
+        _panel_header("Geometry and Grids")
         _create_geometry_section(themes)
+        _create_multigrid_section()
+        _create_mesh_files_section(themes)   # BC button lives at bottom of this
 
-        # Mesh File Selection
-        _create_mesh_files_section()
-        
-        dpg.add_separator()
-        
-        # Initialization File Selection
+        _section_gap()
+        _panel_header("Solver Configuration")
+        _create_solver_method_section(themes)
+        _create_poisson_solver_method_section()
+
+        _section_gap()
+        _panel_header("Flow Parameters")
+        _create_flow_parameters_section()
+        _create_implicit_parameters_section()
+
+        _section_gap()
+        _panel_header("Initial and Restart Conditions")
         _create_init_file_section()
-        
-        dpg.add_spacer(height=10)
-        
-        # Run Button
+        dpg.add_spacer(height=6)
+        _create_restart_file_section()
+
+        _section_gap()
         _create_run_button(themes)
-    
+
     return panel
 
+# ── Visual helpers ─────────────────────────────────────────────────────────────
 
-def _create_solver_method_section():
-    """Create solver method selection combo box"""
-    dpg.add_text("Solver Method")
-    dpg.add_combo(
-        items=SOLVER_METHODS,
-        default_value=DEFAULT_SOLVER_METHOD,
-        tag="solver_method",
-        width=200,
-        callback=show_implicit_callback
-    )
+def _panel_header(title: str):
+    """Visually distinct section header with accent bar effect."""
+    dpg.add_spacer(height=2)
+    dpg.add_text(title, color=COLORS["header"])
+    dpg.add_separator()
+    dpg.add_spacer(height=2)
+
+
+def _section_gap():
+    """Consistent vertical breathing room between sections."""
+    dpg.add_spacer(height=8)
+
+
+def _labeled_row(label: str, widget_fn, *args, **kwargs):
+    """Helper to put a fixed-width label beside any widget."""
+    with dpg.group(horizontal=True):
+        dpg.add_text(f"{label:<22}")   # pad to align widgets
+        return widget_fn(*args, **kwargs)
+
+
+# ── Sections ───────────────────────────────────────────────────────────────────
+
+def _create_solver_method_section(themes: dict):
+    with dpg.group(horizontal=True):
+        dpg.add_text("Method", color=COLORS["subheader"])
+        dpg.add_combo(
+            items=SOLVER_METHODS,
+            default_value=DEFAULT_SOLVER_METHOD,
+            tag="solver_method",
+            width=PARAMETER_INPUT_WIDTH + 80,
+            callback=show_implicit_callback
+        )
+    with dpg.tooltip("solver_method"):
+        dpg.add_text("Select the solver method for the Navier-Stokes equations",
+                     color=COLORS["info"])
+        dpg.add_separator()
+        dpg.add_text("Implicit: more stable for large time steps, solves a linear system each step.")
+        dpg.add_text("Explicit: faster for small meshes/time steps, needs careful stability tuning.")
+
+
+def _create_poisson_solver_method_section():
+    with dpg.group(horizontal=True, tag="poisson_solver_method_group"):
+        dpg.add_text("Poisson Solver", color=COLORS["subheader"])
+        dpg.add_combo(
+            items=Poisson_SOLVER_METHODS,
+            default_value=Poisson_SOLVER_METHODS[0],
+            tag="poisson_solver_method",
+            width=PARAMETER_INPUT_WIDTH+25,
+        )
+    with dpg.tooltip("poisson_solver_method_group"):
+        dpg.add_text("Select the solver type for the Poisson equation",
+                     color=COLORS["info"])
+        dpg.add_separator()
+        dpg.add_text("Multigrid: efficient for large problems.")
+        dpg.add_text("Direct: faster for smaller meshes.")
 
 
 def _create_flow_parameters_section():
-    """Create flow parameters input section"""
-    dpg.add_text("Flow Parameters", color=COLORS["subheader"])
-    
     for pname, pval in BASE_PARAMETERS.items():
         tag = f"param_{pname}"
         dpg.add_input_text(
@@ -128,7 +146,6 @@ def _create_flow_parameters_section():
 
 
 def _create_implicit_parameters_section():
-    """Create implicit solver parameters (hidden by default)"""
     for pname, pval in IMPLICIT_PARAMETERS.items():
         tag = f"param_{pname}"
         dpg.add_input_text(
@@ -143,37 +160,32 @@ def _create_implicit_parameters_section():
 
 
 def _create_multigrid_section():
-    """Create multigrid enable checkbox and parameters"""
-    # Multigrid toggle
     dpg.add_checkbox(
         label="Enable Multigrid",
         tag="multigrid_toggle",
         callback=show_multigrid_callback
     )
-    
-    # Multigrid parameters group (hidden by default)
-    with dpg.group(
-        horizontal=False,
-        tag="multigrid_parameters_section",
-        show=False
-    ):
-        dpg.add_text("Multigrid Parameters", color=COLORS["success"])
-        
-        # Multigrid parameter inputs
+    with dpg.tooltip("multigrid_toggle"):
+        dpg.add_text("Enable multigrid solver with multiple mesh levels",
+                     color=COLORS["info"])
+        dpg.add_separator()
+        dpg.add_text("Provide mesh files finest -> coarsest.")
+        dpg.add_text("Number of files must match the mesh levels specified below.")
+
+    with dpg.group(horizontal=False, tag="multigrid_parameters_section", show=False):
+        dpg.add_spacer(height=4)
+        dpg.add_text("Multigrid Parameters", color=COLORS["subheader"])
         for pname, pval in MULTIGRID_PARAMETERS.items():
-            tag = f"param_{pname}"
             dpg.add_input_text(
                 label=pname,
-                tag=tag,
+                tag=f"param_{pname}",
                 default_value=str(pval),
                 width=PARAMETER_INPUT_WIDTH,
                 callback=validate_numeric_input,
                 on_enter=True
             )
-        
-        # Number of mesh levels
         dpg.add_input_int(
-            label="Number of mesh levels",
+            label="Mesh levels",
             default_value=1,
             min_value=1,
             max_value=MAX_MESH_LEVELS,
@@ -181,41 +193,47 @@ def _create_multigrid_section():
             tag="num_mesh_levels",
             callback=update_mesh_inputs_callback
         )
+        dpg.add_spacer(height=4)
 
 
 def _create_geometry_section(themes: dict):
-    """Create geometry/Gmsh section"""
-    dpg.add_text("Geometry (Gmsh)", color=COLORS["success"])
-    
+    dpg.add_text(
+        "Create geometry in Gmsh, use a .geo file, or browse for an existing .msh file",
+        color=COLORS["success"],
+        wrap=LEFT_PANEL_WIDTH - 20
+    )
+    dpg.add_spacer(height=4)
+
     with dpg.group(horizontal=True):
         new_geo_btn = dpg.add_button(
-            label="Open Gmsh",
+            label="Open Gmsh GUI",
             callback=launch_gmsh_callback,
-            width=120
+            width=130
         )
-        
         open_geo_btn = dpg.add_button(
-            label="Open Geometry",
+            label="Use .geo File",
             callback=browse_geometry_file_callback,
-            width=120
+            width=130
         )
 
-        # Apply themes
-        if "button_secondary" in themes:
-            dpg.bind_item_theme(new_geo_btn, themes["button_secondary"])
-            dpg.bind_item_theme(open_geo_btn, themes["button_secondary"])
-        
-    associate_bc_btn = dpg.add_button(
-        label="Set Boundary Conditions",
-        callback=show_bc_window_callback,
-        width=250
-    )
-        
-    # Apply themes
+    with dpg.tooltip(new_geo_btn):
+        dpg.add_text("Open the Gmsh GUI for geometry creation", color=COLORS["info"])
+        dpg.add_separator()
+        dpg.add_text("1. Name boundaries for correct BC association")
+        dpg.add_text("2. Save mesh as .msh (ASCII v2)")
+        dpg.add_text("3. Load the .msh file below")
+
+    with dpg.tooltip(open_geo_btn):
+        dpg.add_text("Select a .geo file to generate the mesh from", color=COLORS["info"])
+        dpg.add_separator()
+        dpg.add_text("1. Name boundaries for correct BC association")
+        dpg.add_text("2. Save and select the .geo file here")
+        dpg.add_text("3. Mesh is generated and loaded automatically")
+
     if "button_secondary" in themes:
-        dpg.bind_item_theme(associate_bc_btn, themes["button_secondary"])
-    
-    # File dialog for .geo files
+        dpg.bind_item_theme(new_geo_btn, themes["button_secondary"])
+        dpg.bind_item_theme(open_geo_btn, themes["button_secondary"])
+
     dpg.add_file_dialog(
         directory_selector=False,
         tag="file_dialog_geometry",
@@ -224,36 +242,27 @@ def _create_geometry_section(themes: dict):
         width=FILE_DIALOG_WIDTH,
         height=FILE_DIALOG_HEIGHT
     )
-    dpg.add_file_extension(".geo", parent="file_dialog_geometry", color=(150, 255, 150, 255))
+    dpg.add_file_extension(".geo",          parent="file_dialog_geometry", color=(150, 255, 150, 255))
     dpg.add_file_extension(".geo_unrolled", parent="file_dialog_geometry", color=(150, 255, 150, 255))
-    
-    dpg.add_spacer(height=5)
+    dpg.add_spacer(height=4)
 
 
-def _create_mesh_files_section():
-    """Create mesh file selection section"""
+def _create_mesh_files_section(themes: dict):
     with dpg.group(tag="multigrid_mesh_section"):
-        dpg.add_text("Choose Mesh Files", color=COLORS["success"])
-        dpg.add_text("(finest to coarsest if multigrid)", color=COLORS["success"])
-        
-        # Create mesh file inputs for all levels
+        dpg.add_text("Mesh files  (finest to coarsest)",
+                     color=COLORS["success"], tag="multigrid_hint_text", show=False)
+        dpg.add_spacer(height=3)
+
         for i in range(MAX_MESH_LEVELS):
             idx = i + 1
-            show_initial = (i == 0)  # Only show first one initially
-            
-            # Group for each mesh level
-            with dpg.group(
-                horizontal=True,
-                show=show_initial,
-                tag=f"mesh_group_{idx}"
-            ):
+            show_initial = (i == 0)
+            with dpg.group(horizontal=True, show=show_initial, tag=f"mesh_group_{idx}"):
                 dpg.add_input_text(
                     tag=f"mesh_file_{idx}",
-                    hint=f"Mesh file {idx} (choose or type path)",
+                    hint=f"Mesh {idx}",
                     width=MESH_PATH_INPUT_WIDTH,
                     show=show_initial
                 )
-                
                 dpg.add_button(
                     label="Browse",
                     tag=f"browse_{idx}",
@@ -261,94 +270,116 @@ def _create_mesh_files_section():
                     user_data=idx,
                     show=show_initial
                 )
-        
-        # Create file dialogs for mesh files
+
         for i in range(MAX_MESH_LEVELS):
             idx = i + 1
             dialog_tag = f"file_dialog_{idx}"
-            input_tag = f"mesh_file_{idx}"
-            
             dpg.add_file_dialog(
                 directory_selector=False,
                 tag=dialog_tag,
-                user_data=input_tag,
+                user_data=f"mesh_file_{idx}",
                 callback=select_mesh_file_callback,
                 show=False,
                 width=FILE_DIALOG_WIDTH,
                 height=FILE_DIALOG_HEIGHT
             )
-            
-            # Add file extension filter
             if ".msh" in FILE_EXTENSIONS:
-                dpg.add_file_extension(
-                    ".msh",
-                    parent=dialog_tag,
-                    color=FILE_EXTENSIONS[".msh"]
-                )
+                dpg.add_file_extension(".msh", parent=dialog_tag, color=FILE_EXTENSIONS[".msh"])
+
+    dpg.add_spacer(height=6)
+    associate_bc_btn = dpg.add_button(
+        label="Set Boundary Conditions",
+        callback=show_bc_window_callback,
+        width=270
+    )
+    with dpg.tooltip(associate_bc_btn):
+        dpg.add_text("Open the boundary condition association window",
+                     color=COLORS["info"])
+    if "button_secondary" in themes:
+        dpg.bind_item_theme(associate_bc_btn, themes["button_secondary"])
 
 
 def _create_init_file_section():
-    """Create initialization file selection section"""
-    dpg.add_text("Choose the initialisation file", color=COLORS["subheader"])
-    
-    with dpg.group(horizontal=True, show=True, tag="init_group"):
-        dpg.add_input_text(
-            hint="Path to Initialisation file",
-            tag="init_path",
-            width=MESH_PATH_INPUT_WIDTH,
-            show=True
-        )
-        
-        dpg.add_button(
-            label="Browse",
-            tag="init_browse",
-            callback=open_file_dialog_callback,
-            user_data="init",
-            show=True
-        )
-    
-    # File dialog for init file
-    dpg.add_file_dialog(
-        directory_selector=False,
-        tag="file_dialog_init",
-        user_data="init_path",
-        callback=select_mesh_file_callback,
-        show=False,
-        width=FILE_DIALOG_WIDTH,
-        height=FILE_DIALOG_HEIGHT
+    dpg.add_checkbox(
+        label="Initialise with user-defined conditions",
+        tag="init_toggle",
+        callback=show_init_callback
     )
-    
-    # Add .c file extension filter
+    with dpg.tooltip("init_toggle"):
+        dpg.add_text("Provide a .c file defining custom initial conditions",
+                     color=COLORS["info"])
+        dpg.add_separator()
+        dpg.add_text("See 'init.c' in the repository for a template.")
+
+    with dpg.group(horizontal=True, show=False, tag="init_group"):
+        dpg.add_input_text(hint="Path to initialisation file", tag="init_path",
+                           width=MESH_PATH_INPUT_WIDTH)
+        dpg.add_button(label="Browse", tag="init_browse",
+                       callback=open_file_dialog_callback, user_data="init")
+
+    dpg.add_file_dialog(
+        directory_selector=False, tag="file_dialog_init",
+        user_data="init_path", callback=select_mesh_file_callback,
+        show=False, width=FILE_DIALOG_WIDTH, height=FILE_DIALOG_HEIGHT
+    )
     if ".c" in FILE_EXTENSIONS:
-        dpg.add_file_extension(
-            ".c",
-            parent="file_dialog_init",
-            color=FILE_EXTENSIONS[".c"]
-        )
+        dpg.add_file_extension(".c", parent="file_dialog_init",
+                               color=FILE_EXTENSIONS[".c"])
+
+
+def _create_restart_file_section():
+    dpg.add_checkbox(
+        label="Restart from previous run",
+        tag="restart_toggle",
+        callback=show_restart_callback
+    )
+    with dpg.tooltip("restart_toggle"):
+        dpg.add_text("Provide a .csv restart file from a previous run",
+                     color=COLORS["info"])
+        dpg.add_separator()
+        dpg.add_text("Must use the same mesh file as the original run.")
+
+    with dpg.group(horizontal=True, show=False, tag="restart_group"):
+        dpg.add_input_text(hint="Path to restart file", tag="restart_path",
+                           width=MESH_PATH_INPUT_WIDTH)
+        dpg.add_button(label="Browse", tag="restart_browse",
+                       callback=open_file_dialog_callback, user_data="restart")
+
+    dpg.add_file_dialog(
+        directory_selector=False, tag="file_dialog_restart",
+        user_data="restart_path", callback=select_mesh_file_callback,
+        show=False, width=FILE_DIALOG_WIDTH, height=FILE_DIALOG_HEIGHT
+    )
+    if ".csv" in FILE_EXTENSIONS:
+        dpg.add_file_extension(".csv", parent="file_dialog_restart",
+                               color=FILE_EXTENSIONS[".csv"])
 
 
 def _create_run_button(themes: dict):
-    """Create the main run button"""
-    compile_btn = dpg.add_button(
+    dpg.add_checkbox(label="Run on GPU (if supported)", tag="gpu_toggle")
+    dpg.add_spacer(height=6)
+    run_btn = dpg.add_button(
         label="Compile and Run Solver",
-        width=RUN_BUTTON_WIDTH,
+        width=270,
         height=RUN_BUTTON_HEIGHT,
         callback=run_solver_callback,
         tag="run_solver_button"
     )
-    
-    # Add tooltip
-    with dpg.tooltip(compile_btn):
-        dpg.add_text(
-            "Click to compile and execute the solver",
-            color=COLORS["info"]
-        )
+    with dpg.tooltip(run_btn):
+        dpg.add_text("Compile and execute the solver", color=COLORS["info"])
         dpg.add_separator()
-        dpg.add_text("This will:")
-        dpg.add_text("  1. Write configuration files")
-        dpg.add_text("  2. Compile all C source files")
-        dpg.add_text("  3. Run the solver executable")
-    
-    # Apply button theme
+        dpg.add_text("1. Writes configuration files")
+        dpg.add_text("2. Compiles C sources with gcc")
+        dpg.add_text("3. Runs the solver executable")
+
     if "button" in themes:
-        dpg.bind_item_theme(compile_btn, themes["button"])
+        dpg.bind_item_theme(run_btn, themes["button"])
+
+
+# ── Callbacks (unchanged) ──────────────────────────────────────────────────────
+
+def show_restart_callback(sender, app_data, user_data):
+    dpg.configure_item("restart_group", show=app_data)
+
+def show_init_callback(sender, app_data, user_data):
+    dpg.configure_item("init_group", show=app_data)

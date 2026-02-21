@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 # ============================================================
 
 LOG_DIR = "./logs"
-HEADER_DIR = "header_files"
+HEADER_DIR = "src/c_header_files"
 OUTPUT_DIR = "./output"
 
 # Create directories if they don't exist
@@ -110,7 +110,7 @@ BASE_PARAMETERS = {
     "courant_number": 0.3,
     "steady_tolerance": 1e-8,
     "poisson_solver_tolerance": 1e-8,
-    "sor_parameter": 1.6,
+    "sor_parameter": 0.5,
     "time_step": 0.1,
     "num_time_steps": 100000,
     "write_interval": 50,
@@ -134,11 +134,16 @@ FIXED_PARAMETERS = {
     "facdt": "1",
 }
 
+RESTART_PARAMETERS = {
+    "restart": "0",
+    "restart_filename": "Solution.csv",
+}
 # ============================================================
 # Solver Method Options
 # ============================================================
 
 SOLVER_METHODS = ["Fractional Step", "Time Implicit"]
+Poisson_SOLVER_METHODS = ["Jacobi", "Gauss-Seidel", "BiCGStab"]
 DEFAULT_SOLVER_METHOD = "Fractional Step"
 
 # ============================================================
@@ -272,7 +277,8 @@ FILE_DIALOG_HEIGHT = 400
 
 COLORS = {
     "header": (200, 220, 255),
-    "subheader": (255, 220, 160),
+    # "subheader": (255, 220, 160),
+    "subheader": (160, 185, 220),
     "success": (200, 255, 200),
     "warning": (255, 220, 100),
     "error": (255, 100, 100),
@@ -286,8 +292,8 @@ COLORS = {
 # ============================================================
 
 APP_NAME = "MeMPhyS"
-APP_VERSION = "2.2"
-APP_FULL_NAME = "MeMPhyS v2.2"
+APP_VERSION = "2.5.1"
+APP_FULL_NAME = "MeMPhyS"
 APP_SUBTITLE = "Meshless Multi-Physics Solver"
 
 # Team information

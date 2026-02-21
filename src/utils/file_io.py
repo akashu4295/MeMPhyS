@@ -117,8 +117,23 @@ def read_parameters_from_gui() -> Dict[str, Any]:
         solver_method = dpg.get_value("solver_method")
         params["fractional_step"] = 1 if solver_method == "Fractional Step" else 0
     
+    # Read Poisson solver method
+    if dpg.does_item_exist("poisson_solver_method"):
+        poisson_solver_method = dpg.get_value("poisson_solver_method")
+        if poisson_solver_method == "Jacobi":
+            params["Poisson_solver_type"] = "1"
+        elif poisson_solver_method == "Gauss-Seidel":
+            params["Poisson_solver_type"] = "2"
+        elif poisson_solver_method == "BiCGStab":
+            params["Poisson_solver_type"] = "3"
     # Add fixed parameters
     params.update(FIXED_PARAMETERS)
+
+    # Add restart parameters
+    if dpg.does_item_exist("restart_toggle"):
+        params["restart"] = "1" if dpg.get_value("restart_toggle") else "0"
+    if dpg.does_item_exist("restart_file_path"):
+        params["restart_filename"] = dpg.get_value("restart_file_path")
     
     return params
 

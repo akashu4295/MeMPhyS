@@ -31,7 +31,7 @@ from .constants import (
     # Solver
     SOLVER_METHODS,
     DEFAULT_SOLVER_METHOD,
-    
+    Poisson_SOLVER_METHODS,
     # File names
     PARAMS_CSV,
     GRID_CSV,
@@ -132,7 +132,7 @@ from .themes import (
     create_success_button_theme,
     create_error_button_theme,
     initialize_all_themes,
-    apply_global_theme,
+    apply_dark_theme,
     apply_light_theme,
     toggle_theme,
 )
@@ -217,5 +217,6 @@ __all__ = [
     'create_success_button_theme',
     'create_error_button_theme',
     'initialize_all_themes',
-    'apply_global_theme',
+    'apply_dark_theme',
+    'apply_light_theme',
 ]

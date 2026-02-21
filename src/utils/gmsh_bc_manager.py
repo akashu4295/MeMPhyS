@@ -275,19 +275,6 @@ def set_last_gmsh_file(filepath: str):
     _last_gmsh_file = filepath
 
 
-def get_mesh_from_gmsh_file(geo_file: str) -> str:
-    """
-    Get the corresponding .msh file for a .geo file
-    
-    Args:
-        geo_file: Path to .geo file
-        
-    Returns:
-        Path to .msh file (same name, different extension)
-    """
-    return str(Path(geo_file).with_suffix('.msh'))
-
-
 def validate_bc_assignment() -> Tuple[bool, List[str]]:
     """
     Validate that all physical names have boundary conditions assigned

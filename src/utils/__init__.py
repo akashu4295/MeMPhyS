@@ -117,7 +117,7 @@ from .gmsh_bc_manager import (
     read_bc_csv,
     get_last_gmsh_file,
     set_last_gmsh_file,
-    get_mesh_from_gmsh_file,
+    # get_mesh_from_gmsh_file,
     validate_bc_assignment,
 )
 

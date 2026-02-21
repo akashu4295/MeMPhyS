@@ -64,7 +64,7 @@ class SolverRunner:
             FileNotFoundError: If required files are missing
         """
         source_files = []
-        
+        init_on = dpg.get_value("init_toggle")
         # Add header files
         if os.path.exists(HEADER_DIR):
             header_c_files = glob.glob(os.path.join(HEADER_DIR, "*.c"))
@@ -74,14 +74,15 @@ class SolverRunner:
             logger.warning(f"Header directory not found: {HEADER_DIR}")
         
         # Add initialization file
-        if init_file:
-            if validate_file_path(init_file, must_exist=True):
-                source_files.append(init_file)
-                logger.debug(f"Added init file: {init_file}")
+        if init_on:
+            if init_file:
+                if validate_file_path(init_file, must_exist=True):
+                    source_files.append(init_file)
+                    logger.debug(f"Added init file: {init_file}")
+                else:
+                    raise FileNotFoundError(f"Initialization file not found: {init_file}")
             else:
-                raise FileNotFoundError(f"Initialization file not found: {init_file}")
-        else:
-            raise FileNotFoundError("No initialization file specified")
+                raise FileNotFoundError("No initialization file specified")
         
         # Add main solver file
         if validate_file_path(SOLVER_SOURCE, must_exist=True):
@@ -104,7 +105,7 @@ class SolverRunner:
         else:
             return SOLVER_EXECUTABLE_UNIX
     
-    def build_compile_command(self, source_files: List[str]) -> List[str]:
+    def build_compile_command(self, source_files: List[str], compiler: str = "gcc") -> List[str]:
         """
         Build the compilation command
         
@@ -115,13 +116,16 @@ class SolverRunner:
             Command as list of arguments
         """
         output_exe = self.get_output_executable()
-        
-        cmd = [COMPILER] + source_files + COMPILER_FLAGS + ["-o", output_exe]
+        if compiler == "nvc":
+            # Example for NVIDIA HPC SDK compiler
+            cmd = [compiler] + ["-acc", "-Minfo=accel", "-O3"] + source_files + COMPILER_FLAGS + ["-o", output_exe]
+        else:
+            cmd = [compiler] + source_files + COMPILER_FLAGS + ["-o", output_exe]
         
         logger.debug(f"Compile command: {' '.join(cmd)}")
         return cmd
     
-    def compile_solver(self, init_file: str) -> Tuple[bool, str, str]:
+    def compile_solver(self, init_file: str, compiler: str = "gcc") -> Tuple[bool, str, str]:
         """
         Compile the solver
         
@@ -135,11 +139,13 @@ class SolverRunner:
             logger.info("Starting compilation...")
             
             # Collect source files
+            init_on = dpg.get_value("init_toggle")
+            
             source_files = self.collect_source_files(init_file)
             logger.info(f"Compiling {len(source_files)} source files")
             
             # Build compile command
-            compile_cmd = self.build_compile_command(source_files)
+            compile_cmd = self.build_compile_command(source_files, compiler=compiler)
             
             # Run compilation
             self.compile_process = subprocess.Popen(
@@ -272,7 +278,7 @@ class SolverRunner:
             except Exception as e:
                 logger.log_exception(e, "Error in solver completion callback")
     
-    def compile_and_run(self, init_file: str, button_tag: Optional[str] = None,
+    def compile_and_run(self, init_file: str, compiler: str = "gcc", button_tag: Optional[str] = None,
                        on_complete: Optional[Callable] = None) -> bool:
         """
         Compile and run the solver (main entry point)
@@ -297,7 +303,7 @@ class SolverRunner:
             dpg.configure_item(button_tag, label="Compiling...")
         
         # Compile
-        success, stdout, stderr = self.compile_solver(init_file)
+        success, stdout, stderr = self.compile_solver(init_file, compiler=compiler)
         
         if not success:
             logger.error("Cannot run solver: compilation failed")

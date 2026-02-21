@@ -2,7 +2,7 @@
 MeMPhyS GUI
 
 Meshless Multi-Physics Solver
-Version 2.2
+Version 2.5.1
 
 This is the main entry point for the MeMPhyS GUI application.
 """
@@ -18,7 +18,7 @@ from src.config import (
     LOG_FILE_PATH,
     DEFAULT_FONT_SIZE,
 )
-from src.config.themes import initialize_all_themes, apply_global_theme
+from src.config.themes import initialize_all_themes, apply_dark_theme
 from src.core import app_state, logger  # Import core modules
 from src.utils import initialize_fonts, set_default_font    # Import utilities
 from src.solver import convergence_monitor  # Import solver modules
@@ -117,10 +117,10 @@ def initialize_application():
     themes = initialize_all_themes()
     print("Themes initialized")
     
-    print("Step 4: Applying global theme...")
-    apply_global_theme()
+    print("Step 4: Applying dark theme...")
+    apply_dark_theme()
     logger.success("Themes initialized")
-    print("Global theme applied")
+    print("Dark theme applied")
     
     # Mark application as initialized
     app_state.mark_initialized()

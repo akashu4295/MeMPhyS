@@ -32,7 +32,7 @@ def show_multigrid_callback(sender, app_data, user_data):
     # Show/hide entire multigrid parameter group
     if dpg.does_item_exist("multigrid_parameters_section"):
         dpg.configure_item("multigrid_parameters_section", show=multigrid_on)
-    
+        dpg.configure_item("multigrid_hint_text", show=multigrid_on)  # show hint when multigrid ON
     # Get number of mesh levels
     if dpg.does_item_exist("num_mesh_levels"):
         n = int(dpg.get_value("num_mesh_levels"))

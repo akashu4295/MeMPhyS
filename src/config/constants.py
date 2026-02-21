@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 # ============================================================
 
 LOG_DIR = "./logs"
-HEADER_DIR = "header_files"
+HEADER_DIR = "src/c_header_files"
 OUTPUT_DIR = "./output"
 
 # Create directories if they don't exist
@@ -277,7 +277,8 @@ FILE_DIALOG_HEIGHT = 400
 
 COLORS = {
     "header": (200, 220, 255),
-    "subheader": (255, 220, 160),
+    # "subheader": (255, 220, 160),
+    "subheader": (160, 185, 220),
     "success": (200, 255, 200),
     "warning": (255, 220, 100),
     "error": (255, 100, 100),
@@ -291,8 +292,8 @@ COLORS = {
 # ============================================================
 
 APP_NAME = "MeMPhyS"
-APP_VERSION = "2.2"
-APP_FULL_NAME = "MeMPhyS v2.2"
+APP_VERSION = "2.5.1"
+APP_FULL_NAME = "MeMPhyS"
 APP_SUBTITLE = "Meshless Multi-Physics Solver"
 
 # Team information

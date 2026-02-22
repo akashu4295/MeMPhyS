@@ -46,6 +46,10 @@ from .constants import (
     CONVERGENCE_PLOT_HEIGHT,
     LOG_WINDOW_HEIGHT,
     
+    # Boundary Condtions panel
+    BC_WINDOW_HEIGHT,
+    BC_WINDOW_WIDTH,
+
     # Input dimensions
     PARAMETER_INPUT_WIDTH,
     MESH_PATH_INPUT_WIDTH,

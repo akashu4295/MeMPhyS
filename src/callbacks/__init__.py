@@ -60,6 +60,8 @@ from .plot_callbacks import (
     close_all_plot_windows_callback,
     browse_output_folder_callback,
     set_vtk_from_latest_output_callback,
+    open_in_paraview_callback,
+    paraview_selected_callback,
 )
 
 # Menu callbacks
@@ -135,6 +137,8 @@ __all__ = [
     'close_all_plot_windows_callback',
     'browse_output_folder_callback',
     'set_vtk_from_latest_output_callback',
+    'paraview_selected_callback',
+    'open_in_paraview_callback',
     
     # Menu callbacks
     'open_logs_callback',

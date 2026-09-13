@@ -37,6 +37,8 @@ struct parameters parameters;
 int main()
 {
     clock_t clock_start = clock(), clock_program_begin = clock();
+    struct timespec wall_start, wall_end;
+    clock_gettime(CLOCK_MONOTONIC, &wall_start);
     PointStructure* myPointStruct;
     FieldVariables *field;
     double steady_state_error;
@@ -192,6 +194,10 @@ int main()
 
     printf("Time_step, dt : %lf\n",parameters.dt);
     printf("Average distance between nodes: %lf\n",myPointStruct[0].d_avg);
+    clock_gettime(CLOCK_MONOTONIC, &wall_end);
+    double wall_seconds = (wall_end.tv_sec - wall_start.tv_sec)
+                        + (wall_end.tv_nsec - wall_start.tv_nsec) / 1e9;
+    printf("Time for execution (total, wall-clock): %lf\n", wall_seconds);
     free_PointStructure(myPointStruct, parameters.num_levels);
     free_field(field, parameters.num_levels);
     return 0;

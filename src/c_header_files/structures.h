@@ -73,6 +73,7 @@ struct parameters
     short poisson_solver_type; // Solver type Jacobi/Gauss Seidel/Bicgstab etc...
     bool restart; // flag to indicate whether to restart from a previous solution
     char restart_filename[250]; // filename to restart from
+    int start_step; // first time step to run: 0 normally, (step in restart filename) + 1 on restart
     bool compressible_flow;
     double gamma;          // Ratio of specific heats (1.4 for air)
     double R_gas;          // Gas constant (287 J/(kg·K) for air)

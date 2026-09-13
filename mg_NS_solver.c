@@ -52,7 +52,7 @@ int main()
     read_complete_mesh_data(myPointStruct, parameters.num_levels);
     printf("Time taken to read the grids and flow parameters: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
     AllocateMemoryFieldVariables(&field, myPointStruct, parameters.num_levels);
-    check_restart_file(&myPointStruct[0], &field[0]);
+    // check_restart_file(&myPointStruct[0], &field[0]); moved to before apply boundary conditions (after restart func)
     parameters.dt = calculate_dt(&myPointStruct[0]);
     // write_processed_grid_data(myPointStruct, 1);
 
@@ -73,6 +73,7 @@ int main()
         initial_conditions(myPointStruct, field, 1);
         boundary_conditions(myPointStruct, field, 1);
     }
+    check_restart_file(&myPointStruct[0], &field[0]);
     apply_boundary_conditions(myPointStruct, field, 1);
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
         create_laplacian_for_Poisson_equation_vectorised(&myPointStruct[ii]);
@@ -88,13 +89,13 @@ int main()
     
 ////////////// Time stepping loop start and writing solution files///////////// 
     clock_start = clock();    // Start the clock
-    file2 = fopen("Convergence.csv", "w"); // Write data to a file
+    file2 = fopen("Convergence.csv", parameters.restart ? "a" : "w");  // on restart, append to the old history
     int num_nodes = myPointStruct[0].num_nodes;
 
     
     if (parameters.fractional_step)
         if (parameters.dimension == 3){
-            for (it = 0; it<parameters.num_time_steps; it++ ) 
+            for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
             {
                 steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
@@ -117,7 +118,7 @@ int main()
             }
         }
         else{
-            for (it = 0; it<parameters.num_time_steps; it++ ) 
+            for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
             {
                 steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
@@ -141,7 +142,7 @@ int main()
         }
     else{
         if (parameters.dimension == 3){
-            for (it = 0; it<parameters.num_time_steps; it++ ) 
+            for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
             {
                 steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
@@ -164,7 +165,7 @@ int main()
             } 
         }
         else{
-            for (it = 0; it<parameters.num_time_steps; it++ ) 
+            for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
                 {
                     steady_state_error = time_implicit_solver_vectorised_2d(myPointStruct, field);
                     printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);

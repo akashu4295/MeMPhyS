@@ -74,6 +74,7 @@ void write_processed_grid_data(PointStructure* myPointStruct, int num_levels);
 void make_directory(const char* name);
 int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS, int step);
 int write_vtk_test(char *gmsh_filename, FieldVariables *field, PointStructure* myPS) ;
+int read_vtk_restart(char *vtk_filename, FieldVariables *field, PointStructure* myPS);
 void check_restart_file(PointStructure* myPointStruct, FieldVariables* field);
 
 

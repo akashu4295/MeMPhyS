@@ -367,3 +367,74 @@ int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS, 
 
     return 0;
 }
+
+int read_vtk_restart(char *vtk_filename, FieldVariables *field, PointStructure* myPS)
+{
+    FILE *fp_in;
+    char line[256];
+    int num_points = 0;
+
+    fp_in = fopen(vtk_filename, "r");
+    if (!fp_in) {
+        fprintf(stderr, "Error: Cannot open restart file %s\n", vtk_filename);
+        return -1;
+    }
+
+    while (fgets(line, sizeof(line), fp_in)) {
+        if (strstr(line, "POINT_DATA")) {
+            sscanf(line, "POINT_DATA %d", &num_points);
+            break;
+        }
+    }
+
+    int num_corner = myPS->num_corners;
+    int expected_points = num_corner + myPS->num_nodes;
+    if (num_points != expected_points) {
+        fprintf(stderr, "Error: restart file %s has %d points, expected %d -- different mesh?\n",
+                vtk_filename, num_points, expected_points);
+        fclose(fp_in);
+        return -1;
+    }
+
+    /* Velocity: VTK point i (after the corner points) is solver node rcm_order[i - num_corner] */
+    while (fgets(line, sizeof(line), fp_in)) {
+        if (strstr(line, "VECTORS velocity")) break;
+    }
+    for (int i = 0; i < num_points; i++) {
+        double u, v, w;
+        if (fscanf(fp_in, "%lf %lf %lf", &u, &v, &w) != 3) {
+            fprintf(stderr, "Error reading velocity at point %d in %s\n", i, vtk_filename);
+            fclose(fp_in);
+            return -1;
+        }
+        if (i >= num_corner) {
+            int k = myPS->rcm_order[i - num_corner];
+            field->u[k] = u;
+            field->v[k] = v;
+            if (parameters.dimension == 3)
+                field->w[k] = w;
+        }
+    }
+
+    /* Pressure */
+    while (fgets(line, sizeof(line), fp_in)) {
+        if (strstr(line, "SCALARS pressure")) break;
+    }
+    fgets(line, sizeof(line), fp_in);   // skip the LOOKUP_TABLE line
+    for (int i = 0; i < num_points; i++) {
+        double p;
+        if (fscanf(fp_in, "%lf", &p) != 1) {
+            fprintf(stderr, "Error reading pressure at point %d in %s\n", i, vtk_filename);
+            fclose(fp_in);
+            return -1;
+        }
+        if (i >= num_corner) {
+            int k = myPS->rcm_order[i - num_corner];
+            field->p[k] = p;
+        }
+    }
+
+    fclose(fp_in);
+    printf("Restart: loaded u, v, p from %s\n", vtk_filename);
+    return 0;
+}

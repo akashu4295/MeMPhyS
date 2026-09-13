@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <omp.h>
 
 
 // Function definitions
@@ -293,128 +294,111 @@ void laplacian_matrix_vectorised(PointStructure* myPointStruct, double* lap, int
 // Following function creates the full derivative matrices for the mesh
 
 void create_full_gradx_matrix_vectorised(PointStructure* myPointStruct) {
-    double *grad, *A, *A_inv, *B1;
     int n = myPointStruct->num_cloud_points;
     int m = n + myPointStruct->num_poly_terms;
-    
-    // Allocate memory for matrices
-    grad = (double *) malloc(m*m*sizeof(double));
-    A = (double *) malloc(m*m*sizeof(double));
-    A_inv = (double *) malloc(m*m*sizeof(double));
-    B1 = (double *) malloc(m*m*sizeof(double));
-    grad = create_matrix_vectorised(m, m);
-    A = create_matrix_vectorised(m, m);
-    A_inv = create_matrix_vectorised(m, m);
-    B1 = create_matrix_vectorised(m, m);
 
-    // Parallelize the outer loop with OpenACC
+    // Each iteration gets its own work matrices so OpenMP threads don't overwrite each other
+    #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < myPointStruct->num_nodes; i++) {
-        // Sequential parts remain within the loop
+        double *grad  = create_matrix_vectorised(m, m);
+        double *A     = create_matrix_vectorised(m, m);
+        double *A_inv = create_matrix_vectorised(m, m);
+        double *B1    = create_matrix_vectorised(m, m);
+
         create_A_matrix_from_cloud_indices_vectorised(myPointStruct, A, myPointStruct->cloud_index[i*n]);
         gradx_matrix_vectorised(myPointStruct, grad, myPointStruct->cloud_index[i*n]);
         matrixInverse_Gauss_Jordan_vectorised(A, A_inv, m);
         multiply_matrices_vectorised(grad, A_inv, B1, m, m, m);
-        
-        // Parallelize the inner loop (assignment) if it's large enough
-        for (int j = 0; j < myPointStruct->num_cloud_points; j++) 
-            myPointStruct->Dx[i*n+j] = B1[j];
-    }
 
-    // Free matrices
-    free(grad);
-    free(A);
-    free(A_inv);
-    free(B1);
+        for (int j = 0; j < n; j++)
+            myPointStruct->Dx[i*n+j] = B1[j];
+
+        free(grad);
+        free(A);
+        free(A_inv);
+        free(B1);
+    }
 }
 
 void create_full_grady_matrix_vectorised(PointStructure* myPointStruct) {
-    double *grad, *A, *A_inv, *B1;
     int n = myPointStruct->num_cloud_points;
     int m = n + myPointStruct->num_poly_terms;
-    
-    // Allocate memory for matrices
-    grad = (double *) malloc(m*m*sizeof(double));
-    A = (double *) malloc(m*m*sizeof(double));
-    A_inv = (double *) malloc(m*m*sizeof(double));
-    B1 = (double *) malloc(m*m*sizeof(double));
-    grad = create_matrix_vectorised(m, m);
-    A = create_matrix_vectorised(m, m);
-    A_inv = create_matrix_vectorised(m, m);
-    B1 = create_matrix_vectorised(m, m);
 
-    // Parallelize the outer loop with OpenACC
+    // Each iteration gets its own work matrices so OpenMP threads don't overwrite each other
+    #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < myPointStruct->num_nodes; i++) {
+        double *grad  = create_matrix_vectorised(m, m);
+        double *A     = create_matrix_vectorised(m, m);
+        double *A_inv = create_matrix_vectorised(m, m);
+        double *B1    = create_matrix_vectorised(m, m);
+
         create_A_matrix_from_cloud_indices_vectorised(myPointStruct, A, myPointStruct->cloud_index[i*n]);
         grady_matrix_vectorised(myPointStruct, grad, myPointStruct->cloud_index[i*n]);
         matrixInverse_Gauss_Jordan_vectorised(A, A_inv, m);
         multiply_matrices_vectorised(grad, A_inv, B1, m, m, m);
-        for (int j = 0; j < myPointStruct->num_cloud_points; j++) 
-            myPointStruct->Dy[i*n + j] = B1[j];
+
+        for (int j = 0; j < n; j++)
+            myPointStruct->Dy[i*n+j] = B1[j];
+
+        free(grad);
+        free(A);
+        free(A_inv);
+        free(B1);
     }
-    free(grad);
-    free(A);
-    free(A_inv);
-    free(B1);
 }
 
 void create_full_gradz_matrix_vectorised(PointStructure* myPointStruct) {
-    double *grad, *A, *A_inv, *B1;
     int n = myPointStruct->num_cloud_points;
     int m = n + myPointStruct->num_poly_terms;
-    
-    // Allocate memory for matrices
-    grad = (double *) malloc(m*m*sizeof(double));
-    A = (double *) malloc(m*m*sizeof(double));
-    A_inv = (double *) malloc(m*m*sizeof(double));
-    B1 = (double *) malloc(m*m*sizeof(double));
-    grad = create_matrix_vectorised(m, m);
-    A = create_matrix_vectorised(m, m);
-    A_inv = create_matrix_vectorised(m, m);
-    B1 = create_matrix_vectorised(m, m);
 
-    // Parallelize the outer loop with OpenACC
+    // Each iteration gets its own work matrices so OpenMP threads don't overwrite each other
+    #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < myPointStruct->num_nodes; i++) {
+        double *grad  = create_matrix_vectorised(m, m);
+        double *A     = create_matrix_vectorised(m, m);
+        double *A_inv = create_matrix_vectorised(m, m);
+        double *B1    = create_matrix_vectorised(m, m);
+
         create_A_matrix_from_cloud_indices_vectorised(myPointStruct, A, myPointStruct->cloud_index[i*n]);
         gradz_matrix_vectorised(myPointStruct, grad, myPointStruct->cloud_index[i*n]);
         matrixInverse_Gauss_Jordan_vectorised(A, A_inv, m);
         multiply_matrices_vectorised(grad, A_inv, B1, m, m, m);
-        for (int j = 0; j < myPointStruct->num_cloud_points; j++)
-            myPointStruct->Dz[i*n +j] = B1[j];
+
+        for (int j = 0; j < n; j++)
+            myPointStruct->Dz[i*n+j] = B1[j];
+
+        free(grad);
+        free(A);
+        free(A_inv);
+        free(B1);
     }
-    free(grad);
-    free(A);
-    free(A_inv);
-    free(B1);
 }
 
 void create_full_laplacian_matrix_vectorised(PointStructure* myPointStruct) {
-    double *lap, *A, *A_inv, *B1;
     int n = myPointStruct->num_cloud_points;
     int m = n + myPointStruct->num_poly_terms;
-    
-    // Allocate memory for matrices
-    lap = (double *) malloc(m*m*sizeof(double));
-    A = (double *) malloc(m*m*sizeof(double));
-    A_inv = (double *) malloc(m*m*sizeof(double));
-    B1 = (double *) malloc(m*m*sizeof(double));
-    lap = create_matrix_vectorised(m, m);
-    A = create_matrix_vectorised(m, m);
-    A_inv = create_matrix_vectorised(m, m);
-    B1 = create_matrix_vectorised(m, m);
-   
-    // Parallelize the outer loop with OpenACC
+
+    // Each iteration gets its own work matrices so OpenMP threads don't overwrite each other
+    #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < myPointStruct->num_nodes; i++) {
+        double *lap   = create_matrix_vectorised(m, m);
+        double *A     = create_matrix_vectorised(m, m);
+        double *A_inv = create_matrix_vectorised(m, m);
+        double *B1    = create_matrix_vectorised(m, m);
+
         create_A_matrix_from_cloud_indices_vectorised(myPointStruct, A, myPointStruct->cloud_index[i*n]);
         laplacian_matrix_vectorised(myPointStruct, lap, myPointStruct->cloud_index[i*n]);
         matrixInverse_Gauss_Jordan_vectorised(A, A_inv, m);
-        multiply_matrices_vectorised(lap, A_inv, B1, m,m,m);
-        for (int j = 0; j < myPointStruct->num_cloud_points; j++) 
-            myPointStruct->lap[i*n +j] = B1[j];
+        multiply_matrices_vectorised(lap, A_inv, B1, m, m, m);
+
+        for (int j = 0; j < n; j++)
+            myPointStruct->lap[i*n+j] = B1[j];
+
+        free(lap);
+        free(A);
+        free(A_inv);
+        free(B1);
     }
-    free(lap);
-    free(A);
-    free(A_inv);
-    free(B1);
 }
 
 void create_laplacian_Poisson_vectorised(PointStructure* myPointStruct) {

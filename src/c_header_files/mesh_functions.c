@@ -285,6 +285,8 @@ void read_flow_parameters(const char *filename)
         parameters.mu  = 1.0 / parameters.Re;
     }
     parameters.nu = parameters.mu / parameters.rho;
+    printf("PARAMETERS: nu = %f\n", parameters.nu);
+    printf("PARAMETERS: rho = %f\n", parameters.rho);
 }
 
 void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* num_levels)

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "functions.h"
 
 //////////////////////////////////////////////////////////////////////
@@ -355,6 +356,35 @@ int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS, 
         int k = myPS[0].rcm_order[i - num_corner];
         fprintf(fp_out, "%.16e\n", field->p[k]);
     }
+
+    /* Peclet number: |velocity| * (distance to nearest cloud neighbour) / nu, per node */
+    fprintf(fp_out, "\nSCALARS peclet double 1\n");
+    fprintf(fp_out, "LOOKUP_TABLE default\n");
+
+    for (i = 0; i < num_corner; i++) {
+        fprintf(fp_out, "0.0\n");
+    }
+
+    int ncp = myPS->num_cloud_points;
+    for (i = num_corner; i < num_nodes; i++) {
+        int k = myPS[0].rcm_order[i - num_corner];
+        int nearest = myPS->cloud_index[k*ncp + 1];   // index 0 in the cloud is always the node itself
+
+        double dx = myPS->x[k] - myPS->x[nearest];
+        double dy = myPS->y[k] - myPS->y[nearest];
+        double dz = (parameters.dimension == 3) ? (myPS->z[k] - myPS->z[nearest]) : 0.0;
+        double h  = sqrt(dx*dx + dy*dy + dz*dz);
+        
+        // actual vmag
+        double vmag = (parameters.dimension == 3)
+                        ? sqrt(field->u[k]*field->u[k] + field->v[k]*field->v[k] + field->w[k]*field->w[k])
+                        : sqrt(field->u[k]*field->u[k] + field->v[k]*field->v[k]);
+
+        // manually overwrite
+        // double vmag = 1;
+        double pe = (parameters.nu > 0.0) ? vmag * h / parameters.nu : 0.0;
+        fprintf(fp_out, "%.16e\n", pe);
+    }    
 
     fclose(fp_out);
 

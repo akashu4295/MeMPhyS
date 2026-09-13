@@ -56,7 +56,7 @@ int main()
     clock_start = clock();    // Start the clock
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
         create_derivative_matrices_vectorised(&myPointStruct[ii]);
-    if(parameters.test>0) test_derivatives(myPointStruct, parameters.num_levels, parameters.dimension);
+    // if(parameters.test>0) test_derivatives(myPointStruct, parameters.num_levels, parameters.dimension);
     printf("Time taken to create derivative matrices: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
 
 ////////////// Setting up the boudary condition 

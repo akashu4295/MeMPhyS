@@ -1,6 +1,6 @@
-# Compiler Mode Selection
 # Usage:
 #   make OPENACC=1    # for OpenACC GPU mode
+#   make MULTICORE=1  # for OpenACC multicore CPU mode (all cores of one node)
 #   make DEBUG=1      # to include debug symbols
 #   make              # for default CPU mode
 # ----- Mode Selection -----
@@ -8,9 +8,16 @@
 ifeq ($(OPENACC),1)
     CC = nvc
     MODE = openacc
-    CFLAGS = -acc -Minfo=accel -O3 -Wall -Wpointer-arith
+    CFLAGS = -acc -mp -Minfo=accel -O3 -Wall -Wpointer-arith
     LDFLAGS = -lm
     GPU_MSG = "Compiling with NVC (OpenACC GPU mode)"
+
+else ifeq ($(MULTICORE),1)
+    CC = nvc
+    MODE = multicore
+    CFLAGS = -acc=multicore -mp -Minfo=accel -O3 -Wall -Wpointer-arith
+    LDFLAGS = -lm
+    GPU_MSG = "Compiling with NVC (OpenACC multicore CPU mode)"
 
 else ifeq ($(ACC),1)
     CC = gcc

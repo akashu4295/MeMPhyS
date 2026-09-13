@@ -72,7 +72,7 @@ void write_prolongation_and_restriction_points(PointStructure* myPointStruct, ch
 void write_test_files(double* f, double* fx, double* fy, double* fz, double* lapf, double* fxx, double* fyy, double* fzz, int num_nodes, char* folder1);
 void write_processed_grid_data(PointStructure* myPointStruct, int num_levels);
 void make_directory(const char* name);
-int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS);
+int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS, int step);
 int write_vtk_test(char *gmsh_filename, FieldVariables *field, PointStructure* myPS) ;
 void check_restart_file(PointStructure* myPointStruct, FieldVariables* field);
 

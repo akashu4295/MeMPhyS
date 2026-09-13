@@ -55,7 +55,7 @@ struct parameters
     double steady_state_tolerance; // Tolerance for steady state convergence
     double poisson_solver_tolerance; // Tolerance for Poisson solver
     short num_vcycles; // Number of V-cycles
-    short num_relax; // Number of relaxation steps
+    int num_relax; // Number of relaxation steps
     int num_time_steps; // Number of time steps
     short num_levels; // Number of levels in the multigrid
     int write_interval; // Interval for writing the data

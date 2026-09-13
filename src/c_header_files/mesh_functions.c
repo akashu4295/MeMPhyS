@@ -169,7 +169,7 @@ void read_flow_parameters(const char *filename)
         }
         else if (!strcmp(key, "num_relax")){
             parameters.num_relax = atoi(val);
-            printf("PARAMETERS: %s = %hd\n", key, parameters.num_relax);
+            printf("PARAMETERS: %s = %d\n", key, parameters.num_relax);
         }
         else if (!strcmp(key, "fractional_step")){
             parameters.fractional_step = atoi(val) != 0;

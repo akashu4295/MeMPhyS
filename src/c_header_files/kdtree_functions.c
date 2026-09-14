@@ -207,10 +207,12 @@ int* find_nearest_point(PointStructure* ps1,
 
     void* ptree = create_kdtree(ps2);
     double radius = ps2->d_avg * 10.0;
-    double pt[3];
+    int N = ps1->num_nodes;
 
+    #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < ps1->num_nodes; i++) {
         if (!ps1->corner_tag[i]) {
+            double pt[3];
             pt[0] = ps1->x[i];
             pt[1] = ps1->y[i];
             pt[2] = ps1->z[i];
@@ -220,6 +222,10 @@ int* find_nearest_point(PointStructure* ps1,
             free(tmp);
         } else {
             neighbour[i] = -1;
+
+            if (i % 5000 == 0)
+                fprintf(stderr, "  nearest point: [thread %d] node %d / %d (%.1f%%)\n",
+                        omp_get_thread_num(), i, N, 100.0*i/N);
         }
     }
 

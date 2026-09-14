@@ -15,6 +15,8 @@ test*
 *.bak
 *.json
 *.mp4
+*.geo
+*.msh
 *REPORT*
 solver*
 Solution.csv

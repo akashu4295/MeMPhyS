@@ -76,6 +76,13 @@ int* find_neighbours(double* p, void* ptree, double radius, int num_cloud_points
             int* pch = (int*)kd_res_item(presults, pos);
             dist = sqrt(dist_sq(p, pos));
 
+            // more filtering, same result nvm
+            // int already_present = 0;
+            // for (int k = 0; k < num_cloud_points; k++) {
+            //     if (ind[k] == *pch) { already_present = 1; break; }
+            // }
+            // if (already_present) { kd_res_next(presults); continue; }
+
             for (int j = 0; j < num_cloud_points; j++) {
                 if (dist < distance[j]) {
                     for (int k = num_cloud_points - 1; k > j; k--) {

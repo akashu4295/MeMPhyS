@@ -1,15 +1,6 @@
 // Author :  Akash Unnikrishnan and Prof. Surya Pratap Vanka
 // Affiliation : Indian Institute of Technology Gandhinagar and University of Illinois at Urbana Champaign
 
-#include <time.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
-#include <assert.h>
-
-#include "structures.h"
 #include "functions.h"
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -43,11 +34,15 @@ double time_implicit_solver_vectorised_2d(PointStructure* myPointStruct, FieldVa
         }
     }
 
-    # pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error)
-    for (int i=0; i<myPointStruct[0].num_nodes; i++){
-        steady_state_error += pow(field[0].u[i]-field[0].u_old[i],2) + pow(field[0].v[i]-field[0].v_old[i],2);
+    double steady_state_error_par = 0.0;    
+    #pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error_par) 
+    for (int i = 0; i < myPointStruct[0].num_nodes; i++){
+        double du = field[0].u[i] - field[0].u_old[i];
+        double dv = field[0].v[i] - field[0].v_old[i];
+        steady_state_error_par += fabs(du) + fabs(dv);
     }
-    return sqrt(steady_state_error/myPointStruct[0].num_nodes);
+    
+    return (steady_state_error_par/(parameters.dimension * myPointStruct[0].num_nodes * parameters.dt));
 }
 
 void calculate_intermediate_velocity_implicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field) {
@@ -85,10 +80,10 @@ void calculate_intermediate_velocity_implicit_vectorised_2d(PointStructure* myPo
                 }
 
                 double advection_u = field->u_new[i] * t1 + field->v_new[i] * t2;
-                field->u[i] = (parameters.rho * (field->u_old[i]*unst - advection_u)  + parameters.mu*t3 - field->dpdx[i]) / denom;
+                field->u[i] = (parameters.rho * (field->u[i]*unst - advection_u)  + parameters.mu*t3 - field->dpdx[i]) / denom;
 
                 double advection_v = field->u_new[i] * t4 + field->v_new[i] * t5;
-                field->v[i] = (parameters.rho * (field->v_old[i]*unst - advection_v)  + parameters.mu*t6 - field->dpdy[i]) / denom;
+                field->v[i] = (parameters.rho * (field->v[i]*unst - advection_v)  + parameters.mu*t6 - field->dpdy[i]) / denom;
             }
         }
 
@@ -144,7 +139,6 @@ void update_velocity_implicit_vectorised_2d(PointStructure* myPointStruct, Field
         multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->pprime, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
     }
     #pragma acc wait(1,2,3)
-    int count = 0;
     #pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
     for (int i = 0; i < num_nodes; i++) {
         if (myPointStruct->corner_tag[i]) continue;
@@ -234,6 +228,19 @@ void update_boundary_pressure_vectorised_2d(PointStructure* myPointStruct, Field
             }
         }
     }
+     # pragma acc data present(myPointStruct, field, parameters)
+    {
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 4);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 5);
+    }
+    # pragma acc wait(4,5)
+    double sum = 0.0;
+    # pragma acc parallel loop gang vector default(present) reduction(+:sum)
+    for (int i = 0; i < myPointStruct->num_nodes; i++)
+        if (!myPointStruct->corner_tag[i])
+            sum += parameters.rho*fabs(field->dpdx[i]+field->dpdy[i]);
+
+    printf("Mass residual: %e\n", (sum)/myPointStruct->num_nodes);
 }
 
 
@@ -271,11 +278,16 @@ double time_implicit_solver_vectorised(PointStructure* myPointStruct, FieldVaria
         }
     }
 
-    # pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error)
-    for (int i=0; i<myPointStruct[0].num_nodes; i++){
-        steady_state_error += pow(field[0].u[i]-field[0].u_old[i],2) + pow(field[0].v[i]-field[0].v_old[i],2) + pow(field[0].w[i]-field[0].w_old[i],2);
+    double steady_state_error_par = 0.0;    
+    #pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error_par) 
+    for (int i = 0; i < myPointStruct[0].num_nodes; i++){
+        double du = field[0].u[i] - field[0].u_old[i];
+        double dv = field[0].v[i] - field[0].v_old[i];
+        double dw = field[0].w[i] - field[0].w_old[i];
+        steady_state_error_par += fabs(du) + fabs(dv) + fabs(dw);
     }
-    return sqrt(steady_state_error/myPointStruct[0].num_nodes);
+    
+    return (steady_state_error_par/(parameters.dimension * myPointStruct[0].num_nodes * parameters.dt));
 }
 
 void calculate_intermediate_velocity_implicit_vectorised(PointStructure* myPointStruct, FieldVariables* field) {
@@ -321,13 +333,13 @@ void calculate_intermediate_velocity_implicit_vectorised(PointStructure* myPoint
                 }
 
                 double advection_u = field->u_new[i] * t1 + field->v_new[i] * t2 + field->w_new[i] * t3;
-                field->u[i] = (parameters.rho * (field->u_old[i]*unst - advection_u) + parameters.mu*t4 - field->dpdx[i]) / denom;
+                field->u[i] = (parameters.rho * (field->u[i]*unst - advection_u) + parameters.mu*t4 - field->dpdx[i]) / denom;
 
                 double advection_v = field->u_new[i] * t5 + field->v_new[i] * t6 + field->w_new[i] * t7;
-                field->v[i] = (parameters.rho * (field->v_old[i]*unst - advection_v) + parameters.mu*t8 - field->dpdy[i]) / denom;
+                field->v[i] = (parameters.rho * (field->v[i]*unst - advection_v) + parameters.mu*t8 - field->dpdy[i]) / denom;
 
                 double advection_w = field->u_new[i] * t9 + field->v_new[i] * t10 + field->w_new[i] * t11;
-                field->w[i] = (parameters.rho * (field->w_old[i]*unst - advection_w) + parameters.mu*t12 - field->dpdz[i]) / denom;
+                field->w[i] = (parameters.rho * (field->w[i]*unst - advection_w) + parameters.mu*t12 - field->dpdz[i]) / denom;
             }
         }
 
@@ -378,7 +390,6 @@ void calculate_mass_residual_implicit_vectorised(PointStructure* myPointStruct, 
         }
     }
     
-    // printf("Mass residual: %e\n", sum/num_nodes); 
 }
 
 void update_velocity_implicit_vectorised(PointStructure* myPointStruct, FieldVariables* field) {
@@ -443,6 +454,20 @@ void update_velocity_implicit_vectorised(PointStructure* myPointStruct, FieldVar
         }
         // Wall and inlet boundaries: velocity already set in intermediate step, don't touch
     }
+    # pragma acc data present(myPointStruct, field, parameters)
+    {
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dpdx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 4);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dpdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 5);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w, field->dpdz, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 6);
+    }
+    # pragma acc wait(4,5,6)
+    double sum = 0.0;
+    # pragma acc parallel loop gang vector default(present) reduction(+:sum)
+    for (int i = 0; i < myPointStruct->num_nodes; i++)
+        if (!myPointStruct->corner_tag[i])
+            sum += parameters.rho*fabs(field->dpdx[i]+field->dpdy[i]+field->dpdz[i]);
+
+    printf("Mass residual: %e\n", (sum)/myPointStruct->num_nodes);
 }
 
 

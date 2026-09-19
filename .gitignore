@@ -3,9 +3,14 @@ logs/
 output/
 config/
 data/
+memphys_v1/
+legacy/
 linear_stability.c
 mg_heat_conduction.c
-test*
+plot_data.ipynb
+parameters_file.csv
+out
+a.out
 *.jpg
 *.jpeg
 *.png
@@ -49,7 +54,6 @@ Convergence*
 Solution*
 normal*
 prolongation*
-test*
 COMP*
 bc2*
 .build*

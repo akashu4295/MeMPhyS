@@ -73,7 +73,31 @@ void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldva
 //     }
 // }
 
-
+    // double omega_i = 1.0;
+    // double x, y, z, r, u_theta, r_i = 1.0, r_o = 2.0;
+    // double A = r_i * omega_i * r_o * r_i / ((r_o * r_o) - (r_i * r_i));
+    // // double A2 = r_i * omega_i * r_o * r_i / ((r_o * r_o) - (r_i * r_i));
+    // for (int iv = 0; iv < myPointStruct[0].num_nodes; iv++)
+    // {
+    //     x = myPointStruct[0].x[iv], y = myPointStruct[0].y[iv], r = sqrt(x * x + y * y);
+    //     u_theta = A * ((r_o / r) - (r / r_o));
+    //     field[0].u[iv] = (-u_theta * y / r), field[0].v[iv] = (u_theta * x / r);
+    //     field[0].p[iv] = (r * r / (2 * r_o * r_o)) - (2 * log(r)) - (r_o * r_o / (2 * r * r));
+    //     field[0].p[iv] = field[0].p[iv] * A * A;
+    //     field[0].u_old[iv] = field[0].u[iv];
+    //     field[0].v_old[iv] = field[0].v[iv];
+    //     field[0].p_old[iv] = field[0].p[iv];
+    //     field[0].u_new[iv] = field[0].u[iv];
+    //     field[0].v_new[iv] = field[0].v[iv];
+    //     field[0].pprime[iv] = 0.0;
+    //     // printf("%lf, %lf, %lf, %lf\n", x, y, field[0].u[iv], field[0].v[iv]);
+    // }
+    // double reference_pressure = field[0].p[0];
+    // for (int iv = 0; iv < myPointStruct[0].num_nodes; iv++)
+    // {
+    //     field[0].p[iv] = field[0].p[iv] - reference_pressure;
+    //     field[0].p_old[iv] = field[0].p_old[iv] - reference_pressure;
+    // }
 
 ////// Taylor Couette flow
 void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels){

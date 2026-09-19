@@ -100,6 +100,8 @@ typedef struct PointStructure {
     int num_boundary_nodes; // number of boundary nodes
     int num_elem; // number of elements
     double d_avg; // average distance between nodes
+    double d_min; // minimum distance between nodes
+    double d_max; // maximum distance between nodes
     short num_poly_terms; //number of polynomial terms  //////NUM_POLY_TERMS
     short num_cloud_points; //number of cloud points in the domain
     short poly_degree; //degree of the polynomial basis functions
@@ -164,6 +166,22 @@ typedef struct FieldVariables {
     double* lapu; // laplacian of u
     double* lapv; // laplacian of v
     double* lapw; // laplacian of w
+    double* res_u; // residual of u-momentum equation
+    double* res_v; // residual of v-momentum equation
+    double* res_w; // residual of w-momentum equation
+    double* res_p; // residual of continuity equation
+    double* source_u; // source term for u-momentum equation
+    double* source_v; // source term for v-momentum equation
+    double* source_w; // source term for w-momentum equation
+    double* source_p; // source term for continuity equation
+    double* u_restricted; // restricted u field for FAS
+    double* v_restricted; // restricted v field for FAS
+    double* w_restricted; // restricted w field for FAS
+    double* p_restricted; // restricted p field for FAS
+    double* res_u_restricted; // restricted residual of u-momentum equation for FAS
+    double* res_v_restricted; // restricted residual of v-momentum equation for FAS
+    double* res_w_restricted; // restricted residual of w-momentum equation for FAS
+    double* res_p_restricted; // restricted residual of continuity equation for FAS
     // Compressible flow variables
     double* rho; // density field
     double* rho_old; // density old field

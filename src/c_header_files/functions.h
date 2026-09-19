@@ -8,22 +8,29 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-// #include <math.h>
+#include <stddef.h>
+#include <time.h>
+#include <math.h>
 #include <string.h>
-// #include <assert.h>
+#include <string.h>
+#include <assert.h>
+#include <ctype.h>
+#include <float.h>
+#include <sys/stat.h>
+
 #include "structures.h"
 
 // Mesh Function declarations
 void read_PointStructure(PointStructure* myPointStruct);
 void read_flow_parameters(const char *filename);
-void calculate_parameters(PointStructure* myPointStruct);
 void correct_normal_directions(PointStructure* myPointStruct);
 void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* num_levels);
 void read_complete_mesh_data(PointStructure* myPointStruct, short num_levels);   
 void create_restriction_matrix(PointStructure* myPointStruct, PointStructure* myPointStruct1);
 void create_prolongation_matrix(PointStructure* myPointStruct, PointStructure* myPointStruct1);
-void rcm_reordering(PointStructure* myPointStruct);
+void rcm_reordering_with_boundarynodes(PointStructure* myPointStruct);
 double calculate_dt(PointStructure* myPointStruct);
+void calculate_point_spacings(PointStructure* myPointStruct);
 
 // Initialization Function declarations
 BCType parse_bc_type(const char* s);
@@ -177,6 +184,13 @@ double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, Fie
 void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
+
+// Multigrid Modules
+double multigrid_time_implicit_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field);
+void single_grid_Poisson_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field);
+
+
+
 
 
 // Compressible flow

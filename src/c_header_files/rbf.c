@@ -1,6 +1,5 @@
 // Author :  Akash Unnikrishnan and Prof. Surya Pratap Vanka
 // Affiliation : Indian Institute of Technology Gandhinagar and University of Illinois at Urbana Champaign
-#include "structures.h"
 #include "functions.h"
 #include "kdtree.h"
 #include <time.h>
@@ -61,6 +60,7 @@ void create_A_matrix_from_cloud_indices_vectorised(PointStructure* myPointStruct
             A[(j + m)*mpn + i] = A[i*mpn +j + m];
         }
     }
+    free(cloud);
 }
 
 void gradx_matrix_vectorised(PointStructure* myPointStruct, double* grad, int cloud_index) {
@@ -105,6 +105,7 @@ void gradx_matrix_vectorised(PointStructure* myPointStruct, double* grad, int cl
             grad[(j + m)*mpn +i] = grad[i*mpn +j + m];
         }
     }
+    free(cloud);
 }
 
 void grady_matrix_vectorised(PointStructure* myPointStruct, double* grad, int cloud_index) {
@@ -150,6 +151,7 @@ void grady_matrix_vectorised(PointStructure* myPointStruct, double* grad, int cl
             // printf("grad[%d][%d] = %lf\n", i, j+m, grad[i][j+m]);
         }
     }
+    free(cloud);
 }
 
 void gradz_matrix_vectorised(PointStructure* myPointStruct, double* grad, int cloud_index) {
@@ -194,6 +196,7 @@ void gradz_matrix_vectorised(PointStructure* myPointStruct, double* grad, int cl
             grad[(j+m)*mpn +i] = grad[i*mpn +j+m];
         }
     }
+    free(cloud);
 }
 
 void laplacian_matrix_vectorised(PointStructure* myPointStruct, double* lap, int cloud_index) {
@@ -217,7 +220,7 @@ void laplacian_matrix_vectorised(PointStructure* myPointStruct, double* lap, int
             pt2[0] = myPointStruct->x[cloud[j]];
             pt2[1] = myPointStruct->y[cloud[j]];
             pt2[2] = myPointStruct->z[cloud[j]];
-            lap[i*mpn +j] = parameters.phs_degree * parameters.phs_degree *
+            lap[i*mpn +j] = parameters.phs_degree * (parameters.phs_degree + parameters.dimension -2) *
                          calculate_phs_rbf(pt1, pt2, parameters.phs_degree - 2, parameters.dimension);
         }
     }
@@ -289,6 +292,7 @@ void laplacian_matrix_vectorised(PointStructure* myPointStruct, double* lap, int
             }
         }
     }
+    free(cloud);
 }
 
 // Following function creates the full derivative matrices for the mesh
@@ -428,14 +432,10 @@ void create_laplacian_Poisson_vectorised(PointStructure* myPointStruct) {
 void create_derivative_matrices_vectorised(PointStructure* myPointStruct){
     int m = myPointStruct->num_nodes;
     int n = myPointStruct->num_cloud_points;
-    myPointStruct->Dx = (double*) malloc(m*n*sizeof(double));
-    myPointStruct->Dy = (double*) malloc(m*n*sizeof(double));
-    myPointStruct->lap = (double*) malloc(m*n*sizeof(double));
     myPointStruct->Dx = create_matrix_vectorised(m,n);
-    myPointStruct->Dx = create_matrix_vectorised(m,n);
-    myPointStruct->Dx = create_matrix_vectorised(m,n);
+    myPointStruct->Dy = create_matrix_vectorised(m,n);
+    myPointStruct->lap = create_matrix_vectorised(m,n);
     if (parameters.dimension == 3){
-        myPointStruct->Dz = (double*) malloc(m*n*sizeof(double));
         myPointStruct->Dz = create_matrix_vectorised(m,n);
         create_full_gradx_matrix_vectorised(myPointStruct);
         create_full_grady_matrix_vectorised(myPointStruct);
@@ -447,12 +447,12 @@ void create_derivative_matrices_vectorised(PointStructure* myPointStruct){
         create_full_grady_matrix_vectorised(myPointStruct);
         create_full_laplacian_matrix_vectorised(myPointStruct);
     }
+    create_laplacian_for_Poisson_equation_vectorised(myPointStruct);
 }
 
 void create_laplacian_for_Poisson_equation_vectorised(PointStructure* myPointStruct){
     int m = myPointStruct->num_nodes;
     int n = myPointStruct->num_cloud_points;
-    myPointStruct->lap_Poison = (double*) malloc(m*n*sizeof(double));
     myPointStruct->lap_Poison = create_matrix_vectorised(m,n);
     create_laplacian_Poisson_vectorised(myPointStruct);
 }

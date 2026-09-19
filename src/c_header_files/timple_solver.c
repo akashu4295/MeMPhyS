@@ -144,7 +144,7 @@ void update_velocity_implicit_vectorised_2d(PointStructure* myPointStruct, Field
         multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->pprime, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
     }
     #pragma acc wait(1,2,3)
-    int count = 0;
+    // int count = 0;
     #pragma acc parallel loop gang vector present(field, parameters, myPointStruct)
     for (int i = 0; i < num_nodes; i++) {
         if (myPointStruct->corner_tag[i]) continue;
@@ -534,12 +534,12 @@ void multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, FieldVar
         // Upward Path (Prolongation)
         for (int ilev = parameters.num_levels - 1; ilev > 0; ilev--) {
             prolongate_corrections_vectorised(&myPointStruct[ilev-1], &myPointStruct[ilev], &field[ilev-1], &field[ilev]);
-            if (parameters.poisson_solver_type == 1)    
+            if (parameters.poisson_solver_type == 1)
                 relaxation_vectorised_Jacobi(&myPointStruct[ilev-1], field[ilev-1].source, field[ilev-1].pprime, field[ilev-1].p_old);
             else if (parameters.poisson_solver_type == 3)
                 relaxation_vectorised_BiCGStab(&myPointStruct[ilev-1], field[ilev-1].source, field[ilev-1].pprime, parameters.num_relax, parameters.poisson_solver_tolerance);
             else
-                relaxation_vectorised_GaussSeidel(&myPointStruct[ilev-1], field[ilev-1].source, field[ilev-1].pprime);  
+                relaxation_vectorised_GaussSeidel(&myPointStruct[ilev-1], field[ilev-1].source, field[ilev-1].pprime);
         }
     }
 }
@@ -652,15 +652,16 @@ void relaxation_vectorised_GaussSeidel(PointStructure* mypointstruct, const doub
     int num_nodes = mypointstruct->num_nodes;
 
     for (int iter = 0; iter < parameters.num_relax; iter++) {
-        #pragma acc parallel loop gang vector present(pprime[:num_nodes], source[:num_nodes], parameters, mypointstruct)
         for (int i = 0; i < num_nodes; i++) {
             double sum = 0.0;
             int base = i * n;
-            #pragma acc loop seq // Inner loops should be handled carefully for reduction
             for (int j = 1; j < n; j++) {
                 sum += mypointstruct->lap_Poison[base + j] * pprime[mypointstruct->cloud_index[base + j]];
             }
             double diag = mypointstruct->lap_Poison[base];
+            if (fabs(diag) < 1e-14) {
+                continue;
+            }
             double new_val = (source[i] - sum) / diag;
             pprime[i] = parameters.omega * new_val + (1.0 - parameters.omega) * pprime[i];
         }

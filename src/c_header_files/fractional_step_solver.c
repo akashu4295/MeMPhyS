@@ -154,8 +154,8 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
     }
     # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
-        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] 
-                        && !myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type != BC_PRESSURE_OUTLET){
             field->u_new[i] = field->u[i] + parameters.dt * (field->dpdx[i]);
             field->v_new[i] = field->v[i] + parameters.dt * (field->dpdy[i]);
         }
@@ -229,14 +229,12 @@ void FS_multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, Field
         }
         for (int ilev = parameters.num_levels-1; ilev > 0; ilev--){
             FS_prolongate_corrections_vectorised(&myPointStruct[ilev-1], &myPointStruct[ilev], &field[ilev-1], &field[ilev]);
-            if (ilev != 1) {
-                if (parameters.poisson_solver_type == 1)    
-                    FS_relaxation_vectorised_Jacobi(&myPointStruct[ilev-1], &field[ilev-1]);
-                else if (parameters.poisson_solver_type == 2)
-                    FS_relaxation_vectorised_Gauss_Seidel(&myPointStruct[ilev-1], &field[ilev-1]);
-                else if (parameters.poisson_solver_type == 3)
-                    FS_relaxation_vectorised_BiCGStab(&myPointStruct[ilev-1], field[ilev-1].source, field[ilev-1].p, parameters.num_relax, parameters.poisson_solver_tolerance);   
-            } 
+            if (parameters.poisson_solver_type == 1)
+                FS_relaxation_vectorised_Jacobi(&myPointStruct[ilev-1], &field[ilev-1]);
+            else if (parameters.poisson_solver_type == 2)
+                FS_relaxation_vectorised_Gauss_Seidel(&myPointStruct[ilev-1], &field[ilev-1]);
+            else if (parameters.poisson_solver_type == 3)
+                FS_relaxation_vectorised_BiCGStab(&myPointStruct[ilev-1], field[ilev-1].source, field[ilev-1].p, parameters.num_relax, parameters.poisson_solver_tolerance);
         }
     } 
 }
@@ -245,6 +243,9 @@ void FS_relaxation_vectorised_Jacobi(PointStructure* mypointstruct, FieldVariabl
 {
     int n = mypointstruct->num_cloud_points;
     int N = mypointstruct->num_nodes;
+    double jacobi_omega = isfinite(parameters.omega)
+                        ? fmin(fmax((double)parameters.omega, 0.0), 2.0 / 3.0)
+                        : 2.0 / 3.0;
     #pragma acc parallel loop present(field->p[:N], field->p_old[:N])
     for (int i = 0; i < N; i++) {
         field->p_old[i] = field->p[i];
@@ -257,19 +258,18 @@ void FS_relaxation_vectorised_Jacobi(PointStructure* mypointstruct, FieldVariabl
                 int idx = i*n + j;
                 sum += mypointstruct->lap_Poison[idx] * field->p_old[mypointstruct->cloud_index[idx]];
             }
-            field->p[i] = parameters.omega * (field->source[i] - sum) / mypointstruct->lap_Poison[i*n] 
-                            + (1.0 - parameters.omega) * field->p_old[i];
+            double diag = mypointstruct->lap_Poison[i*n];
+            if (!isfinite(diag) || fabs(diag) < 1e-14) {
+                continue;
+            }
+            field->p[i] = jacobi_omega * (field->source[i] - sum) / diag
+                            + (1.0 - jacobi_omega) * field->p_old[i];
         }
-        // double mean = 0;
-        // #pragma acc parallel loop present(field->p[:N], field->p_old[:N])
-        // for (int i = 0; i < N; i++) {
-        //     mean += field->p[i];
-        // }
-        // mean = mean/N;
-        // #pragma acc parallel loop present(field->p[:N], field->p_old[:N])
-        // for (int i = 0; i < N; i++) {
-        //     field->p_old[i] = field->p[i]-mean;
-        // }
+
+        #pragma acc parallel loop present(field->p[:N], field->p_old[:N])
+        for (int i = 0; i < N; i++) {
+            field->p_old[i] = field->p[i];
+        }
     }
 }
 
@@ -277,18 +277,21 @@ void FS_relaxation_vectorised_Gauss_Seidel(PointStructure* mypointstruct, FieldV
 {
     int n = mypointstruct->num_cloud_points;
     int N = mypointstruct->num_nodes;
-    
+
     for (int iter = 0; iter < parameters.num_relax; iter++) {
-        #pragma acc parallel loop gang vector_length(128) present(field, mypointstruct, parameters)
         for (int i = 0; i < N; i++) {
             double sum = 0.0;
-            #pragma acc loop vector reduction(+:sum)
+            int base = i * n;
             for (int j = 1; j < n; j++) {
-                sum += mypointstruct->lap_Poison[i*n + j] *
-                       field->p[mypointstruct->cloud_index[i*n + j]];
+                int idx = mypointstruct->cloud_index[base + j];
+                sum += mypointstruct->lap_Poison[base + j] * field->p[idx];
             }
-            field->p[i] = parameters.omega * ((field->source[i] - sum) / mypointstruct->lap_Poison[i*n])
-                + (1 - parameters.omega) * field->p[i];
+            double diag = mypointstruct->lap_Poison[base];
+            if (fabs(diag) < 1e-14) {
+                continue;
+            }
+            field->p[i] = parameters.omega * ((field->source[i] - sum) / diag)
+                       + (1.0 - parameters.omega) * field->p[i];
         }
     }
 }

@@ -483,29 +483,27 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
     }
 }
 
+// Step number from a name like ".../Solution_002000.vtk" -> 2000 (0 if there is no "_")
+static int extract_restart_step(const char* filename) {
+    const char* base = strrchr(filename, '/');
+    base = base ? base + 1 : filename;
+    const char* underscore = strrchr(base, '_');
+    return underscore ? atoi(underscore + 1) : 0;
+}
+
 void check_restart_file(PointStructure* myPointStruct, FieldVariables *field) {
-    if (parameters.restart) {
-        printf("Checking restart file: %s\n", parameters.restart_filename);
-        FILE *file = fopen(parameters.restart_filename, "r");
-        if (file) {
-            printf("Restart file found: %s\n", parameters.restart_filename);
-            for (int i = 0; i < myPointStruct->num_nodes; i++) {
-                double x, y, z, u, v, w, p;
-                if (fscanf(file, "%lf, %lf, %lf, %lf, %lf, %lf, %lf", &x, &y, &z, &u, &v, &w, &p) != 7) {
-                    fprintf(stderr, "Error reading restart file at line %d\n", i);
-                    fclose(file);
-                    exit(1);
-                }
-                field->u[i] = u;
-                field->v[i] = v;
-                field->w[i] = w;
-                field->p[i] = p;
-            }
-            
-        } 
-        else {
-            printf("Restart file not found: %s\n", parameters.restart_filename);
-            exit(1);
-        }
+    if (!parameters.restart) return;
+
+    printf("Checking restart file: %s\n", parameters.restart_filename);
+    if (read_vtk_restart(parameters.restart_filename, field, myPointStruct) != 0) {
+        fprintf(stderr, "Restart failed, exiting.\n");
+        exit(1);
     }
-}    
+    // Solution_N.vtk holds the state after step N, so continue from step N+1
+    parameters.start_step = extract_restart_step(parameters.restart_filename) + 1;
+    printf("Restart: resuming from time step %d\n", parameters.start_step);
+    if (parameters.start_step >= parameters.num_time_steps)
+        printf("WARNING: num_time_steps (%d) is not larger than the restart step, so no time steps will run. "
+               "num_time_steps is the final step number, not the number of extra steps.\n",
+               parameters.num_time_steps);
+} 

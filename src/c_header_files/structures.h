@@ -55,7 +55,7 @@ struct parameters
     double steady_state_tolerance; // Tolerance for steady state convergence
     double poisson_solver_tolerance; // Tolerance for Poisson solver
     short num_vcycles; // Number of V-cycles
-    short num_relax; // Number of relaxation steps
+    int num_relax; // Number of relaxation steps
     int num_time_steps; // Number of time steps
     short num_levels; // Number of levels in the multigrid
     int write_interval; // Interval for writing the data
@@ -73,6 +73,7 @@ struct parameters
     short poisson_solver_type; // Solver type Jacobi/Gauss Seidel/Bicgstab etc...
     bool restart; // flag to indicate whether to restart from a previous solution
     char restart_filename[250]; // filename to restart from
+    int start_step; // first time step to run: 0 normally, (step in restart filename) + 1 on restart
     bool compressible_flow;
     double gamma;          // Ratio of specific heats (1.4 for air)
     double R_gas;          // Gas constant (287 J/(kg·K) for air)
@@ -99,6 +100,8 @@ typedef struct PointStructure {
     int num_boundary_nodes; // number of boundary nodes
     int num_elem; // number of elements
     double d_avg; // average distance between nodes
+    double d_min; // minimum distance between nodes
+    double d_max; // maximum distance between nodes
     short num_poly_terms; //number of polynomial terms  //////NUM_POLY_TERMS
     short num_cloud_points; //number of cloud points in the domain
     short poly_degree; //degree of the polynomial basis functions
@@ -163,6 +166,22 @@ typedef struct FieldVariables {
     double* lapu; // laplacian of u
     double* lapv; // laplacian of v
     double* lapw; // laplacian of w
+    double* res_u; // residual of u-momentum equation
+    double* res_v; // residual of v-momentum equation
+    double* res_w; // residual of w-momentum equation
+    double* res_p; // residual of continuity equation
+    double* source_u; // source term for u-momentum equation
+    double* source_v; // source term for v-momentum equation
+    double* source_w; // source term for w-momentum equation
+    double* source_p; // source term for continuity equation
+    double* u_restricted; // restricted u field for FAS
+    double* v_restricted; // restricted v field for FAS
+    double* w_restricted; // restricted w field for FAS
+    double* p_restricted; // restricted p field for FAS
+    double* res_u_restricted; // restricted residual of u-momentum equation for FAS
+    double* res_v_restricted; // restricted residual of v-momentum equation for FAS
+    double* res_w_restricted; // restricted residual of w-momentum equation for FAS
+    double* res_p_restricted; // restricted residual of continuity equation for FAS
     // Compressible flow variables
     double* rho; // density field
     double* rho_old; // density old field

@@ -48,7 +48,18 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
         (*field)[ii].dvdy = (double*) malloc(N * sizeof(double));
         (*field)[ii].lapu = (double*) malloc(N * sizeof(double));
         (*field)[ii].lapv = (double*) malloc(N * sizeof(double));
-        
+        (*field)[ii].res_u = (double*) malloc(N * sizeof(double));
+        (*field)[ii].res_v = (double*) malloc(N * sizeof(double));
+        (*field)[ii].res_p = (double*) malloc(N * sizeof(double));
+        (*field)[ii].source_u = (double*) malloc(N * sizeof(double));
+        (*field)[ii].source_v = (double*) malloc(N * sizeof(double));
+        (*field)[ii].source_p = (double*) malloc(N * sizeof(double));
+        (*field)[ii].u_restricted = (double*) malloc(N * sizeof(double));
+        (*field)[ii].v_restricted = (double*) malloc(N * sizeof(double));
+        (*field)[ii].p_restricted = (double*) malloc(N * sizeof(double));
+        (*field)[ii].res_u_restricted = (double*) malloc(N * sizeof(double));
+        (*field)[ii].res_v_restricted = (double*) malloc(N * sizeof(double));
+        (*field)[ii].res_p_restricted = (double*) malloc(N * sizeof(double));
         if (parameters.dimension == 3) {
             (*field)[ii].w = (double*) malloc(N * sizeof(double));
             (*field)[ii].w_new = (double*) malloc(N * sizeof(double));
@@ -60,6 +71,10 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             (*field)[ii].dwdy = (double*) malloc(N * sizeof(double));
             (*field)[ii].dwdz = (double*) malloc(N * sizeof(double));
             (*field)[ii].lapw = (double*) malloc(N * sizeof(double));
+            (*field)[ii].res_w = (double*) malloc(N * sizeof(double));
+            (*field)[ii].source_w = (double*) malloc(N * sizeof(double));
+            (*field)[ii].w_restricted = (double*) malloc(N * sizeof(double));
+            (*field)[ii].res_w_restricted = (double*) malloc(N * sizeof(double));
         }
         else {
             (*field)[ii].w = NULL;

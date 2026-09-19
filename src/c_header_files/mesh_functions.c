@@ -1,7 +1,6 @@
 // Author :  Akash Unnikrishnan and Prof. Surya Pratap Vanka
 // Affiliation : Indian Institute of Technology Gandhinagar and University of Illinois at Urbana Champaign
 
-#include "structures.h"
 #include "functions.h"
 #include "kdtree.h"
 #include <stdio.h>
@@ -10,6 +9,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <omp.h>
 
 // Safe guards for fscanf on reading 1 and 2 items
 #define SAFE_SCAN1(x, msg) if ((x) != 1) { puts(msg); exit(1); }
@@ -169,7 +169,7 @@ void read_flow_parameters(const char *filename)
         }
         else if (!strcmp(key, "num_relax")){
             parameters.num_relax = atoi(val);
-            printf("PARAMETERS: %s = %hd\n", key, parameters.num_relax);
+            printf("PARAMETERS: %s = %d\n", key, parameters.num_relax);
         }
         else if (!strcmp(key, "fractional_step")){
             parameters.fractional_step = atoi(val) != 0;
@@ -285,7 +285,10 @@ void read_flow_parameters(const char *filename)
         parameters.mu  = 1.0 / parameters.Re;
     }
     parameters.nu = parameters.mu / parameters.rho;
+    printf("PARAMETERS: nu = %f\n", parameters.nu);
+    printf("PARAMETERS: rho = %f\n", parameters.rho);
 }
+
 
 void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* num_levels)
 {   
@@ -895,32 +898,33 @@ void create_restriction_matrix(PointStructure* myPointStruct_f,
 
     myPointStruct_c->restr_mat = (double*)malloc(myPointStruct_c->num_nodes * m * sizeof(double));
 
-    // for (int i = 0; i < myPointStruct_c->num_nodes; i++)
-    //     myPointStruct_c->restr_mat[i] = (double*)malloc(m * sizeof(double));
-
     // Initialise to zeros
     for (int i = 0; i < myPointStruct_c->num_nodes * m; i++)
         myPointStruct_c->restr_mat[i] = 0;
-    
-    double *A_inv = create_matrix_vectorised(mpn,mpn);
-    double *A = create_matrix_vectorised(mpn,mpn);
-    double *temp = create_vector(mpn);
-    double *temp1 = create_vector(m); // coefficients of restriction matrix
-    int i_restr;
 
-    double point1[3], point2[3];
-    for (int i = myPointStruct_c->num_boundary_nodes; i < myPointStruct_c->num_nodes; i++)
-    {   
-        i_restr = myPointStruct_c->restriction_points[i];
-        create_A_matrix_from_cloud_indices_vectorised(myPointStruct_f, A, myPointStruct_f->cloud_index[i_restr]);
+    int num_boundary_nodes = myPointStruct_c->num_boundary_nodes;
+    int num_nodes = myPointStruct_c->num_nodes;
+
+    // Each iteration gets its own work matrices so OpenMP threads don't overwrite each other
+    #pragma omp parallel for schedule(dynamic, 256)
+    for (int i = num_boundary_nodes; i < num_nodes; i++)
+    {
+        double *A_inv = create_matrix_vectorised(mpn,mpn);
+        double *A     = create_matrix_vectorised(mpn,mpn);
+        double *temp  = create_vector(mpn);
+        double *temp1 = create_vector(m); // coefficients of restriction matrix
+
+        int i_restr = myPointStruct_c->restriction_points[i];
+        create_A_matrix_from_cloud_indices_vectorised(myPointStruct_f, A, myPointStruct_f->cloud_index[i_restr * myPointStruct_f->num_cloud_points]);
         matrixInverse_Gauss_Jordan_vectorised(A, A_inv, m+n);
-        
+
+        double point1[3], point2[3];
         point1[0] = myPointStruct_c->x[i];
         point1[1] = myPointStruct_c->y[i];
         point1[2] = myPointStruct_c->z[i];
         
         for (short j = 0; j < m; j++) {
-            int k = (i_restr - 1)* myPointStruct_f->num_cloud_points + j;
+            int k = i_restr * myPointStruct_f->num_cloud_points + j;
             point2[0] = myPointStruct_f->x[myPointStruct_f->cloud_index[k]];
             point2[1] = myPointStruct_f->y[myPointStruct_f->cloud_index[k]];
             point2[2] = myPointStruct_f->z[myPointStruct_f->cloud_index[k]];
@@ -940,11 +944,16 @@ void create_restriction_matrix(PointStructure* myPointStruct_f,
         {
             myPointStruct_c->restr_mat[i*m +j] = temp1[j];
         }
+
+        free(temp);
+        free(temp1);
+        free(A);
+        free(A_inv);
+
+        if (i % 5000 == 0)
+            fprintf(stderr, "  restriction matrix: [thread %d] node %d / %d (%.1f%%)\n",
+                    omp_get_thread_num(), i, num_nodes, 100.0*i/num_nodes);
     }
-    free(temp);
-    free(temp1);
-    free(A);
-    free(A_inv);
 }
 
 void create_prolongation_matrix(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c)
@@ -962,27 +971,30 @@ void create_prolongation_matrix(PointStructure* myPointStruct_f, PointStructure*
     {
         myPointStruct_f->prol_mat[i] = 0;
     }
-    
-    double *A_inv = create_matrix_vectorised(mpn,mpn);
-    double *A = create_matrix_vectorised(mpn,mpn);
-    double *temp = create_vector(mpn);
-    double *temp1 = create_vector(m);
-    int i_prol;
 
-    double point1[3], point2[3], seed_pt[3];
-    for (int i = myPointStruct_f->num_boundary_nodes;
-                     i < myPointStruct_f->num_nodes; i++)
-    {   
-        i_prol = myPointStruct_f->prolongation_points[i];
-        create_A_matrix_from_cloud_indices_vectorised(myPointStruct_c, A, myPointStruct_c->cloud_index[i_prol]);
+    int num_boundary_nodes = myPointStruct_f->num_boundary_nodes;
+    int num_nodes = myPointStruct_f->num_nodes;
+
+    // Each iteration gets its own work matrices so OpenMP threads don't overwrite each other
+    #pragma omp parallel for schedule(dynamic, 256)
+    for (int i = num_boundary_nodes; i < num_nodes; i++)
+    {
+        double *A_inv = create_matrix_vectorised(mpn,mpn);
+        double *A     = create_matrix_vectorised(mpn,mpn);
+        double *temp  = create_vector(mpn);
+        double *temp1 = create_vector(m);
+
+        int i_prol = myPointStruct_f->prolongation_points[i];
+        create_A_matrix_from_cloud_indices_vectorised(myPointStruct_c, A, myPointStruct_c->cloud_index[i_prol * myPointStruct_c->num_cloud_points]);
         matrixInverse_Gauss_Jordan_vectorised(A, A_inv, m+n);
         
+        double point1[3], point2[3], seed_pt[3];
         point1[0] = myPointStruct_f->x[i];
         point1[1] = myPointStruct_f->y[i];
         point1[2] = myPointStruct_f->z[i];
         
         for (short j = 0; j < m; j++) {
-            int k = (i_prol-1)*myPointStruct_c->num_cloud_points + j;
+            int k = i_prol*myPointStruct_c->num_cloud_points + j;
             point2[0] = myPointStruct_c->x[myPointStruct_c->cloud_index[k]];
             point2[1] = myPointStruct_c->y[myPointStruct_c->cloud_index[k]];
             point2[2] = myPointStruct_c->z[myPointStruct_c->cloud_index[k]];
@@ -1001,11 +1013,16 @@ void create_prolongation_matrix(PointStructure* myPointStruct_f, PointStructure*
         
         for (short j = 0; j < (m); j++)
             myPointStruct_f->prol_mat[i*m +j] = temp1[j];
+
+        free(temp);
+        free(temp1);
+        free(A);
+        free(A_inv);
+
+        if (i % 5000 == 0)
+            fprintf(stderr, "  prolongation matrix: [thread %d] node %d / %d (%.1f%%)\n",
+                    omp_get_thread_num(), i, num_nodes, 100.0*i/num_nodes);
     }
-    free(temp);
-    free(temp1);
-    free(A);
-    free(A_inv);
 }
 
 void rcm_reordering_with_boundarynodes(PointStructure* myPointstruct) {
@@ -1141,9 +1158,12 @@ void create_prolongation_and_restriction_matrices(PointStructure* myPointStruct,
     printf("Prolongation and restriction points identified\n");
 }
 
-void calculate_avg_dx(PointStructure* myPointStruct){
+void calculate_point_spacings(PointStructure* myPointStruct){
     double dx, dy, dz;
     myPointStruct->d_avg = 0;
+    myPointStruct->d_min = 1e10;
+    myPointStruct->d_max = 0;
+    double temp;
     int n = myPointStruct->num_cloud_points;
     for (int i = 0; i < myPointStruct->num_nodes; i++){
         if (!myPointStruct->boundary_tag[i]){
@@ -1153,11 +1173,26 @@ void calculate_avg_dx(PointStructure* myPointStruct){
                 dz = myPointStruct->z[i] - myPointStruct->z[myPointStruct->cloud_index[i*n +1]];
             else
                 dz = 0;
-            myPointStruct->d_avg += sqrt(dx*dx + dy*dy + dz*dz);
+            temp = sqrt(dx*dx + dy*dy + dz*dz);
+            myPointStruct->d_avg += temp;
+            if (temp < myPointStruct->d_min)
+                myPointStruct->d_min = temp;
+            if (temp > myPointStruct->d_max)
+                myPointStruct->d_max = temp;
         }
     }
     myPointStruct->d_avg = myPointStruct->d_avg/myPointStruct->num_nodes;
 }
+
+double calculate_dt(PointStructure* myPointStruct){
+    double dt = 1e10;
+    double d = myPointStruct->d_min;
+    double termd =  parameters.dimension* parameters.nu/(d*d);
+    double termc =    1/d;
+    dt = 1/(termd + termc);
+    return (fmin(dt*parameters.courant_number/parameters.dimension, parameters.dt));
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1174,8 +1209,9 @@ void read_complete_mesh_data(PointStructure* myPointStruct, short num_levels)
         rcm_reordering_with_boundarynodes(&myPointStruct[ii]);
         printf("Correcting normal directions\n");
         correct_normal_directions(&myPointStruct[ii]);
-        printf("Calculating average nodal distance\n");
-        calculate_avg_dx(&myPointStruct[ii]);
+        printf("Calculating nodal distances\n");
+        calculate_point_spacings(&myPointStruct[ii]);
     }
+    parameters.dt = calculate_dt(&myPointStruct[0]);
     create_prolongation_and_restriction_matrices(myPointStruct, num_levels);
 }

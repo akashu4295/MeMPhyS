@@ -1,11 +1,11 @@
+// Author :  Akash Unnikrishnan and Prof. Surya Pratap Vanka
+// Affiliation : Indian Institute of Technology Gandhinagar and University of Illinois at Urbana Champaign
+
 #include "structures.h"
 #include "kdtree.h"
-#include <math.h>
-#include <assert.h>
-#include <stdlib.h>
-#include <stdbool.h>
 #include <float.h>
 #include <stdio.h>
+#include <omp.h>
 
 static double dist_sq(double *a1, double *a2)
 {
@@ -75,6 +75,13 @@ int* find_neighbours(double* p, void* ptree, double radius, int num_cloud_points
             int* pch = (int*)kd_res_item(presults, pos);
             dist = sqrt(dist_sq(p, pos));
 
+            // more filtering, same result nvm
+            // int already_present = 0;
+            // for (int k = 0; k < num_cloud_points; k++) {
+            //     if (ind[k] == *pch) { already_present = 1; break; }
+            // }
+            // if (already_present) { kd_res_next(presults); continue; }
+
             for (int j = 0; j < num_cloud_points; j++) {
                 if (dist < distance[j]) {
                     for (int k = num_cloud_points - 1; k > j; k--) {
@@ -138,15 +145,16 @@ void find_cloud_index(PointStructure* ps)
     if (!ps->cloud_index) abort();
 
     double radius = ps->d_avg * n;
-    double pt[3];
 
     /* -------- Interior nodes (exclude corners) -------- */
     void* ptree_all = create_kdtree_no_corners(ps);
 
+    #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < N; i++) {
         if (ps->corner_tag[i]) continue;
         if (ps->boundary_tag[i]) continue;
 
+        double pt[3];
         pt[0] = ps->x[i];
         pt[1] = ps->y[i];
         pt[2] = ps->z[i];
@@ -157,16 +165,21 @@ void find_cloud_index(PointStructure* ps)
             ps->cloud_index[i*n + j] = neigh[j];
 
         free(neigh);
+        if (i % 5000 == 0)
+        fprintf(stderr, "  cloud (interior): [thread %d] node %d / %d (%.1f%%)\n",
+                omp_get_thread_num(), i, N, 100.0*i/N);
     }
     free_kdtree(ptree_all);
 
     // Boundary nodes → interior-only cloud 
     void* ptree_int = create_kdtree_interior_only(ps);
 
+    #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < ps->num_nodes; i++) {
         if (ps->corner_tag[i]) continue;
         if (!ps->boundary_tag[i]) continue;
 
+        double pt[3];
         pt[0] = ps->x[i];
         pt[1] = ps->y[i];
         pt[2] = ps->z[i];
@@ -193,10 +206,12 @@ int* find_nearest_point(PointStructure* ps1,
 
     void* ptree = create_kdtree(ps2);
     double radius = ps2->d_avg * 10.0;
-    double pt[3];
+    int N = ps1->num_nodes;
 
+    #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < ps1->num_nodes; i++) {
         if (!ps1->corner_tag[i]) {
+            double pt[3];
             pt[0] = ps1->x[i];
             pt[1] = ps1->y[i];
             pt[2] = ps1->z[i];
@@ -206,6 +221,10 @@ int* find_nearest_point(PointStructure* ps1,
             free(tmp);
         } else {
             neighbour[i] = -1;
+
+            if (i % 5000 == 0)
+                fprintf(stderr, "  nearest point: [thread %d] node %d / %d (%.1f%%)\n",
+                        omp_get_thread_num(), i, N, 100.0*i/N);
         }
     }
 

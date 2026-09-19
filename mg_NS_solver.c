@@ -37,9 +37,12 @@ struct parameters parameters;
 int main()
 {
     clock_t clock_start = clock(), clock_program_begin = clock();
+    struct timespec wall_start, wall_end;
+    clock_gettime(CLOCK_MONOTONIC, &wall_start);
     PointStructure* myPointStruct;
     FieldVariables *field;
     double steady_state_error;
+    int it = 0;
     FILE *file1;
     FILE *file2;
 
@@ -49,14 +52,14 @@ int main()
     read_complete_mesh_data(myPointStruct, parameters.num_levels);
     printf("Time taken to read the grids and flow parameters: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
     AllocateMemoryFieldVariables(&field, myPointStruct, parameters.num_levels);
-    check_restart_file(&myPointStruct[0], &field[0]);
+    // check_restart_file(&myPointStruct[0], &field[0]); moved to before apply boundary conditions (after restart func)
     parameters.dt = calculate_dt(&myPointStruct[0]);
     // write_processed_grid_data(myPointStruct, 1);
 
     clock_start = clock();    // Start the clock
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
         create_derivative_matrices_vectorised(&myPointStruct[ii]);
-    if(parameters.test>0) test_derivatives(myPointStruct, parameters.num_levels, parameters.dimension);
+    // if(parameters.test>0) test_derivatives(myPointStruct, parameters.num_levels, parameters.dimension);
     printf("Time taken to create derivative matrices: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
 
 ////////////// Setting up the boudary condition 
@@ -70,6 +73,7 @@ int main()
         initial_conditions(myPointStruct, field, 1);
         boundary_conditions(myPointStruct, field, 1);
     }
+    check_restart_file(&myPointStruct[0], &field[0]);
     apply_boundary_conditions(myPointStruct, field, 1);
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
         create_laplacian_for_Poisson_equation_vectorised(&myPointStruct[ii]);
@@ -85,13 +89,13 @@ int main()
     
 ////////////// Time stepping loop start and writing solution files///////////// 
     clock_start = clock();    // Start the clock
-    file2 = fopen("Convergence.csv", "w"); // Write data to a file
+    file2 = fopen("Convergence.csv", parameters.restart ? "a" : "w");  // on restart, append to the old history
     int num_nodes = myPointStruct[0].num_nodes;
 
     
     if (parameters.fractional_step)
         if (parameters.dimension == 3){
-            for (int it = 0; it<parameters.num_time_steps; it++ ) 
+            for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
             {
                 steady_state_error = fractional_step_explicit_vectorised(myPointStruct, field);
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
@@ -107,13 +111,14 @@ int main()
                     #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].w[0:num_nodes], field[0].p[0:num_nodes])
                     for (int i = 0; i < myPointStruct[0].num_nodes; i++)
                         fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
-                    fflush(file1);	
+                    fflush(file1);
+                    write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
                     fclose(file1);
                 }
             }
         }
         else{
-            for (int it = 0; it<parameters.num_time_steps; it++ ) 
+            for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
             {
                 steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
@@ -129,14 +134,15 @@ int main()
                     #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
                     for (int i = 0; i < myPointStruct[0].num_nodes; i++)
                         fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], field[0].u[i], field[0].v[i], field[0].p[i]);
-                    fflush(file1);	
+                    fflush(file1);
+                    write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
                     fclose(file1);
                 }
             }
         }
     else{
         if (parameters.dimension == 3){
-            for (int it = 0; it<parameters.num_time_steps; it++ ) 
+            for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
             {
                 steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
                 printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
@@ -152,13 +158,14 @@ int main()
                     #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].w[0:num_nodes], field[0].p[0:num_nodes])
                     for (int i = 0; i < myPointStruct[0].num_nodes; i++)
                         fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
-                    fflush(file1);	
+                    fflush(file1);
+                    write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);    	
                     fclose(file1);
                 }
             } 
         }
         else{
-            for (int it = 0; it<parameters.num_time_steps; it++ ) 
+            for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
                 {
                     steady_state_error = time_implicit_solver_vectorised_2d(myPointStruct, field);
                     printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
@@ -174,7 +181,8 @@ int main()
                         #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
                         for (int i = 0; i < myPointStruct[0].num_nodes; i++)
                             fprintf(file1, "%lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], field[0].u[i], field[0].v[i], field[0].p[i]);
-                        fflush(file1);	
+                        fflush(file1);
+                        write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
                         fclose(file1);
                     }
                 }
@@ -186,12 +194,22 @@ int main()
 ////////////// Time stepping loop end ///////////// 
     // Write final solution in VTK format
     clock_start = clock();    // Start the clock
-    write_vtk(myPointStruct[0].mesh_filename,field,myPointStruct);
+    if (it < parameters.num_time_steps) {   // loop stopped early on convergence: last step not written yet
+        #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
+        if (parameters.dimension == 3) {
+            #pragma acc update host(field[0].w[0:num_nodes])
+        }
+        write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);
+    }
     printf("Time taken for VTK writing: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
     printf("Time for execution (total): %lf\n", (double)(clock()-clock_program_begin)/CLOCKS_PER_SEC);
 
     printf("Time_step, dt : %lf\n",parameters.dt);
     printf("Average distance between nodes: %lf\n",myPointStruct[0].d_avg);
+    clock_gettime(CLOCK_MONOTONIC, &wall_end);
+    double wall_seconds = (wall_end.tv_sec - wall_start.tv_sec)
+                        + (wall_end.tv_nsec - wall_start.tv_nsec) / 1e9;
+    printf("Time for execution (total, wall-clock): %lf\n", wall_seconds);
     free_PointStructure(myPointStruct, parameters.num_levels);
     free_field(field, parameters.num_levels);
     return 0;

@@ -3,9 +3,14 @@ logs/
 output/
 config/
 data/
+memphys_v1/
+legacy/
 linear_stability.c
 mg_heat_conduction.c
-test*
+plot_data.ipynb
+parameters_file.csv
+out
+a.out
 *.jpg
 *.jpeg
 *.png
@@ -14,6 +19,9 @@ test*
 *.vtk
 *.bak
 *.json
+*.mp4
+*.geo
+*.msh
 *REPORT*
 solver*
 Solution.csv
@@ -46,8 +54,9 @@ Convergence*
 Solution*
 normal*
 prolongation*
-test*
 COMP*
 bc2*
 .build*
 *_pycache_*
+*:Zone.Identifier
+*Zone.Identifier*

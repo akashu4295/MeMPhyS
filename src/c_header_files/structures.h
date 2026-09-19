@@ -60,6 +60,7 @@ struct parameters
     short num_levels; // Number of levels in the multigrid
     int write_interval; // Interval for writing the data
     float omega; // relaxation parameter
+    double timple_under_relax; // timple_under_relax
     double dt; // time step
     short iter_momentum; // number of iterations for momentum equation
     short iter_timple; // number of iterations for timple time stepping
@@ -165,6 +166,22 @@ typedef struct FieldVariables {
     double* lapu; // laplacian of u
     double* lapv; // laplacian of v
     double* lapw; // laplacian of w
+    double* res_u; // residual of u-momentum equation
+    double* res_v; // residual of v-momentum equation
+    double* res_w; // residual of w-momentum equation
+    double* res_p; // residual of continuity equation
+    double* source_u; // source term for u-momentum equation
+    double* source_v; // source term for v-momentum equation
+    double* source_w; // source term for w-momentum equation
+    double* source_p; // source term for continuity equation
+    double* u_restricted; // restricted u field for FAS
+    double* v_restricted; // restricted v field for FAS
+    double* w_restricted; // restricted w field for FAS
+    double* p_restricted; // restricted p field for FAS
+    double* res_u_restricted; // restricted residual of u-momentum equation for FAS
+    double* res_v_restricted; // restricted residual of v-momentum equation for FAS
+    double* res_w_restricted; // restricted residual of w-momentum equation for FAS
+    double* res_p_restricted; // restricted residual of continuity equation for FAS
     // Compressible flow variables
     double* rho; // density field
     double* rho_old; // density old field

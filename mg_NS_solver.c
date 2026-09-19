@@ -72,31 +72,7 @@ int main()
     printf("Time to setup the problem in cpu: %lf\n", (double)(clock()-clock_program_begin)/CLOCKS_PER_SEC);
 
 
-    // double omega_i = 1.0;
-    // double x, y, z, r, u_theta, r_i = 1.0, r_o = 2.0;
-    // double A = r_i * omega_i * r_o * r_i / ((r_o * r_o) - (r_i * r_i));
-    // // double A2 = r_i * omega_i * r_o * r_i / ((r_o * r_o) - (r_i * r_i));
-    // for (int iv = 0; iv < myPointStruct[0].num_nodes; iv++)
-    // {
-    //     x = myPointStruct[0].x[iv], y = myPointStruct[0].y[iv], r = sqrt(x * x + y * y);
-    //     u_theta = A * ((r_o / r) - (r / r_o));
-    //     field[0].u[iv] = (-u_theta * y / r), field[0].v[iv] = (u_theta * x / r);
-    //     field[0].p[iv] = (r * r / (2 * r_o * r_o)) - (2 * log(r)) - (r_o * r_o / (2 * r * r));
-    //     field[0].p[iv] = field[0].p[iv] * A * A;
-    //     field[0].u_old[iv] = field[0].u[iv];
-    //     field[0].v_old[iv] = field[0].v[iv];
-    //     field[0].p_old[iv] = field[0].p[iv];
-    //     field[0].u_new[iv] = field[0].u[iv];
-    //     field[0].v_new[iv] = field[0].v[iv];
-    //     field[0].pprime[iv] = 0.0;
-    //     // printf("%lf, %lf, %lf, %lf\n", x, y, field[0].u[iv], field[0].v[iv]);
-    // }
-    // double reference_pressure = field[0].p[0];
-    // for (int iv = 0; iv < myPointStruct[0].num_nodes; iv++)
-    // {
-    //     field[0].p[iv] = field[0].p[iv] - reference_pressure;
-    //     field[0].p_old[iv] = field[0].p_old[iv] - reference_pressure;
-    // }
+
 ////////////// Copy data to GPU memory /////////////
     clock_start = clock();    // Start the clock
     copyin_pointstructure_to_gpu(myPointStruct);
@@ -106,12 +82,12 @@ int main()
     
 ////////////// Time stepping loop start and writing solution files///////////// 
     clock_start = clock();    // Start the clock
-    file2 = fopen("Convergence.csv", "w"); // Write data to a file
     int num_nodes = myPointStruct[0].num_nodes;
     
     // Creating solution file name
     char filename[250];
     char sol_filename[250];
+    char convergence_filename[250];
     char temp[250];
     snprintf(temp, sizeof(temp), "%s", myPointStruct[0].mesh_filename);
     char *base = strrchr(temp, '/');   // Unix paths
@@ -129,8 +105,11 @@ int main()
     else
         snprintf(filename, sizeof(sol_filename), "Solution_implicit_poly_%d_Re_%g_%s", parameters.poly_degree, parameters.Re, base);
     snprintf(sol_filename, sizeof(sol_filename), "%s.csv", filename);
+    snprintf(convergence_filename, sizeof(convergence_filename), "Convergence_%s.csv", filename);
     
-    if (parameters.fractional_step)
+    file2 = fopen(convergence_filename, "w"); // Write data to a file
+    
+    if (parameters.fractional_step){
         if (parameters.dimension == 3){
             for (int it = 0; it<parameters.num_time_steps; it++ ) 
             {
@@ -175,32 +154,79 @@ int main()
                 }
             }
         }
+    }
     else{
         if (parameters.dimension == 3){
-            for (int it = 0; it<parameters.num_time_steps; it++ ) 
-            {
-                steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
-                printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
-                fflush(stdout);
-                fprintf(file2,"%d, %e\n", it, steady_state_error);
-                fflush(file2);
-                if (steady_state_error < parameters.steady_state_tolerance){
-                    printf("Converged at time step: %d\n", it);
-                    break;
+            if (parameters.num_levels>0){
+                for (int it = 0; it<parameters.num_time_steps; it++ ) 
+                {
+                    steady_state_error = multigrid_time_implicit_solver_vectorised(myPointStruct, field);
+                    printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
+                    fflush(stdout);
+                    fprintf(file2,"%d, %e\n", it, steady_state_error);
+                    fflush(file2);
+                    if (steady_state_error < parameters.steady_state_tolerance){
+                        printf("Converged at time step: %d\n", it);
+                        break;
+                    }
+                    if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
+                        file1 = fopen(sol_filename, "w"); // Write data to a file
+                        #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].w[0:num_nodes], field[0].p[0:num_nodes])
+                        for (int i = 0; i < myPointStruct[0].num_nodes; i++)
+                            fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
+                        fflush(file1);	
+                        fclose(file1);
+                    }
                 }
-                if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
-                    file1 = fopen(sol_filename, "w"); // Write data to a file
-                    #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].w[0:num_nodes], field[0].p[0:num_nodes])
-                    for (int i = 0; i < myPointStruct[0].num_nodes; i++)
-                        fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
-                    fflush(file1);	
-                    fclose(file1);
-                }
-            } 
+            }
+            else{
+                for (int it = 0; it<parameters.num_time_steps; it++ ) 
+                {
+                    steady_state_error = time_implicit_solver_vectorised(myPointStruct, field);
+                    printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
+                    fflush(stdout);
+                    fprintf(file2,"%d, %e\n", it, steady_state_error);
+                    fflush(file2);
+                    if (steady_state_error < parameters.steady_state_tolerance){
+                        printf("Converged at time step: %d\n", it);
+                        break;
+                    }
+                    if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
+                        file1 = fopen(sol_filename, "w"); // Write data to a file
+                        #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].w[0:num_nodes], field[0].p[0:num_nodes])
+                        for (int i = 0; i < myPointStruct[0].num_nodes; i++)
+                            fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
+                        fflush(file1);	
+                        fclose(file1);
+                    }
+                } 
+            }
         }
         else{
-            for (int it = 0; it<parameters.num_time_steps; it++ ) 
+            if (parameters.num_levels>1){
+                for (int it = 0; it<parameters.num_time_steps; it++ ) 
                 {
+                    steady_state_error = multigrid_time_implicit_solver_vectorised(myPointStruct, field);
+                    printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
+                    fflush(stdout);
+                    fprintf(file2,"%d, %e\n", it, steady_state_error);
+                    fflush(file2);
+                    if (steady_state_error < parameters.steady_state_tolerance){
+                        printf("Converged at time step: %d\n", it);
+                        break;
+                    }
+                    if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
+                        file1 = fopen(sol_filename, "w"); // Write data to a file
+                        #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
+                        for (int i = 0; i < myPointStruct[0].num_nodes; i++)
+                            fprintf(file1, "%lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], field[0].u[i], field[0].v[i], field[0].p[i]);
+                        fflush(file1);	
+                        fclose(file1);
+                    }
+                }
+            }
+            else{
+                for (int it = 0; it<parameters.num_time_steps; it++ ) {
                     steady_state_error = time_implicit_solver_vectorised_2d(myPointStruct, field);
                     printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
                     fflush(stdout);
@@ -220,6 +246,7 @@ int main()
                     }
                 }
             }
+        }
     }
     fclose(file2); 
     printf("Time taken for the solver: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);

@@ -132,6 +132,10 @@ void read_flow_parameters(const char *filename)
             parameters.omega = atof(val);
             printf("PARAMETERS: %s = %f\n", key, parameters.omega);
         }
+        else if (!strcmp(key, "timple_under_relax")){
+            parameters.timple_under_relax = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.timple_under_relax);
+        }
         else if (!strcmp(key, "time_step")){
             parameters.dt = atof(val);
             printf("PARAMETERS: %s = %f\n", key, parameters.dt);

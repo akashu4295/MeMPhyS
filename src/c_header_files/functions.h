@@ -182,6 +182,13 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
 void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 
+// Multigrid Modules
+double multigrid_time_implicit_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field);
+void single_grid_Poisson_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field);
+
+
+
+
 
 // Compressible flow
 double calculate_viscosity_sutherland(double T, double mu_ref, double T_ref, double T_s);

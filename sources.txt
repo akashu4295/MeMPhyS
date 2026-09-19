@@ -5,9 +5,10 @@ src/c_header_files/mat_lib.c
 src/c_header_files/kdtree_functions.c
 src/c_header_files/kdtree.c
 src/c_header_files/rbf.c
+src/c_header_files/test_derivatives.c
 src/c_header_files/timple_solver.c
 src/c_header_files/fractional_step_solver.c
-src/c_header_files/write_functions.c
+src/c_header_files/write_data.c
 src/c_header_files/initialisation.c
 src/c_header_files/openACC_functions.c
 -lm

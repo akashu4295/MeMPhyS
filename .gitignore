@@ -3,6 +3,8 @@ logs/
 output/
 config/
 data/
+memphys_v1/
+legacy/
 linear_stability.c
 mg_heat_conduction.c
 plot_data.ipynb

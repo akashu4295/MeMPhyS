@@ -5,6 +5,9 @@
 #include "kdtree.h"
 #include <float.h>
 #include <stdio.h>
+#include <assert.h>
+#include <math.h>
+#include <stdlib.h>
 
 static double dist_sq(double *a1, double *a2)
 {

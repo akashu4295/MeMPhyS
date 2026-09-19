@@ -450,7 +450,7 @@ void update_velocity_implicit_vectorised(PointStructure* myPointStruct, FieldVar
             field->u[i] -= (parameters.dt / parameters.rho) * field->dpdx[i];
             field->v[i] -= (parameters.dt / parameters.rho) * field->dpdy[i];
             field->w[i] -= (parameters.dt / parameters.rho) * field->dpdz[i];
-            field->p[i] += parameters.timple_under_relax * field->pprime[i];
+            field->p[i] += parameters.omega * field->pprime[i];
         }
         // Wall and inlet boundaries: velocity already set in intermediate step, don't touch
     }

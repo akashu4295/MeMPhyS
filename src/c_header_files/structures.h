@@ -55,12 +55,11 @@ struct parameters
     double steady_state_tolerance; // Tolerance for steady state convergence
     double poisson_solver_tolerance; // Tolerance for Poisson solver
     short num_vcycles; // Number of V-cycles
-    short num_relax; // Number of relaxation steps
+    int num_relax; // Number of relaxation steps
     int num_time_steps; // Number of time steps
     short num_levels; // Number of levels in the multigrid
     int write_interval; // Interval for writing the data
     float omega; // relaxation parameter
-    double timple_under_relax; // timple_under_relax
     double dt; // time step
     short iter_momentum; // number of iterations for momentum equation
     short iter_timple; // number of iterations for timple time stepping
@@ -74,6 +73,7 @@ struct parameters
     short poisson_solver_type; // Solver type Jacobi/Gauss Seidel/Bicgstab etc...
     bool restart; // flag to indicate whether to restart from a previous solution
     char restart_filename[250]; // filename to restart from
+    int start_step; // first time step to run: 0 normally, (step in restart filename) + 1 on restart
     bool compressible_flow;
     double gamma;          // Ratio of specific heats (1.4 for air)
     double R_gas;          // Gas constant (287 J/(kg·K) for air)

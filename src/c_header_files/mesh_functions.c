@@ -132,10 +132,6 @@ void read_flow_parameters(const char *filename)
             parameters.omega = atof(val);
             printf("PARAMETERS: %s = %f\n", key, parameters.omega);
         }
-        else if (!strcmp(key, "timple_under_relax")){
-            parameters.timple_under_relax = atof(val);
-            printf("PARAMETERS: %s = %f\n", key, parameters.timple_under_relax);
-        }
         else if (!strcmp(key, "time_step")){
             parameters.dt = atof(val);
             printf("PARAMETERS: %s = %f\n", key, parameters.dt);
@@ -166,7 +162,7 @@ void read_flow_parameters(const char *filename)
         }
         else if (!strcmp(key, "num_relax")){
             parameters.num_relax = atoi(val);
-            printf("PARAMETERS: %s = %hd\n", key, parameters.num_relax);
+            printf("PARAMETERS: %s = %d\n", key, parameters.num_relax);
         }
         else if (!strcmp(key, "fractional_step")){
             parameters.fractional_step = atoi(val) != 0;
@@ -282,7 +278,10 @@ void read_flow_parameters(const char *filename)
         parameters.mu  = 1.0 / parameters.Re;
     }
     parameters.nu = parameters.mu / parameters.rho;
+    printf("PARAMETERS: nu = %f\n", parameters.nu);
+    printf("PARAMETERS: rho = %f\n", parameters.rho);
 }
+
 
 void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* num_levels)
 {   

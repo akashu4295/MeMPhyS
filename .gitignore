@@ -11,7 +11,6 @@ plot_data.ipynb
 parameters_file.csv
 out
 a.out
-test*
 *.jpg
 *.jpeg
 *.png
@@ -52,7 +51,6 @@ Convergence*
 Solution*
 normal*
 prolongation*
-test*
 COMP*
 bc2*
 .build*

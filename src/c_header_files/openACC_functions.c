@@ -109,7 +109,11 @@ void copyin_field_to_gpu(FieldVariables *field,
             field[l].pprime[:N], \
             field[l].dpdn[:N], \
             field[l].dpdx[:N], \
-            field[l].dpdy[:N]  )
+            field[l].dpdy[:N], \
+            field[l].hyper_u[:N], \
+            field[l].hyper_v[:N], \
+            field[l].lapu_old[:N], \
+            field[l].lapv_old[:N] )
 
         #pragma acc enter data attach( \
             field[l].u, \
@@ -129,7 +133,11 @@ void copyin_field_to_gpu(FieldVariables *field,
             field[l].pprime, \
             field[l].dpdn, \
             field[l].dpdx, \
-            field[l].dpdy )
+            field[l].dpdy, \
+            field[l].hyper_u, \
+            field[l].hyper_v, \
+            field[l].lapu_old, \
+            field[l].lapv_old )
 
         if (parameters.dimension == 3) {
             #pragma acc enter data copyin( \
@@ -142,7 +150,9 @@ void copyin_field_to_gpu(FieldVariables *field,
                 field[l].dvdz[:N], \
                 field[l].dudz[:N], \
                 field[l].lapw[:N], \
-                field[l].dpdz[:N] )
+                field[l].dpdz[:N], \
+                field[l].hyper_w[:N], \
+                field[l].lapw_old[:N] )
             #pragma acc enter data attach( \
                 field[l].w, \
                 field[l].w_old, \
@@ -153,7 +163,9 @@ void copyin_field_to_gpu(FieldVariables *field,
                 field[l].dvdz, \
                 field[l].dudz, \
                 field[l].lapw, \
-                field[l].dpdz )
+                field[l].dpdz, \
+                field[l].hyper_w, \
+                field[l].lapw_old )
         }
 
         /* ---------------- res, source ---------------- */

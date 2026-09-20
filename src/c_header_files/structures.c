@@ -54,6 +54,10 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
         (*field)[ii].source_u = (double*) malloc(N * sizeof(double));
         (*field)[ii].source_v = (double*) malloc(N * sizeof(double));
         (*field)[ii].source_p = (double*) malloc(N * sizeof(double));
+        (*field)[ii].lapu_old = (double*) malloc(N * sizeof(double));
+        (*field)[ii].lapv_old = (double*) malloc(N * sizeof(double));
+        (*field)[ii].hyper_u = (double*) malloc(N * sizeof(double));
+        (*field)[ii].hyper_v = (double*) malloc(N * sizeof(double));
         (*field)[ii].u_restricted = (double*) malloc(N * sizeof(double));
         (*field)[ii].v_restricted = (double*) malloc(N * sizeof(double));
         (*field)[ii].p_restricted = (double*) malloc(N * sizeof(double));
@@ -75,6 +79,8 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             (*field)[ii].source_w = (double*) malloc(N * sizeof(double));
             (*field)[ii].w_restricted = (double*) malloc(N * sizeof(double));
             (*field)[ii].res_w_restricted = (double*) malloc(N * sizeof(double));
+            (*field)[ii].lapw_old = (double*) malloc(N * sizeof(double));
+            (*field)[ii].hyper_w = (double*) malloc(N * sizeof(double));
         }
         else {
             (*field)[ii].w = NULL;
@@ -87,6 +93,12 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             (*field)[ii].dwdy = NULL;
             (*field)[ii].dwdz = NULL;
             (*field)[ii].lapw = NULL;
+            (*field)[ii].res_w = NULL;
+            (*field)[ii].source_w = NULL;
+            (*field)[ii].w_restricted = NULL;
+            (*field)[ii].res_w_restricted = NULL;
+            (*field)[ii].lapw_old = NULL;
+            (*field)[ii].hyper_w = NULL;
         }
         
         // ========== COMPRESSIBLE FLOW VARIABLES (CONDITIONAL) ==========
@@ -200,6 +212,17 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
                 (*field)[ii].lapw[i] = 0.0;
             }
             
+            if (parameters.use_hyperviscosity) {
+                (*field)[ii].hyper_u[i] = parameters.gamma_hyper;
+                (*field)[ii].hyper_v[i] = parameters.gamma_hyper;
+                (*field)[ii].lapu_old[i] = 0.0;
+                (*field)[ii].lapv_old[i] = 0.0;
+                if (parameters.dimension == 3) {
+                    (*field)[ii].hyper_w[i] = parameters.gamma_hyper;
+                    (*field)[ii].lapw_old[i] = 0.0;
+                }
+            }
+
             // Compressible variables (if allocated)
             if (parameters.compressible_flow) {
                 (*field)[ii].rho[i] = parameters.rho_ref;
@@ -335,6 +358,10 @@ void free_field(FieldVariables* field, int num_levels) {
         free(field[i].dvdy);
         free(field[i].lapu);
         free(field[i].lapv);
+        free(field[i].hyper_u);
+        free(field[i].hyper_v);
+        free(field[i].lapu_old);
+        free(field[i].lapv_old);
 
         if (parameters.dimension == 3) {
             free(field[i].w);
@@ -347,6 +374,8 @@ void free_field(FieldVariables* field, int num_levels) {
             free(field[i].dwdy);
             free(field[i].dwdz);
             free(field[i].lapw);
+            free(field[i].hyper_w);
+            free(field[i].lapw_old);
         }
 
         // Free compressible variables (if allocated)

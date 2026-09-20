@@ -11,7 +11,7 @@ void test_derivatives(PointStructure* myPointStruct, short num_levels, short dom
     for (int ii = 0; ii < num_levels; ii++) {
         // Manufactured RHS function
         printf("Testing level %d\n", ii);
-        int k = 1; // wave number
+        int k = 3; // wave number
         if (domain_dimension > 2) {
             double *f, *fx, *fy, *fz, *lapf;
             f = (double*)malloc(myPointStruct[ii].num_nodes * sizeof(double));

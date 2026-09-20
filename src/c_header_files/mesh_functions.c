@@ -187,6 +187,22 @@ void read_flow_parameters(const char *filename)
             parameters.poisson_solver_type = atoi(val);
             printf("PARAMETERS: %s = %hd\n", key, parameters.poisson_solver_type);
         }
+        else if (!strcmp(key, "use_hyperviscosity")){
+            parameters.use_hyperviscosity = atoi(val) != 0;
+            printf("PARAMETERS: %s = %hd\n", key, parameters.use_hyperviscosity);
+        }
+        else if (!strcmp(key, "gamma_hyper")){
+            parameters.gamma_hyper = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.gamma_hyper);
+        }
+        else if (!strcmp(key, "time_scheme")){
+            parameters.time_scheme = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.time_scheme);
+        }
+        else if (!strcmp(key, "theta")){
+            parameters.theta = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.theta);
+        }
         else if (!strcmp(key, "restart")){
             parameters.restart = atoi(val) != 0;
             printf("PARAMETERS: %s = %hd\n", key, parameters.restart);

@@ -169,7 +169,7 @@ void prolongate_corrections_fas(PointStructure* fineStruct, PointStructure* coar
             int base_f = i * n_c;
             int base_c = i_prol_node * n_c;
             
-            double du = 0.0, dv = 0.0, dw = 0.0, dp = 0.0;
+            double du = 0.0, dv = 0.0, dw = 0.0;
 
             #pragma acc loop seq
             for (int j = 0; j < n_c; j++) {

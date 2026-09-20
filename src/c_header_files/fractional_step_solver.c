@@ -84,12 +84,38 @@ void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct
         multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w, field->dwdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 11);
         multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->w, field->lapw, myPointStruct->cloud_index, num_nodes, num_cloud_points, 12);    
         # pragma acc wait(1,2,3,4,5,6,7,8,9,10,11,12)
+
+        /* Hyperviscosity Evaluation: Biharmonic Operator \nabla^4 u = \nabla^2(\nabla^2 u) */
+        if (parameters.use_hyperviscosity) {
+            multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapu, field->hyper_u, myPointStruct->cloud_index, num_nodes, num_cloud_points, 13);
+            multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapv, field->hyper_v, myPointStruct->cloud_index, num_nodes, num_cloud_points, 14);
+            multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapw, field->hyper_w, myPointStruct->cloud_index, num_nodes, num_cloud_points, 15);
+            # pragma acc wait(13, 14, 15)
+        }
     }
+    
+    double weight_curr = (parameters.time_scheme == 1) ? (1.0 - parameters.theta) : 1.0;
+    double weight_old  = (parameters.time_scheme == 1) ? parameters.theta : 0.0;
+    double gamma       = parameters.use_hyperviscosity ? parameters.gamma_hyper : 0.0;
+
     # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
-        field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dudx[i] + field->v[i] * field->dudy[i] + field->w[i] * field->dudz[i] - parameters.nu * field->lapu[i]);
-        field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dvdx[i] + field->v[i] * field->dvdy[i] + field->w[i] * field->dvdz[i] - parameters.nu * field->lapv[i]);
-        field->w_new[i] = field->w[i] - parameters.dt * (field->u[i] * field->dwdx[i] + field->v[i] * field->dwdy[i] + field->w[i] * field->dwdz[i] - parameters.nu * field->lapw[i]);
+        double visc_u = weight_curr * field->lapu[i] + weight_old * field->lapu_old[i];
+        double visc_v = weight_curr * field->lapv[i] + weight_old * field->lapv_old[i];
+        double visc_w = weight_curr * field->lapw[i] + weight_old * field->lapw_old[i];
+
+        double hyp_u = gamma * field->hyper_u[i];
+        double hyp_v = gamma * field->hyper_v[i];
+        double hyp_w = gamma * field->hyper_w[i];
+
+        field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dudx[i] + field->v[i] * field->dudy[i] + field->w[i] * field->dudz[i] - parameters.nu * visc_u + hyp_u);
+        field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dvdx[i] + field->v[i] * field->dvdy[i] + field->w[i] * field->dvdz[i] - parameters.nu * visc_v + hyp_v);
+        field->w_new[i] = field->w[i] - parameters.dt * (field->u[i] * field->dwdx[i] + field->v[i] * field->dwdy[i] + field->w[i] * field->dwdz[i] - parameters.nu * visc_w + hyp_w);
+    
+        /* Save current Laplacian for next Crank-Nicolson iteration */
+        field->lapu_old[i] = field->lapu[i];
+        field->lapv_old[i] = field->lapv[i];
+        field->lapw_old[i] = field->lapw[i];
     }
     // /* ---- ENFORCE BOUNDARY CONDITIONS ON u* ---- */
     // # pragma acc parallel loop gang vector default(present)
@@ -122,11 +148,31 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
         multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 5);
         multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->v, field->lapv, myPointStruct->cloud_index, num_nodes, num_cloud_points, 6);
         # pragma acc wait(1,2,3,4,5,6)
+        /* Hyperviscosity Evaluation: Biharmonic Operator \nabla^4 u = \nabla^2(\nabla^2 u) */
+        if (parameters.use_hyperviscosity) {
+            multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapu, field->hyper_u, myPointStruct->cloud_index, num_nodes, num_cloud_points, 7);
+            multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapv, field->hyper_v, myPointStruct->cloud_index, num_nodes, num_cloud_points, 8);
+            # pragma acc wait(7, 8)
+        }
     }
+    double weight_curr = (parameters.time_scheme == 1) ? (1.0 - parameters.theta) : 1.0;
+    double weight_old  = (parameters.time_scheme == 1) ? parameters.theta : 0.0;
+    double gamma       = parameters.use_hyperviscosity ? parameters.gamma_hyper : 0.0;
+
     # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
-        field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dudx[i] + field->v[i] * field->dudy[i] - parameters.nu *field->lapu[i]);
-        field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dvdx[i] + field->v[i] * field->dvdy[i] - parameters.nu *field->lapv[i]);
+        double visc_u = weight_curr * field->lapu[i] + weight_old * field->lapu_old[i];
+        double visc_v = weight_curr * field->lapv[i] + weight_old * field->lapv_old[i];
+
+        double hyp_u = gamma * field->hyper_u[i];
+        double hyp_v = gamma * field->hyper_v[i];
+
+        field->u_new[i] = field->u[i] - parameters.dt * (field->u[i] * field->dudx[i] + field->v[i] * field->dudy[i] - parameters.nu *visc_u + hyp_u);
+        field->v_new[i] = field->v[i] - parameters.dt * (field->u[i] * field->dvdx[i] + field->v[i] * field->dvdy[i] - parameters.nu *visc_v + hyp_v);
+        
+        /* Save current Laplacian for next Crank-Nicolson iteration */
+        field->lapu_old[i] = field->lapu[i];
+        field->lapv_old[i] = field->lapv[i];
     }
     #pragma acc data present(field, myPointStruct, parameters)
     {

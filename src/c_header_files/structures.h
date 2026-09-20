@@ -71,6 +71,10 @@ struct parameters
     double nu; // kinematic viscosity
     bool fractional_step; // fractional step flag
     short poisson_solver_type; // Solver type Jacobi/Gauss Seidel/Bicgstab etc...
+    short time_scheme; // Time integration scheme: 0=explicit, 1=implicit
+    double theta; // theta parameter for implicit time integration 0.5 for Crank Nichollson, 1.0 for backward Euler
+    bool use_hyperviscosity; // flag to indicate whether to use hyperviscosity
+    double gamma_hyper; // hyperviscosity parameter
     bool restart; // flag to indicate whether to restart from a previous solution
     char restart_filename[250]; // filename to restart from
     int start_step; // first time step to run: 0 normally, (step in restart filename) + 1 on restart
@@ -166,6 +170,12 @@ typedef struct FieldVariables {
     double* lapu; // laplacian of u
     double* lapv; // laplacian of v
     double* lapw; // laplacian of w
+    double* hyper_u; // hyperviscosity of u
+    double* hyper_v; // hyperviscosity of v
+    double* hyper_w; // hyperviscosity of w
+    double* lapu_old; // laplacian of u from previous time step
+    double* lapv_old; // laplacian of v from previous time step
+    double* lapw_old; // laplacian of w from previous time step
     double* res_u; // residual of u-momentum equation
     double* res_v; // residual of v-momentum equation
     double* res_w; // residual of w-momentum equation

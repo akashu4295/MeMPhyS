@@ -6,6 +6,8 @@
 #include <float.h>
 #include <stdio.h>
 #include <omp.h>
+#include <assert.h>
+#include <math.h>
 
 static double dist_sq(double *a1, double *a2)
 {

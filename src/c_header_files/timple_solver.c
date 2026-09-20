@@ -8,7 +8,7 @@
 ////////////////////////////////////////////////////////////////////////////////////
 
 double time_implicit_solver_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field){
-    double steady_state_error = 0.0;
+    // double steady_state_error = 0.0;
 
     # pragma acc parallel loop present(field[0], myPointStruct[0])
     for (int i = 0; i < myPointStruct->num_nodes; i++){
@@ -250,7 +250,7 @@ void update_boundary_pressure_vectorised_2d(PointStructure* myPointStruct, Field
 
 
 double time_implicit_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field){
-    double steady_state_error = 0.0;
+    // double steady_state_error = 0.0;
 
     # pragma acc parallel loop present(field[0], myPointStruct[0])
     for (int i = 0; i < myPointStruct->num_nodes; i++){

@@ -1,6 +1,6 @@
-cylinder,wall,u=0.0,v=0.0,w=0.0
+wall,wall,u=0.0,v=0.0,w=0.0
 outlet,pressure_outlet,p=0.0
 inlet,velocity_inlet,u=0.1,v=0.0,w=0.0
-top,velocity_inlet,u=0.1,v=0.0,w=0.0
-bottom,velocity_inlet,u=0.1,v=0.0,w=0.0
-fluid,interior
+top_wall,velocity_inlet,u=0.1,v=0.0,w=0.0
+bottom_wall,velocity_inlet,u=0.1,v=0.0,w=0.0
+interior,interior

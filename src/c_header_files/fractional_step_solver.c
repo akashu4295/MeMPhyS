@@ -279,7 +279,8 @@ void FS_relaxation_vectorised_Jacobi(PointStructure* mypointstruct, FieldVariabl
         field->p_old[i] = field->p[i];
     }
     for (int iter = 0; iter < parameters.num_relax; iter++) {
-        #pragma acc parallel loop gang vector present(field->p[:N], field->p_old[:N], mypointstruct->cloud_index[:N*n], mypointstruct->lap_Poison[:N*n], parameters)
+        #pragma acc parallel loop gang vector present(field->p[:N], field->p_old[:N], \
+            mypointstruct->cloud_index[:N*n], mypointstruct->lap_Poison[:N*n], parameters)
         for (int i = 0; i < N; i++) {
             double sum = 0.0;
             for (int j = 1; j < n; j++) {
@@ -307,6 +308,7 @@ void FS_relaxation_vectorised_Gauss_Seidel(PointStructure* mypointstruct, FieldV
     int N = mypointstruct->num_nodes;
 
     for (int iter = 0; iter < parameters.num_relax; iter++) {
+        #pragma acc parallel loop gang vector present(field->p[:N], field->source[:N], mypointstruct->cloud_index[:N*n], mypointstruct->lap_Poison[:N*n], parameters)
         for (int i = 0; i < N; i++) {
             double sum = 0.0;
             int base = i * n;
@@ -563,11 +565,9 @@ void FS_relaxation_vectorised_BiCGStab(PointStructure* ps, const double* b, doub
     }
 
     #pragma acc data present(ps->lap_Poison[0:N*n], ps->cloud_index[0:N*n], \
-                             ps->boundary_tag[0:N]) \
-                     copyin(b[0:N]) \
-                     copy(x[0:N]) \
-                     create(diag_inv[0:N], r[0:N], r0[0:N], p[0:N], v[0:N], \
-                            s[0:N], t[0:N], z[0:N], y[0:N])
+                         ps->boundary_tag[0:N], b[0:N], x[0:N]) \
+                 create(diag_inv[0:N], r[0:N], r0[0:N], p[0:N], v[0:N], \
+                        s[0:N], t[0:N], z[0:N], y[0:N])
     {
         /* Diagonal inverse (Jacobi preconditioner) */
         #pragma acc parallel loop present(diag_inv, ps->lap_Poison)

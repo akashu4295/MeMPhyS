@@ -33,34 +33,36 @@
 #include <time.h>
 
 struct parameters parameters;
+struct timer timer;
 
 int main()
 {
-    clock_t clock_start = clock(), clock_program_begin = clock();
+    clock_t clock_start, clock_program_begin = clock();
     struct timespec wall_start, wall_end;
     clock_gettime(CLOCK_MONOTONIC, &wall_start);
     PointStructure* myPointStruct;
     FieldVariables *field;
-    double steady_state_error;
+    double steady_state_error=0.0;
     int it = 0;
-    FILE *file1;
     FILE *file2;
 
 ///// Read Parameters, grid filenames and mesh data 
     read_flow_parameters("flow_parameters.csv");     // Read the parameters from the file
     read_grid_filenames(&myPointStruct, "grid_filenames.csv", &parameters.num_levels);     // Read the parameters from the file
     read_complete_mesh_data(myPointStruct, parameters.num_levels);
-    printf("Time taken to read the grids and flow parameters: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
+    timer.time_read = (double)(clock() - clock_program_begin)/CLOCKS_PER_SEC;
+    printf("Time taken to read the grids and flow parameters: %lf\n", timer.time_read);
     AllocateMemoryFieldVariables(&field, myPointStruct, parameters.num_levels);
-    // check_restart_file(&myPointStruct[0], &field[0]); moved to before apply boundary conditions (after restart func)
     parameters.dt = calculate_dt(&myPointStruct[0]);
-    // write_processed_grid_data(myPointStruct, 1);
+
+    // write_processed_grid_data(myPointStruct, 1); // mesh coordinates, normals, boundary tags, corner tags, etc. are written to files for verification
 
     clock_start = clock();    // Start the clock
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
         create_derivative_matrices_vectorised(&myPointStruct[ii]);
-    // if(parameters.test>0) test_derivatives(myPointStruct, parameters.num_levels, parameters.dimension);
-    printf("Time taken to create derivative matrices: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
+    if(parameters.test>0) test_derivatives(myPointStruct, parameters.num_levels, parameters.dimension);
+    timer.time_derivatives = (double)(clock()-clock_start)/CLOCKS_PER_SEC;
+    printf("Time taken to create derivative matrices: %lf\n", timer.time_derivatives);
 
 ////////////// Setting up the boudary condition 
     FILE *bcf = fopen("bc.csv", "r");
@@ -77,22 +79,19 @@ int main()
     apply_boundary_conditions(myPointStruct, field, 1);
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
         create_laplacian_for_Poisson_equation_vectorised(&myPointStruct[ii]);
-    
-    printf("Time to setup the problem in cpu: %lf\n", (double)(clock()-clock_program_begin)/CLOCKS_PER_SEC);
+    timer.time_initialisation = (double)(clock()-clock_start)/CLOCKS_PER_SEC;
+    printf("Time taken for initialisation: %lf\n", timer.time_initialisation);
 
 ////////////// Copy data to GPU memory /////////////
     clock_start = clock();    // Start the clock
-    copyin_pointstructure_to_gpu(myPointStruct);
-    copyin_field_to_gpu(field, myPointStruct);
-    copyin_parameters_to_gpu();
-    printf("Time taken to copy data to GPU: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
+    copy_all_data_to_gpu(myPointStruct, field);
+    timer.time_copy_to_gpu = (double)(clock()-clock_start)/CLOCKS_PER_SEC;
+    printf("Time taken to copy data to GPU: %lf\n", timer.time_copy_to_gpu);
     
 ////////////// Time stepping loop start and writing solution files///////////// 
     clock_start = clock();    // Start the clock
     file2 = fopen("Convergence.csv", parameters.restart ? "a" : "w");  // on restart, append to the old history
-    int num_nodes = myPointStruct[0].num_nodes;
 
-    
     if (parameters.fractional_step)
         if (parameters.dimension == 3){
             for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
@@ -107,13 +106,8 @@ int main()
                     break;
                 }
                 if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
-                    file1 = fopen("Solution.csv", "w"); // Write data to a file
                     #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].w[0:num_nodes], field[0].p[0:num_nodes])
-                    for (int i = 0; i < myPointStruct[0].num_nodes; i++)
-                        fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
-                    fflush(file1);
                     write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
-                    fclose(file1);
                 }
             }
         }
@@ -130,13 +124,8 @@ int main()
                     break;
                 }
                 if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
-                    file1 = fopen("Solution.csv", "w"); // Write data to a file
                     #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
-                    for (int i = 0; i < myPointStruct[0].num_nodes; i++)
-                        fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], field[0].u[i], field[0].v[i], field[0].p[i]);
-                    fflush(file1);
                     write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
-                    fclose(file1);
                 }
             }
         }
@@ -154,13 +143,8 @@ int main()
                     break;
                 }
                 if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
-                    file1 = fopen("Solution.csv", "w"); // Write data to a file
                     #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].w[0:num_nodes], field[0].p[0:num_nodes])
-                    for (int i = 0; i < myPointStruct[0].num_nodes; i++)
-                        fprintf(file1, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], myPointStruct[0].z[i], field[0].u[i], field[0].v[i], field[0].w[i], field[0].p[i]);
-                    fflush(file1);
-                    write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);    	
-                    fclose(file1);
+                    write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);    
                 }
             } 
         }
@@ -177,39 +161,24 @@ int main()
                         break;
                     }
                     if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
-                        file1 = fopen("Solution.csv", "w"); // Write data to a file
                         #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
-                        for (int i = 0; i < myPointStruct[0].num_nodes; i++)
-                            fprintf(file1, "%lf, %lf, %lf, %lf, %lf\n", myPointStruct[0].x[i], myPointStruct[0].y[i], field[0].u[i], field[0].v[i], field[0].p[i]);
-                        fflush(file1);
                         write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
-                        fclose(file1);
                     }
                 }
             }
     }
     fclose(file2); 
-    printf("Time taken for the solver: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
+    timer.time_total = (double)(clock()-clock_start)/CLOCKS_PER_SEC;
+    printf("Time taken for the solver: %lf\n", timer.time_total);
 
-////////////// Time stepping loop end ///////////// 
-    // Write final solution in VTK format
-    clock_start = clock();    // Start the clock
-    if (it < parameters.num_time_steps) {   // loop stopped early on convergence: last step not written yet
-        #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
-        if (parameters.dimension == 3) {
-            #pragma acc update host(field[0].w[0:num_nodes])
-        }
-        write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);
-    }
-    printf("Time taken for VTK writing: %lf\n", (double)(clock()-clock_start)/CLOCKS_PER_SEC);
-    printf("Time for execution (total): %lf\n", (double)(clock()-clock_program_begin)/CLOCKS_PER_SEC);
-
+    ////////////// Time stepping loop end ///////////// 
     printf("Time_step, dt : %lf\n",parameters.dt);
     printf("Average distance between nodes: %lf\n",myPointStruct[0].d_avg);
     clock_gettime(CLOCK_MONOTONIC, &wall_end);
-    double wall_seconds = (wall_end.tv_sec - wall_start.tv_sec)
+    timer.time_total = (wall_end.tv_sec - wall_start.tv_sec)
                         + (wall_end.tv_nsec - wall_start.tv_nsec) / 1e9;
-    printf("Time for execution (total, wall-clock): %lf\n", wall_seconds);
+    printf("Time for execution (total, wall-clock): %lf\n", timer.time_total);
+    write_solver_data(myPointStruct, steady_state_error, it);
     free_PointStructure(myPointStruct, parameters.num_levels);
     free_field(field, parameters.num_levels);
     return 0;

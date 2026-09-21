@@ -83,7 +83,7 @@ int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS, 
 int write_vtk_test(char *gmsh_filename, FieldVariables *field, PointStructure* myPS) ;
 int read_vtk_restart(char *vtk_filename, FieldVariables *field, PointStructure* myPS);
 void check_restart_file(PointStructure* myPointStruct, FieldVariables* field);
-
+void write_solver_data(const PointStructure* myPointStruct, double steady_state_error, int it);
 
 // Math Library Function Declarations
 void create_matrix(double ***A, int n_rows, int n_cols);
@@ -218,6 +218,6 @@ void copyin_pointstructure_to_gpu(PointStructure* myPointStruct);
 void copyin_field_to_gpu(FieldVariables* field, PointStructure* myPointStruct);
 void copypout_pointstructure_from_gpu(PointStructure* myPointStruct);
 void copypout_field_from_gpu(FieldVariables* field, PointStructure* myPointStruct);
-
+void copy_all_data_to_gpu(PointStructure* myPointStruct, FieldVariables* field);
 
 #endif

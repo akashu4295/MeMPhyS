@@ -468,3 +468,106 @@ int read_vtk_restart(char *vtk_filename, FieldVariables *field, PointStructure* 
     printf("Restart: loaded u, v, p from %s\n", vtk_filename);
     return 0;
 }
+
+static const char* get_poisson_solver_name(int type) {
+    switch (type) {
+        case 1:  return "Jacobi";
+        case 2:  return "Gauss-Seidel";
+        case 3:  return "BiCGStab";
+        default: return "Unknown";
+    }
+}
+
+static const char* get_time_scheme_name(int scheme) {
+    switch (scheme) {
+        case 0:  return "Explicit";
+        case 1:  return "Crank-Nicolson";
+        default: return "Unknown";
+    }
+}
+
+static const char* get_algorithm_name(int fractional_step) {
+    switch (fractional_step) {
+        case 0:  return "Time Implicit";
+        case 1:  return "Fractional Step";
+        default: return "Unknown Algorithm";
+    }
+}
+
+
+void write_solver_data(const PointStructure* point_struct, double steady_state_error, int iteration)
+{
+    const char* filename = "Solver_data.txt";
+    FILE* file = fopen(filename, "w");
+    if (file == NULL) {
+        fprintf(stderr, "Error: Unable to open output file '%s'\n", filename);
+        exit(EXIT_FAILURE);
+    }   
+    // Header
+    fprintf(file, "================================================================================\n");
+    fprintf(file, "                          SOLVER LOG & RUN DATA SUMMARY                         \n");
+    fprintf(file, "================================================================================\n\n");
+
+    // Section 1: Mesh & Geometry
+    fprintf(file, "--- MESH & GEOMETRY INFORMATION ------------------------------------------------\n");
+    fprintf(file, "  %-30s : %s\n", "Mesh Filename",       point_struct->mesh_filename);
+    fprintf(file, "  %-30s : %d\n", "Number of Nodes",     point_struct->num_nodes);
+    fprintf(file, "  %-30s : %d\n", "Number of Corners",   point_struct->num_corners);
+    fprintf(file, "  %-30s : %d\n", "Cloud Points Count",  point_struct->num_cloud_points);
+    fprintf(file, "  %-30s : %.6e\n", "Avg Point Distance (d_avg)", point_struct->d_avg);
+    fprintf(file, "  %-30s : %.6e\n", "Min Point Distance (d_min)", point_struct->d_min);
+    fprintf(file, "  %-30s : %.6e\n", "Max Point Distance (d_max)", point_struct->d_max);
+    fprintf(file, "\n");
+
+    // Section 2: Physical & Domain Parameters
+    fprintf(file, "--- PHYSICAL & DOMAIN PROPERTIES -----------------------------------------------\n");
+    fprintf(file, "  %-30s : %dD\n",  "Dimension",            parameters.dimension);
+    fprintf(file, "  %-30s : %.6e\n", "Kinematic Viscosity (nu)", parameters.nu);
+    fprintf(file, "  %-30s : %.6f\n", "Fluid Density (rho)",      parameters.rho);
+    fprintf(file, "\n");
+
+    // Section 3: Numerical Model & Basis Function
+    fprintf(file, "--- NUMERICAL MODEL PARAMETERS -------------------------------------------------\n");
+    fprintf(file, "  %-30s : %s\n",  "Algorithm Type",       get_algorithm_name(parameters.fractional_step));
+    fprintf(file, "  %-30s : %d\n",  "Polynomial Degree",    parameters.poly_degree);
+    fprintf(file, "  %-30s : %d\n",  "PHS Degree",           parameters.phs_degree);
+    fprintf(file, "  %-30s : %.6f\n", "Courant Number",       parameters.courant_number);
+    fprintf(file, "  %-30s : %d\n",  "Number of Levels",     parameters.num_levels);
+    fprintf(file, "  %-30s : %d\n",  "Test Parameter",       parameters.test);
+    fprintf(file, "  %-30s : %d\n",  "Restart Flag",         parameters.restart);
+    fprintf(file, "\n");
+
+    // Section 4: Time Integration Scheme
+    fprintf(file, "--- TIME DISCRETIZATION SCHEME ------------------------------------------------\n");
+    fprintf(file, "  %-30s : %s\n",   "Time Scheme",          get_time_scheme_name(parameters.time_scheme));
+    fprintf(file, "  %-30s : %.4f\n", "Theta Parameter",      parameters.theta);
+    fprintf(file, "  %-30s : %.6e\n", "Time Step Size (dt)",  parameters.dt);
+    fprintf(file, "  %-30s : %d\n",   "Total Time Steps",    parameters.num_time_steps);
+    fprintf(file, "\n");
+
+    // Section 5: Poisson Solver Settings
+    fprintf(file, "--- POISSON SOLVER SETTINGS ----------------------------------------------------\n");
+    fprintf(file, "  %-30s : %s\n",   "Poisson Solver Type",  get_poisson_solver_name(parameters.poisson_solver_type));
+    fprintf(file, "  %-30s : %.6e\n", "Steady State Tolerance", parameters.steady_state_tolerance);
+    fprintf(file, "  %-30s : %.6e\n", "Poisson Tolerance",    parameters.poisson_solver_tolerance);
+    fprintf(file, "  %-30s : %.4f\n", "SOR Relaxation (omega)", parameters.omega);
+    fprintf(file, "  %-30s : %d\n",   "Max SOR Iterations",   parameters.num_relax);
+    fprintf(file, "\n");
+
+    // Section 6: Execution Profiling
+    fprintf(file, "--- EXECUTION TIMING PROFILE (seconds) -----------------------------------------\n");
+    fprintf(file, "  %-30s : %.4f s\n", "Read Grids & Flow Params", timer.time_read);
+    fprintf(file, "  %-30s : %.4f s\n", "Create Derivative Matrices", timer.time_derivatives);
+    fprintf(file, "  %-30s : %.4f s\n", "Initialization Time",     timer.time_initialisation);
+    fprintf(file, "  %-30s : %.4f s\n", "GPU Copy Time",          timer.time_copy_to_gpu);
+    fprintf(file, "  %-30s : %.4f s\n", "Total Solver Loop Time",  timer.time_total);
+    fprintf(file, "\n");
+
+    // Section 7: Current Convergence Snapshot
+    fprintf(file, "--- CONVERGENCE SNAPSHOT -------------------------------------------------------\n");
+    fprintf(file, "  %-30s : %d\n",   "Current Iteration",    iteration);
+    fprintf(file, "  %-30s : %.6e\n", "Steady State Error Residual", steady_state_error);
+    fprintf(file, "================================================================================\n");
+
+    fclose(file);
+}

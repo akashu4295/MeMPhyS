@@ -1,6 +1,7 @@
 #include "structures.h"
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 void AllocateMemoryPointStructure(PointStructure* myPointStruct, int nodes) {
     myPointStruct->x_normal = (double*)malloc(nodes * sizeof(double));
@@ -23,6 +24,7 @@ void AllocateMemoryPointStructure(PointStructure* myPointStruct, int nodes) {
 
 void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPointStruct, int num_levels) {
     *field = (FieldVariables*) malloc(num_levels * sizeof(FieldVariables));
+    // memset(*field, 0, num_levels * sizeof(FieldVariables));
     
     for (int ii = 0; ii < num_levels; ii++) {
         int N = myPointStruct[ii].num_nodes;
@@ -48,16 +50,16 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
         (*field)[ii].dvdy = (double*) malloc(N * sizeof(double));
         (*field)[ii].lapu = (double*) malloc(N * sizeof(double));
         (*field)[ii].lapv = (double*) malloc(N * sizeof(double));
+        (*field)[ii].lapu_old = (double*) malloc(N * sizeof(double));
+        (*field)[ii].lapv_old = (double*) malloc(N * sizeof(double));
+        (*field)[ii].hyper_u = (double*) malloc(N * sizeof(double));
+        (*field)[ii].hyper_v = (double*) malloc(N * sizeof(double));
         (*field)[ii].res_u = (double*) malloc(N * sizeof(double));
         (*field)[ii].res_v = (double*) malloc(N * sizeof(double));
         (*field)[ii].res_p = (double*) malloc(N * sizeof(double));
         (*field)[ii].source_u = (double*) malloc(N * sizeof(double));
         (*field)[ii].source_v = (double*) malloc(N * sizeof(double));
         (*field)[ii].source_p = (double*) malloc(N * sizeof(double));
-        (*field)[ii].lapu_old = (double*) malloc(N * sizeof(double));
-        (*field)[ii].lapv_old = (double*) malloc(N * sizeof(double));
-        (*field)[ii].hyper_u = (double*) malloc(N * sizeof(double));
-        (*field)[ii].hyper_v = (double*) malloc(N * sizeof(double));
         (*field)[ii].u_restricted = (double*) malloc(N * sizeof(double));
         (*field)[ii].v_restricted = (double*) malloc(N * sizeof(double));
         (*field)[ii].p_restricted = (double*) malloc(N * sizeof(double));
@@ -75,12 +77,12 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             (*field)[ii].dwdy = (double*) malloc(N * sizeof(double));
             (*field)[ii].dwdz = (double*) malloc(N * sizeof(double));
             (*field)[ii].lapw = (double*) malloc(N * sizeof(double));
+            (*field)[ii].lapw_old = (double*) malloc(N * sizeof(double));
+            (*field)[ii].hyper_w = (double*) malloc(N * sizeof(double));
             (*field)[ii].res_w = (double*) malloc(N * sizeof(double));
             (*field)[ii].source_w = (double*) malloc(N * sizeof(double));
             (*field)[ii].w_restricted = (double*) malloc(N * sizeof(double));
             (*field)[ii].res_w_restricted = (double*) malloc(N * sizeof(double));
-            (*field)[ii].lapw_old = (double*) malloc(N * sizeof(double));
-            (*field)[ii].hyper_w = (double*) malloc(N * sizeof(double));
         }
         else {
             (*field)[ii].w = NULL;
@@ -198,9 +200,14 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             (*field)[ii].dudy[i] = 0.0;
             (*field)[ii].dvdx[i] = 0.0;
             (*field)[ii].dvdy[i] = 0.0;
+            (*field)[ii].lapu_old[i] = 0.0;
+            (*field)[ii].lapv_old[i] = 0.0;
+            (*field)[ii].hyper_u[i] = 0.0;
+            (*field)[ii].hyper_v[i] = 0.0;
 
             if (parameters.dimension == 3) {
-                (*field)[ii].w[i] = 0.0;
+                if (parameters.dimension == 3)
+                    (*field)[ii].w[i] = 0.0;
                 (*field)[ii].w_new[i] = 0.0;
                 (*field)[ii].w_old[i] = 0.0;
                 (*field)[ii].dpdz[i] = 0.0;
@@ -211,15 +218,18 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
                 (*field)[ii].dwdz[i] = 0.0;
                 (*field)[ii].lapw[i] = 0.0;
             }
-            
-            if (parameters.use_hyperviscosity) {
-                (*field)[ii].hyper_u[i] = parameters.gamma_hyper;
-                (*field)[ii].hyper_v[i] = parameters.gamma_hyper;
+            if (parameters.fractional_step){
                 (*field)[ii].lapu_old[i] = 0.0;
                 (*field)[ii].lapv_old[i] = 0.0;
                 if (parameters.dimension == 3) {
-                    (*field)[ii].hyper_w[i] = parameters.gamma_hyper;
                     (*field)[ii].lapw_old[i] = 0.0;
+                }
+            }
+            if (parameters.use_hyperviscosity) {
+                (*field)[ii].hyper_u[i] = 0.0;
+                (*field)[ii].hyper_v[i] = 0.0;
+                if (parameters.dimension == 3) {
+                    (*field)[ii].hyper_w[i] = 0.0;
                 }
             }
 
@@ -281,14 +291,14 @@ void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldva
             myfieldvariables[ii].p_old[i] = 0;
         }
         if (parameters.compressible_flow){
-            for (int i = 0; i < myPointStruct->num_nodes; i++) {
+            for (int i = 0; i < myPointStruct[ii].num_nodes; i++) {
                 myPointStruct[ii].node_bc[i].T = 0.0;
                 myPointStruct[ii].node_bc[i].rho = 0.0;
                 myPointStruct[ii].node_bc[i].p_total = 0.0;
                 myPointStruct[ii].node_bc[i].T_total = 0.0;
-                myfieldvariables->T[i] = 0.0;  // e.g., 300 K
-                myfieldvariables->rho[i] = 0.0;           // Ideal gas law
-                myfieldvariables->e[i] = 0.0;             // Internal energy
+                myfieldvariables[ii].T[i] = 0.0;
+                myfieldvariables[ii].rho[i] = 0.0;
+                myfieldvariables[ii].e[i] = 0.0;
             }
         }
     }
@@ -318,17 +328,18 @@ void free_PointStructure(PointStructure* myPointStruct, int num_levels) {
         free(myPointStruct[i].cloud_index);
         free(myPointStruct[i].Dx);
         free(myPointStruct[i].Dy);
-        if (parameters.dimension == 3)
-            free(myPointStruct[i].Dz);
+        free(myPointStruct[i].prolongation_points);
+        free(myPointStruct[i].restriction_points);
         free(myPointStruct[i].lap);
         free(myPointStruct[i].lap_Poison);
+
+        if (parameters.dimension == 3)
+            free(myPointStruct[i].Dz);
         
         if (i != num_levels-1) {
-            free(myPointStruct[i].prolongation_points);
             free(myPointStruct[i].prol_mat);
         }
         if (i != 0) {
-            free(myPointStruct[i].restriction_points);
             free(myPointStruct[i].restr_mat);
         }
     }

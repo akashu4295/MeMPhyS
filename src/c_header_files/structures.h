@@ -96,6 +96,19 @@ struct parameters
 
 extern struct parameters parameters;
 
+// Structure to reord all times
+struct timer{
+    clock_t time_read; // Time for reading the grids and flow parameters
+    double time_initialisation; // Time for initialisation
+    double time_total; // Total time for the simulation
+    double time_derivatives; // Time for calulating derivatives
+    double time_test; // Time for testing    
+    double time_copy_to_gpu; // Time for copying data to GPU
+    double time_solver; // Time for the solver  
+}; // child created only once and used globally
+
+extern struct timer timer;
+
 // Structure to represent the mesh data
 typedef struct PointStructure {   
     char mesh_filename[250]; // name of the mesh file
@@ -176,6 +189,8 @@ typedef struct FieldVariables {
     double* lapu_old; // laplacian of u from previous time step
     double* lapv_old; // laplacian of v from previous time step
     double* lapw_old; // laplacian of w from previous time step
+
+    // TODO: For FAS and compressible flow, we need additional variables
     double* res_u; // residual of u-momentum equation
     double* res_v; // residual of v-momentum equation
     double* res_w; // residual of w-momentum equation

@@ -94,7 +94,7 @@ int main()
     clock_gettime(CLOCK_MONOTONIC, &clock_start);
     FILE *cnvgf = fopen("Convergence.csv", parameters.restart ? "a" : "w");  // on restart, append to the old history
     double steady_state_error = 0.0;
-    int it = 0;
+    int it = 0, num_nodes = myPointStruct[0].num_nodes;
 
     if (parameters.fractional_step)
         if (parameters.dimension == 3){

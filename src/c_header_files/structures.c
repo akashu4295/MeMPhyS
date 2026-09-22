@@ -425,3 +425,9 @@ void free_field(FieldVariables* field, int num_levels) {
     }
     free(field);
 }
+
+
+void free_all_memory(PointStructure* myPointStruct, FieldVariables* field, int num_levels) {
+    free_PointStructure(myPointStruct, num_levels);
+    free_field(field, num_levels);
+}

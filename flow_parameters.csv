@@ -24,3 +24,4 @@ use_hyperviscosity,0
 gamma_hyper,1e-3
 restart,0
 restart_filename,Solution_000099.vtk
+write_processed_grid_data,0

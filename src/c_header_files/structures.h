@@ -77,6 +77,7 @@ struct parameters
     double gamma_hyper; // hyperviscosity parameter
     bool restart; // flag to indicate whether to restart from a previous solution
     char restart_filename[250]; // filename to restart from
+    bool write_grid_data; // flag to indicate whether to write grid data
     int start_step; // first time step to run: 0 normally, (step in restart filename) + 1 on restart
     bool compressible_flow;
     double gamma;          // Ratio of specific heats (1.4 for air)
@@ -98,7 +99,7 @@ extern struct parameters parameters;
 
 // Structure to reord all times
 struct timer{
-    clock_t time_read; // Time for reading the grids and flow parameters
+    double time_read; // Time for reading the grids and flow parameters
     double time_initialisation; // Time for initialisation
     double time_total; // Total time for the simulation
     double time_derivatives; // Time for calulating derivatives
@@ -235,6 +236,6 @@ void free_PointStructure(PointStructure* myPointStruct, int num_levels);
 void free_field(FieldVariables* field, int num_levels);
 void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
 void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
-
+void free_all_memory(PointStructure* myPointStruct, FieldVariables* field, int num_levels);
 
 #endif

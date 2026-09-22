@@ -31,6 +31,7 @@ void create_prolongation_matrix(PointStructure* myPointStruct, PointStructure* m
 void rcm_reordering_with_boundarynodes(PointStructure* myPointStruct);
 double calculate_dt(PointStructure* myPointStruct);
 void calculate_point_spacings(PointStructure* myPointStruct);
+void read_parameters_gridfilenames_and_meshdata(PointStructure** myPointStruct, char* flow_parameters_file, char* grid_file);
 
 // Initialization Function declarations
 BCType parse_bc_type(const char* s);
@@ -188,9 +189,6 @@ void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariab
 // Multigrid Modules
 double multigrid_time_implicit_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field);
 void single_grid_Poisson_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field);
-
-
-
 
 
 // Compressible flow

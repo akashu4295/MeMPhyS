@@ -212,6 +212,10 @@ void read_flow_parameters(const char *filename)
             parameters.restart_filename[249] = '\0';
             printf("PARAMETERS: %s = %s\n", key, parameters.restart_filename);
         }
+        else if (!strcmp(key, "write_processed_grid_data")){
+            parameters.write_grid_data = atoi(val) != 0;
+            printf("PARAMETERS: %s = %hd\n", key, parameters.write_grid_data);
+        }
         /* ---- compressible block ---- */
 
         else if (!strcmp(key, "compressible_flow")){
@@ -1230,4 +1234,11 @@ void read_complete_mesh_data(PointStructure* myPointStruct, short num_levels)
     }
     parameters.dt = calculate_dt(&myPointStruct[0]);
     create_prolongation_and_restriction_matrices(myPointStruct, num_levels);
+}
+
+void read_parameters_gridfilenames_and_meshdata(PointStructure** myPointStruct, char* flow_parameters_file, char* grid_file)
+{
+    read_flow_parameters(flow_parameters_file);     // Read the parameters from the file
+    read_grid_filenames(myPointStruct, grid_file, &parameters.num_levels);     // Read the parameters from the file
+    read_complete_mesh_data(*myPointStruct, parameters.num_levels);
 }

@@ -132,8 +132,8 @@ int* find_nearest_point(PointStructure* myPointStruct1, PointStructure* myPointS
 //                      void* ptree,
 //                      double radius,
 //                      int num_cloud_points);
-// void* create_kdtree_no_corners(PointStructure* ps);
-// void* create_kdtree_interior_only(PointStructure* ps);
+void* create_kdtree_no_corners(PointStructure* ps);
+void* create_kdtree_interior_only(PointStructure* ps);
 // int* find_nearest_point(PointStructure* src, PointStructure* tgt);
 
 

@@ -309,6 +309,46 @@ void read_flow_parameters(const char *filename)
     printf("PARAMETERS: rho = %f\n", parameters.rho);
 }
 
+#include "kdtree.h"
+#include <omp.h>
+
+void build_gmsh_node_mapping(PointStructure *myPS)
+{
+    int j = 0;
+    for (int i = 0; i < myPS->num_nodes; i++) {
+        myPS->x_gmsh[i] = myPS->x[i];
+        myPS->y_gmsh[i] = myPS->y[i];
+        myPS->z_gmsh[i] = myPS->z[i];
+
+        if (!myPS->corner_tag[i]) {
+            myPS->orig_to_solver[i] = j++;
+        } else {
+            myPS->orig_to_solver[i] = -1;
+        }
+    }
+
+    /* Build KD-Tree of non-corner nodes using your existing helper */
+    void* ptree = create_kdtree_no_corners(myPS);
+
+    /* Fast, parallel search for the nearest solver node for each corner */
+    #pragma omp parallel for schedule(dynamic, 256)
+    for (int i = 0; i < myPS->num_nodes; i++) {
+        if (myPS->orig_to_solver[i] == -1) {
+            double z_val = (parameters.dimension == 3) ? myPS->z_gmsh[i] : 0.0;
+            
+            /* Query KD-Tree for nearest 1 point */
+            struct kdres *res = kd_nearest3(ptree, myPS->x_gmsh[i], myPS->y_gmsh[i], z_val);
+            if (res && !kd_res_end(res)) {
+                int *orig_idx_ptr = (int*)kd_res_item(res, NULL);
+                int orig_solver_node = *orig_idx_ptr;
+                myPS->corner_nearest_solver[i] = myPS->orig_to_solver[orig_solver_node];
+            }
+            kd_res_free(res);
+        }
+    }
+
+    free_kdtree(ptree);
+}
 
 void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* num_levels)
 {   
@@ -739,6 +779,9 @@ void read_PointStructure(PointStructure* myPointStruct)
         if (myPointStruct->corner_tag[i] == true)
             myPointStruct->num_corners++;
     }
+
+    build_gmsh_node_mapping(myPointStruct);
+    
     // Remove first num_corners nodes
     int remove_count = myPointStruct->num_corners;
     int new_size = myPointStruct->num_nodes - myPointStruct->num_corners;

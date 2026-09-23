@@ -32,6 +32,7 @@ void rcm_reordering_with_boundarynodes(PointStructure* myPointStruct);
 double calculate_dt(PointStructure* myPointStruct);
 void calculate_point_spacings(PointStructure* myPointStruct);
 void read_parameters_gridfilenames_and_meshdata(PointStructure** myPointStruct, char* flow_parameters_file, char* grid_file);
+void build_gmsh_node_mapping(PointStructure *myPS);
 
 // Initialization Function declarations
 BCType parse_bc_type(const char* s);
@@ -82,9 +83,12 @@ void write_processed_grid_data(PointStructure* myPointStruct, int num_levels);
 void make_directory(const char* name);
 int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS, int step);
 int write_vtk_test(char *gmsh_filename, FieldVariables *field, PointStructure* myPS) ;
-int read_vtk_restart(char *vtk_filename, FieldVariables *field, PointStructure* myPS);
+int read_vtk_restart(const char *vtk_filename, FieldVariables *field, PointStructure* myPS);
 void check_restart_file(PointStructure* myPointStruct, FieldVariables* field);
 void write_solver_data(const PointStructure* myPointStruct, double steady_state_error, int it);
+int write_vtk_field(FieldVariables *field, PointStructure *myPS, int step);
+int write_vtk_mesh(const char *gmsh_filename, const char *mesh_filename);
+
 
 // Math Library Function Declarations
 void create_matrix(double ***A, int n_rows, int n_cols);

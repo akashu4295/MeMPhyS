@@ -132,6 +132,12 @@ typedef struct PointStructure {
     double* y;  // y coordinates of the nodes
     double* z;  // z coordinates of the nodes
     int* rcm_order; // to get original order of data after rcm_reordering
+    int total_gmsh_nodes;      // Total number of nodes in the original GMSH mesh file (including ghost nodes)
+    double *x_gmsh;            // Original node X coords (size total_gmsh_nodes) 
+    double *y_gmsh;            // Original node Y coords
+    double *z_gmsh;            // Original node Z coords
+    int *orig_to_solver;       // Size total_gmsh_nodes 
+    int *corner_nearest_solver;// Size total_gmsh_nodes 
     int* point_index; // index of the point in the original dataset
     double* x_normal; // x component of the normal vector
     double* y_normal; // y component of the normal vector

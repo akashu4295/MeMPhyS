@@ -93,6 +93,7 @@ int main()
 ////////////// Time stepping loop starts here
     clock_gettime(CLOCK_MONOTONIC, &clock_start);
     FILE *cnvgf = fopen("Convergence.csv", parameters.restart ? "a" : "w");  // on restart, append to the old history
+    write_vtk_mesh(myPointStruct[0].mesh_filename, "mesh.vtk"); // Write mesh data to VTK for visualization
     double steady_state_error = 0.0;
     int it = 0, num_nodes = myPointStruct[0].num_nodes;
 
@@ -111,7 +112,8 @@ int main()
                 }
                 if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
                     #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].w[0:num_nodes], field[0].p[0:num_nodes])
-                    write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
+                    // write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
+                    write_vtk_field(field, myPointStruct, it); // Write field data to VTK for visualization
                 }
             }
         }
@@ -129,7 +131,8 @@ int main()
                 }
                 if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
                     #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
-                    write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
+                    // write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
+                    write_vtk_field(field, myPointStruct, it); // Write field data to VTK for visualization
                 }
             }
         }
@@ -148,7 +151,8 @@ int main()
                 }
                 if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
                     #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].w[0:num_nodes], field[0].p[0:num_nodes])
-                    write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);    
+                    // write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);    
+                    write_vtk_field(field, myPointStruct, it);
                 }
             } 
         }
@@ -166,7 +170,8 @@ int main()
                     }
                     if ((it % parameters.write_interval == 0) || (it == parameters.num_time_steps-1)){
                         #pragma acc update host(field[0].u[0:num_nodes], field[0].v[0:num_nodes], field[0].p[0:num_nodes])
-                        write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);	
+                        // write_vtk(myPointStruct[0].mesh_filename, field, myPointStruct, it);
+                        write_vtk_field(field, myPointStruct, it); // Write field data to VTK for visualization
                     }
                 }
             }

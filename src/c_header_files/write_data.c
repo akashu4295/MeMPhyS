@@ -7,6 +7,8 @@
 #include <string.h>
 #include <math.h>
 #include "functions.h"
+#include <omp.h>
+#include "kdtree.h"
 
 //////////////////////////////////////////////////////////////////////
 // Function Definitions
@@ -188,10 +190,6 @@ void write_processed_grid_data(PointStructure* myPointStruct, int ii)
     write_prolongation_and_restriction_points(myPointStruct, filename);
     printf("\n\n");
 }
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 // Structure to hold field data (velocities and pressure)
 typedef struct {
@@ -398,7 +396,7 @@ int write_vtk(char *gmsh_filename, FieldVariables *field, PointStructure* myPS, 
     return 0;
 }
 
-int read_vtk_restart(char *vtk_filename, FieldVariables *field, PointStructure* myPS)
+int read_vtk_restart(const char *vtk_filename, FieldVariables *field, PointStructure* myPS)
 {
     FILE *fp_in;
     char line[256];
@@ -570,4 +568,311 @@ void write_solver_data(const PointStructure* point_struct, double steady_state_e
     fprintf(file, "================================================================================\n");
 
     fclose(file);
+}
+
+int write_vtk_mesh(const char *gmsh_filename, const char *mesh_filename)
+{
+    FILE *fp_in = fopen(gmsh_filename, "r");
+    if (!fp_in) return -1;
+
+    char line[256];
+    int num_nodes = 0, num_elements = 0;
+
+    /* Read Nodes */
+    while (fgets(line, sizeof(line), fp_in)) {
+        if (strstr(line, "$Nodes")) {
+            fscanf(fp_in, "%d", &num_nodes);
+            break;
+        }
+    }
+
+    double *nodes_x = malloc(num_nodes * sizeof(double));
+    double *nodes_y = malloc(num_nodes * sizeof(double));
+    double *nodes_z = malloc(num_nodes * sizeof(double));
+
+    for (int i = 0; i < num_nodes; i++) {
+        int node_id;
+        double x, y, z;
+        fscanf(fp_in, "%d %lf %lf %lf", &node_id, &x, &y, &z);
+        nodes_x[node_id - 1] = x;
+        nodes_y[node_id - 1] = y;
+        nodes_z[node_id - 1] = z;
+    }
+
+    /* Read Elements */
+    while (fgets(line, sizeof(line), fp_in)) {
+        if (strstr(line, "$Elements")) {
+            fscanf(fp_in, "%d", &num_elements);
+            break;
+        }
+    }
+
+    int max_conn = (parameters.dimension == 2) ? 3 : 4;
+    int vtk_type  = (parameters.dimension == 2) ? 5 : 10;
+    int *conn = malloc(num_elements * max_conn * sizeof(int));
+    int cell_count = 0;
+
+    for (int i = 0; i < num_elements; i++) {
+        int elem_id, elem_type, num_tags;
+        fscanf(fp_in, "%d %d %d", &elem_id, &elem_type, &num_tags);
+
+        for (int j = 0; j < num_tags; j++) {
+            int tmp;
+            fscanf(fp_in, "%d", &tmp);
+        }
+
+        if (parameters.dimension == 2 && elem_type == 2) {
+            int n1, n2, n3;
+            fscanf(fp_in, "%d %d %d", &n1, &n2, &n3);
+            conn[cell_count*3+0] = n1-1;
+            conn[cell_count*3+1] = n2-1;
+            conn[cell_count*3+2] = n3-1;
+            cell_count++;
+        }
+        else if (parameters.dimension == 3 && elem_type == 4) {
+            int n1, n2, n3, n4;
+            fscanf(fp_in, "%d %d %d %d", &n1, &n2, &n3, &n4);
+            conn[cell_count*4+0] = n1-1;
+            conn[cell_count*4+1] = n2-1;
+            conn[cell_count*4+2] = n3-1;
+            conn[cell_count*4+3] = n4-1;
+            cell_count++;
+        } else {
+            fgets(line, sizeof(line), fp_in);
+        }
+    }
+    fclose(fp_in);
+
+    /* Write VTK Mesh */
+    FILE *fp_out = fopen(mesh_filename, "w");
+    if (!fp_out) return -1;
+
+    fprintf(fp_out, "# vtk DataFile Version 3.0\nMesh\nASCII\nDATASET UNSTRUCTURED_GRID\n");
+    fprintf(fp_out, "POINTS %d double\n", num_nodes);
+    for (int i = 0; i < num_nodes; i++) {
+        fprintf(fp_out, "%.16e %.16e %.16e\n", nodes_x[i], nodes_y[i], nodes_z[i]);
+    }
+
+    int vtk_cell_size = max_conn + 1;
+    fprintf(fp_out, "\nCELLS %d %d\n", cell_count, cell_count * vtk_cell_size);
+    for (int i = 0; i < cell_count; i++) {
+        fprintf(fp_out, "%d ", max_conn);
+        for (int j = 0; j < max_conn; j++) {
+            fprintf(fp_out, "%d ", conn[i * max_conn + j]);
+        }
+        fprintf(fp_out, "\n");
+    }
+
+    fprintf(fp_out, "\nCELL_TYPES %d\n", cell_count);
+    for (int i = 0; i < cell_count; i++) {
+        fprintf(fp_out, "%d\n", vtk_type);
+    }
+
+    fclose(fp_out);
+    free(nodes_x); free(nodes_y); free(nodes_z); free(conn);
+    return 0;
+}
+
+int write_vtk_field(FieldVariables *field, PointStructure *myPS, int step)
+{
+    char vtk_filename[256];
+    sprintf(vtk_filename, "Field_%06d.vtk", step);
+
+    FILE *fp_out = fopen(vtk_filename, "w");
+    if (!fp_out) return -1;
+
+    int total_nodes = myPS->total_gmsh_nodes;
+
+    fprintf(fp_out, "# vtk DataFile Version 3.0\nField Step %d\nASCII\nDATASET UNSTRUCTURED_GRID\n", step);
+
+    /* 1. WRITE POINTS */
+    fprintf(fp_out, "POINTS %d double\n", total_nodes);
+    for (int i = 0; i < total_nodes; i++) {
+        fprintf(fp_out, "%.16e %.16e %.16e\n", myPS->x_gmsh[i], myPS->y_gmsh[i], myPS->z_gmsh[i]);
+    }
+
+    /* 2. WRITE POINT DATA */
+    fprintf(fp_out, "\nPOINT_DATA %d\n", total_nodes);
+
+    /* Velocity Vector */
+    fprintf(fp_out, "VECTORS velocity double\n");
+    for (int i = 0; i < total_nodes; i++) {
+        int pre_rcm_s = myPS->orig_to_solver[i];
+        if (pre_rcm_s < 0) {
+            pre_rcm_s = myPS->corner_nearest_solver[i];
+        }
+
+        int k = myPS->rcm_order[pre_rcm_s];
+
+        if (parameters.dimension == 2) {
+            fprintf(fp_out, "%.16e %.16e 0.0\n", field->u[k], field->v[k]);
+        } else {
+            fprintf(fp_out, "%.16e %.16e %.16e\n", field->u[k], field->v[k], field->w[k]);
+        }
+    }
+
+    /* Pressure Scalar */
+    fprintf(fp_out, "\nSCALARS pressure double 1\nLOOKUP_TABLE default\n");
+    for (int i = 0; i < total_nodes; i++) {
+        int pre_rcm_s = myPS->orig_to_solver[i];
+        if (pre_rcm_s < 0) {
+            pre_rcm_s = myPS->corner_nearest_solver[i];
+        }
+
+        int k = myPS->rcm_order[pre_rcm_s];
+        fprintf(fp_out, "%.16e\n", field->p[k]);
+    }
+
+    /* Peclet number: |velocity| * (distance to nearest cloud neighbour) / nu, per node */
+    fprintf(fp_out, "\nSCALARS peclet double 1\n");
+    fprintf(fp_out, "LOOKUP_TABLE default\n");
+    int ncp = myPS->num_cloud_points;
+    for (int i = 0; i < total_nodes; i++) {
+        int pre_rcm_s = myPS->orig_to_solver[i];
+        if (pre_rcm_s < 0) {
+            pre_rcm_s = myPS->corner_nearest_solver[i];
+        }
+
+        int k = myPS->rcm_order[pre_rcm_s];
+        int nearest = myPS->cloud_index[k*ncp + 1];   // index 0 in the cloud is always the node itself
+
+        double dx = myPS->x[k] - myPS->x[nearest];
+        double dy = myPS->y[k] - myPS->y[nearest];
+        double dz = (parameters.dimension == 3) ? (myPS->z[k] - myPS->z[nearest]) : 0.0;
+        double h  = sqrt(dx*dx + dy*dy + dz*dz);
+        
+        // actual vmag
+        double vmag = (parameters.dimension == 3)
+                        ? sqrt(field->u[k]*field->u[k] + field->v[k]*field->v[k] + field->w[k]*field->w[k])
+                        : sqrt(field->u[k]*field->u[k] + field->v[k]*field->v[k]);
+
+        // manually overwrite
+        // double vmag = 1;
+        double pe = (parameters.nu > 0.0) ? vmag * h / parameters.nu : 0.0;
+        fprintf(fp_out, "%.16e\n", pe);
+    }
+    
+    fclose(fp_out);
+    return 0;
+}
+
+#define EPSILON 1e-12
+
+typedef struct {
+    double x, y, z;
+    double u, v, w, p;
+    int index;
+} OldNodeData;
+
+int read_and_interpolate_restart_vtk(const char *old_field_file,  FieldVariables *field,  PointStructure *newPS){
+    FILE *fp = fopen(old_field_file, "r");
+    if (!fp) {
+        fprintf(stderr, "Error: Could not open restart file %s\n", old_field_file);
+        return -1;
+    }
+
+    char line[256];
+    int num_old_nodes = 0;
+
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, "POINTS")) {
+            sscanf(line, "POINTS %d", &num_old_nodes);
+            break;
+        }
+    }
+
+    if (num_old_nodes == 0) {
+        fclose(fp);
+        return -1;
+    }
+
+    OldNodeData *old_data = malloc(num_old_nodes * sizeof(OldNodeData));
+
+    for (int i = 0; i < num_old_nodes; i++) {
+        fscanf(fp, "%lf %lf %lf", &old_data[i].x, &old_data[i].y, &old_data[i].z);
+        old_data[i].index = i;
+    }
+
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, "VECTORS velocity")) break;
+    }
+    for (int i = 0; i < num_old_nodes; i++) {
+        fscanf(fp, "%lf %lf %lf", &old_data[i].u, &old_data[i].v, &old_data[i].w);
+    }
+
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, "SCALARS pressure")) break;
+    }
+    fgets(line, sizeof(line), fp); /* skip LOOKUP_TABLE line */
+
+    for (int i = 0; i < num_old_nodes; i++) {
+        fscanf(fp, "%lf", &old_data[i].p);
+    }
+    fclose(fp);
+
+    void *ptree = kd_create(3);
+    for (int i = 0; i < num_old_nodes; i++) {
+        kd_insert3(ptree, old_data[i].x, old_data[i].y, old_data[i].z, &old_data[i]);
+    }
+
+    int num_new_solver = newPS->num_nodes;
+    double search_radius = newPS->d_avg * 10.0;
+    int K = newPS->num_cloud_points;
+
+    #pragma omp parallel for schedule(dynamic, 256)
+    for (int i = 0; i < num_new_solver; i++) {
+        double pt[3];
+        pt[0] = newPS->x[i];
+        pt[1] = newPS->y[i];
+        pt[2] = (parameters.dimension == 3) ? newPS->z[i] : 0.0;
+
+        int *neigh_indices = find_neighbours(pt, ptree, search_radius, K);
+
+        int target_k = newPS->rcm_order[i];
+
+        if (neigh_indices) {
+            double weight_sum = 0.0;
+            double u_interp = 0.0, v_interp = 0.0, w_interp = 0.0, p_interp = 0.0;
+            int exact_found = -1;
+
+            for (int k = 0; k < K; k++) {
+                int old_idx = neigh_indices[k];
+                double dx = pt[0] - old_data[old_idx].x;
+                double dy = pt[1] - old_data[old_idx].y;
+                double dz = pt[2] - old_data[old_idx].z;
+                double dist_sq = dx*dx + dy*dy + dz*dz;
+
+                if (dist_sq < EPSILON) {
+                    exact_found = old_idx;
+                    break;
+                }
+
+                double w = 1.0 / dist_sq; /* IDW weight */
+                weight_sum += w;
+
+                u_interp += w * old_data[old_idx].u;
+                v_interp += w * old_data[old_idx].v;
+                w_interp += w * old_data[old_idx].w;
+                p_interp += w * old_data[old_idx].p;
+            }
+
+            if (exact_found >= 0) {
+                field->u[target_k] = old_data[exact_found].u;
+                field->v[target_k] = old_data[exact_found].v;
+                if (parameters.dimension == 3) field->w[target_k] = old_data[exact_found].w;
+                field->p[target_k] = old_data[exact_found].p;
+            } else {
+                field->u[target_k] = u_interp / weight_sum;
+                field->v[target_k] = v_interp / weight_sum;
+                if (parameters.dimension == 3) field->w[target_k] = w_interp / weight_sum;
+                field->p[target_k] = p_interp / weight_sum;
+            }
+
+            free(neigh_indices);
+        }
+    }
+
+    free_kdtree(ptree);
+    free(old_data);
+    return 0;
 }

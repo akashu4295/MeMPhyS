@@ -20,6 +20,12 @@ void AllocateMemoryPointStructure(PointStructure* myPointStruct, int nodes) {
     myPointStruct->num_nodes = nodes;
     myPointStruct->num_elem = 0;
     myPointStruct->rcm_order = (int*)malloc(nodes*sizeof(int));
+    myPointStruct->total_gmsh_nodes = myPointStruct->num_nodes;
+    myPointStruct->x_gmsh = (double*)malloc(myPointStruct->num_nodes * sizeof(double));
+    myPointStruct->y_gmsh = (double*)malloc(myPointStruct->num_nodes * sizeof(double));
+    myPointStruct->z_gmsh = (double*)malloc(myPointStruct->num_nodes * sizeof(double));
+    myPointStruct->orig_to_solver = (int*)malloc(myPointStruct->num_nodes * sizeof(int));
+    myPointStruct->corner_nearest_solver = (int*)malloc(myPointStruct->num_nodes * sizeof(int));
 }
 
 void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPointStruct, int num_levels) {
@@ -332,7 +338,13 @@ void free_PointStructure(PointStructure* myPointStruct, int num_levels) {
         free(myPointStruct[i].restriction_points);
         free(myPointStruct[i].lap);
         free(myPointStruct[i].lap_Poison);
-
+        free(myPointStruct[i].rcm_order);
+        free(myPointStruct[i].x_gmsh);
+        free(myPointStruct[i].y_gmsh);
+        free(myPointStruct[i].z_gmsh);
+        free(myPointStruct[i].orig_to_solver);
+        free(myPointStruct[i].corner_nearest_solver);
+        
         if (parameters.dimension == 3)
             free(myPointStruct[i].Dz);
         

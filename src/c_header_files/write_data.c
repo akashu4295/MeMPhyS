@@ -9,6 +9,7 @@
 #include "functions.h"
 #include <omp.h>
 #include "kdtree.h"
+#include <glob.h>
 
 //////////////////////////////////////////////////////////////////////
 // Function Definitions
@@ -673,23 +674,64 @@ int write_vtk_mesh(const char *gmsh_filename, const char *mesh_filename)
     return 0;
 }
 
+/* Rewrite Solution.vtk.series: a ParaView file-series index listing every
+   Solution_*.vtk in the run folder up to `step`, with time = step * dt.
+   Opening Solution.vtk.series in ParaView loads all steps as one case. */
+static void write_vtk_series(int step)
+{
+    glob_t g;
+    if (glob("Solution_[0-9]*.vtk", 0, NULL, &g) != 0) return;
+
+    FILE *fp = fopen("Solution.vtk.series.tmp", "w");
+    if (!fp) { globfree(&g); return; }
+
+    fprintf(fp, "{\n  \"file-series-version\" : \"1.0\",\n  \"files\" : [\n");
+    int first = 1;
+    for (size_t i = 0; i < g.gl_pathc; i++) {
+        int s;
+        if (sscanf(g.gl_pathv[i], "Solution_%d.vtk", &s) != 1 || s > step) continue;
+        fprintf(fp, "%s    { \"name\" : \"%s\", \"time\" : %.10g }",
+                first ? "" : ",\n", g.gl_pathv[i], s * parameters.dt);
+        first = 0;
+    }
+    fprintf(fp, "\n  ]\n}\n");
+    fclose(fp);
+    globfree(&g);
+    rename("Solution.vtk.series.tmp", "Solution.vtk.series");  // swap in one go so ParaView never reads a half-written file
+}
+
 int write_vtk_field(FieldVariables *field, PointStructure *myPS, int step)
 {
     char vtk_filename[256];
-    sprintf(vtk_filename, "Field_%06d.vtk", step);
+    sprintf(vtk_filename, "Solution_%06d.vtk", step);
 
     FILE *fp_out = fopen(vtk_filename, "w");
     if (!fp_out) return -1;
 
-    int total_nodes = myPS->total_gmsh_nodes;
+    // int total_nodes = myPS->total_gmsh_nodes;
 
-    fprintf(fp_out, "# vtk DataFile Version 3.0\nField Step %d\nASCII\nDATASET UNSTRUCTURED_GRID\n", step);
+    // fprintf(fp_out, "# vtk DataFile Version 3.0\nField Step %d\nASCII\nDATASET UNSTRUCTURED_GRID\n", step);
 
-    /* 1. WRITE POINTS */
-    fprintf(fp_out, "POINTS %d double\n", total_nodes);
-    for (int i = 0; i < total_nodes; i++) {
-        fprintf(fp_out, "%.16e %.16e %.16e\n", myPS->x_gmsh[i], myPS->y_gmsh[i], myPS->z_gmsh[i]);
+    // /* 1. WRITE POINTS */
+    // fprintf(fp_out, "POINTS %d double\n", total_nodes);
+    // for (int i = 0; i < total_nodes; i++) {
+    //     fprintf(fp_out, "%.16e %.16e %.16e\n", myPS->x_gmsh[i], myPS->y_gmsh[i], myPS->z_gmsh[i]);
+    // }
+
+    /* 1. GEOMETRY: copy mesh.vtk (points + cells, written once before the time loop) */
+    FILE *fp_mesh = fopen("mesh.vtk", "r");
+    if (!fp_mesh) {
+        fprintf(stderr, "Error: mesh.vtk not found, cannot write %s\n", vtk_filename);
+        fclose(fp_out);
+        return -1;
     }
+    char buf[65536];
+    size_t nread;
+    while ((nread = fread(buf, 1, sizeof(buf), fp_mesh)) > 0)
+        fwrite(buf, 1, nread, fp_out);
+    fclose(fp_mesh);
+
+    int total_nodes = myPS->total_gmsh_nodes;
 
     /* 2. WRITE POINT DATA */
     fprintf(fp_out, "\nPOINT_DATA %d\n", total_nodes);
@@ -753,6 +795,9 @@ int write_vtk_field(FieldVariables *field, PointStructure *myPS, int step)
     }
     
     fclose(fp_out);
+
+    write_vtk_series(step);
+
     return 0;
 }
 

@@ -212,8 +212,7 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             (*field)[ii].hyper_v[i] = 0.0;
 
             if (parameters.dimension == 3) {
-                if (parameters.dimension == 3)
-                    (*field)[ii].w[i] = 0.0;
+                (*field)[ii].w[i] = 0.0;
                 (*field)[ii].w_new[i] = 0.0;
                 (*field)[ii].w_old[i] = 0.0;
                 (*field)[ii].dpdz[i] = 0.0;
@@ -385,7 +384,8 @@ void free_field(FieldVariables* field, int num_levels) {
         free(field[i].hyper_v);
         free(field[i].lapu_old);
         free(field[i].lapv_old);
-
+        free(field[i].color_node_list);
+        free(field[i].color_offsets);
         if (parameters.dimension == 3) {
             free(field[i].w);
             free(field[i].w_new);
@@ -439,7 +439,7 @@ void free_field(FieldVariables* field, int num_levels) {
 }
 
 
-void free_all_memory(PointStructure* myPointStruct, FieldVariables* field, int num_levels) {
-    free_PointStructure(myPointStruct, num_levels);
-    free_field(field, num_levels);
+void free_all_memory_from_cpu(PointStructure* myPointStruct, FieldVariables* field) {
+    free_PointStructure(myPointStruct, parameters.num_levels);
+    free_field(field, parameters.num_levels);
 }

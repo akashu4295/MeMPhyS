@@ -3,13 +3,6 @@
 
 #include "functions.h"
 #include "kdtree.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <stdbool.h>
-#include <ctype.h>
-#include <omp.h>
 
 // Safe guards for fscanf on reading 1 and 2 items
 #define SAFE_SCAN1(x, msg) if ((x) != 1) { puts(msg); exit(1); }
@@ -187,6 +180,10 @@ void read_flow_parameters(const char *filename)
             parameters.poisson_solver_type = atoi(val);
             printf("PARAMETERS: %s = %hd\n", key, parameters.poisson_solver_type);
         }
+        else if (!strcmp(key, "num_colors")){
+            parameters.num_colors = atoi(val);
+            printf("PARAMETERS: %s = %hd\n", key, parameters.num_colors);
+        }
         else if (!strcmp(key, "use_hyperviscosity")){
             parameters.use_hyperviscosity = atoi(val) != 0;
             printf("PARAMETERS: %s = %hd\n", key, parameters.use_hyperviscosity);
@@ -309,9 +306,6 @@ void read_flow_parameters(const char *filename)
     printf("PARAMETERS: rho = %f\n", parameters.rho);
 }
 
-#include "kdtree.h"
-#include <omp.h>
-
 void build_gmsh_node_mapping(PointStructure *myPS)
 {
     int j = 0;
@@ -370,6 +364,76 @@ void read_grid_filenames(PointStructure** myPointStruct, char* filename, short* 
         printf("Mesh filename for level %d : %s\n", ii, (*myPointStruct)[ii].mesh_filename);
     }
     fclose(file);
+}
+
+void setup_point_cloud_multicoloring(PointStructure *ps, FieldVariables *field)
+{
+    if (parameters.poisson_solver_type != 2) {
+        field->num_colors = 0;
+        field->color_offsets = NULL;
+        field->color_node_list = NULL;
+        return;
+    }
+
+    int N = ps->num_nodes;
+    int n = ps->num_cloud_points;
+    
+    int *colors = (int*)malloc(N * sizeof(int));
+    for (int i = 0; i < N; i++) colors[i] = -1;
+
+    int max_color = 0;
+    int *available = (int*)malloc((n + 1) * sizeof(int));
+
+    // 1. Greedy coloring phase
+    for (int i = 0; i < N; i++) {
+        for (int k = 0; k <= n; k++) available[k] = 1; // reset available colors
+
+        // Mark colors used by already-colored cloud neighbors as unavailable
+        for (int j = 1; j < n; j++) {
+            int nbr = ps->cloud_index[i * n + j];
+            if (colors[nbr] != -1 && colors[nbr] <= n) {
+                available[colors[nbr]] = 0;
+            }
+        }
+
+        // Assign smallest available color
+        int c;
+        for (c = 0; c <= n; c++) {
+            if (available[c]) break;
+        }
+        colors[i] = c;
+        if (c > max_color) max_color = c;
+    }
+
+    // True number of colors determined by point cloud connectivity
+    field->num_colors = max_color + 1;
+
+    // Allocate memory NOW after field->num_colors is calculated
+    field->color_offsets = (int*) malloc((field->num_colors + 1) * sizeof(int));
+    field->color_node_list = (int*) malloc(N * sizeof(int));
+
+    int *counts = (int*)calloc(field->num_colors, sizeof(int));
+    for (int i = 0; i < N; i++) counts[colors[i]]++;
+
+    field->color_offsets[0] = 0;
+    for (int c = 0; c < field->num_colors; c++) {
+        field->color_offsets[c + 1] = field->color_offsets[c] + counts[c];
+    }
+
+    int *current_pos = (int*)malloc(field->num_colors * sizeof(int));
+    for (int c = 0; c < field->num_colors; c++) {
+        current_pos[c] = field->color_offsets[c];
+    }
+
+    for (int i = 0; i < N; i++) {
+        int c = colors[i];
+        field->color_node_list[current_pos[c]++] = i;
+    }
+
+    free(colors);
+    free(available);
+    free(counts);
+    free(current_pos);
 }
 
 void read_PointStructure(PointStructure* myPointStruct)

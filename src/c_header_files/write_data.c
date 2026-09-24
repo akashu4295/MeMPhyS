@@ -802,14 +802,16 @@ int write_vtk_field(FieldVariables *field, PointStructure *myPS, int step)
 }
 
 #define EPSILON 1e-12
-
 typedef struct {
     double x, y, z;
     double u, v, w, p;
-    int index;
+    int index; // Node index stored explicitly for KD-Tree
 } OldNodeData;
 
-int read_and_interpolate_restart_vtk(const char *old_field_file,  FieldVariables *field,  PointStructure *newPS){
+int read_and_interpolate_restart_vtk(const char *old_field_file, 
+                                     FieldVariables *field, 
+                                     PointStructure *newPS)
+{
     FILE *fp = fopen(old_field_file, "r");
     if (!fp) {
         fprintf(stderr, "Error: Could not open restart file %s\n", old_field_file);
@@ -819,6 +821,7 @@ int read_and_interpolate_restart_vtk(const char *old_field_file,  FieldVariables
     char line[256];
     int num_old_nodes = 0;
 
+    /* 1. READ POINTS FROM OLD VTK */
     while (fgets(line, sizeof(line), fp)) {
         if (strstr(line, "POINTS")) {
             sscanf(line, "POINTS %d", &num_old_nodes);
@@ -827,17 +830,23 @@ int read_and_interpolate_restart_vtk(const char *old_field_file,  FieldVariables
     }
 
     if (num_old_nodes == 0) {
+        fprintf(stderr, "Error: No 'POINTS' header found in %s\n", old_field_file);
         fclose(fp);
         return -1;
     }
 
-    OldNodeData *old_data = malloc(num_old_nodes * sizeof(OldNodeData));
+    OldNodeData *old_data = (OldNodeData*)malloc(num_old_nodes * sizeof(OldNodeData));
+    if (!old_data) {
+        fclose(fp);
+        return -1;
+    }
 
     for (int i = 0; i < num_old_nodes; i++) {
         fscanf(fp, "%lf %lf %lf", &old_data[i].x, &old_data[i].y, &old_data[i].z);
-        old_data[i].index = i;
+        old_data[i].index = i; /* Save explicit node index */
     }
 
+    /* 2. READ VELOCITIES */
     while (fgets(line, sizeof(line), fp)) {
         if (strstr(line, "VECTORS velocity")) break;
     }
@@ -845,24 +854,30 @@ int read_and_interpolate_restart_vtk(const char *old_field_file,  FieldVariables
         fscanf(fp, "%lf %lf %lf", &old_data[i].u, &old_data[i].v, &old_data[i].w);
     }
 
+    /* 3. READ PRESSURES */
     while (fgets(line, sizeof(line), fp)) {
         if (strstr(line, "SCALARS pressure")) break;
     }
-    fgets(line, sizeof(line), fp); /* skip LOOKUP_TABLE line */
+    fgets(line, sizeof(line), fp); /* Skip LOOKUP_TABLE line */
 
     for (int i = 0; i < num_old_nodes; i++) {
         fscanf(fp, "%lf", &old_data[i].p);
     }
     fclose(fp);
 
+    /* 4. BUILD KD-TREE FROM OLD MESH DATA */
     void *ptree = kd_create(3);
     for (int i = 0; i < num_old_nodes; i++) {
-        kd_insert3(ptree, old_data[i].x, old_data[i].y, old_data[i].z, &old_data[i]);
+        /* Pass pointer to index field (&old_data[i].index) so find_neighbours can dereference it */
+        kd_insert3(ptree, old_data[i].x, old_data[i].y, old_data[i].z, &old_data[i].index);
     }
 
+    /* 5. PARALLEL INTERPOLATION ONTO NEW SOLVER NODES */
     int num_new_solver = newPS->num_nodes;
-    double search_radius = newPS->d_avg * 10.0;
-    int K = newPS->num_cloud_points;
+    
+    /* Fallback search radius if d_avg is uninitialized */
+    double search_radius = (newPS->d_avg > 1e-12) ? (newPS->d_avg * 10.0) : 1.0;
+    int K = (newPS->num_cloud_points > 0) ? newPS->num_cloud_points : 4;
 
     #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < num_new_solver; i++) {
@@ -871,28 +886,33 @@ int read_and_interpolate_restart_vtk(const char *old_field_file,  FieldVariables
         pt[1] = newPS->y[i];
         pt[2] = (parameters.dimension == 3) ? newPS->z[i] : 0.0;
 
-        int *neigh_indices = find_neighbours(pt, ptree, search_radius, K);
-
         int target_k = newPS->rcm_order[i];
 
-        if (neigh_indices) {
+        /* Find K-nearest neighbors */
+        int *neigh_indices = find_neighbours(pt, ptree, search_radius, K);
+
+        if (neigh_indices != NULL) {
             double weight_sum = 0.0;
             double u_interp = 0.0, v_interp = 0.0, w_interp = 0.0, p_interp = 0.0;
             int exact_found = -1;
 
             for (int k = 0; k < K; k++) {
                 int old_idx = neigh_indices[k];
+                
+                /* Guard against invalid index */
+                if (old_idx < 0 || old_idx >= num_old_nodes) continue;
+
                 double dx = pt[0] - old_data[old_idx].x;
                 double dy = pt[1] - old_data[old_idx].y;
                 double dz = pt[2] - old_data[old_idx].z;
-                double dist_sq = dx*dx + dy*dy + dz*dz;
+                double dist_sq = dx * dx + dy * dy + dz * dz;
 
                 if (dist_sq < EPSILON) {
                     exact_found = old_idx;
                     break;
                 }
 
-                double w = 1.0 / dist_sq; /* IDW weight */
+                double w = 1.0 / dist_sq;
                 weight_sum += w;
 
                 u_interp += w * old_data[old_idx].u;
@@ -906,7 +926,7 @@ int read_and_interpolate_restart_vtk(const char *old_field_file,  FieldVariables
                 field->v[target_k] = old_data[exact_found].v;
                 if (parameters.dimension == 3) field->w[target_k] = old_data[exact_found].w;
                 field->p[target_k] = old_data[exact_found].p;
-            } else {
+            } else if (weight_sum > 0.0) {
                 field->u[target_k] = u_interp / weight_sum;
                 field->v[target_k] = v_interp / weight_sum;
                 if (parameters.dimension == 3) field->w[target_k] = w_interp / weight_sum;
@@ -914,6 +934,20 @@ int read_and_interpolate_restart_vtk(const char *old_field_file,  FieldVariables
             }
 
             free(neigh_indices);
+        } else {
+            /* Fallback: Direct 1-nearest query if range search returned NULL */
+            struct kdres *res = kd_nearest3(ptree, pt[0], pt[1], pt[2]);
+            if (res && !kd_res_end(res)) {
+                int *old_idx_ptr = (int*)kd_res_item(res, NULL);
+                int old_idx = *old_idx_ptr;
+                if (old_idx >= 0 && old_idx < num_old_nodes) {
+                    field->u[target_k] = old_data[old_idx].u;
+                    field->v[target_k] = old_data[old_idx].v;
+                    if (parameters.dimension == 3) field->w[target_k] = old_data[old_idx].w;
+                    field->p[target_k] = old_data[old_idx].p;
+                }
+            }
+            if (res) kd_res_free(res);
         }
     }
 

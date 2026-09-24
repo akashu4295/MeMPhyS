@@ -31,36 +31,17 @@ void copyin_pointstructure_to_gpu(PointStructure *myPointStruct)
             myPointStruct[l].restriction_points[:N], \
             myPointStruct[l].prolongation_points[:N] )
 
-        #pragma acc enter data attach( \
-            myPointStruct[l].x_normal, \
-            myPointStruct[l].y_normal, \
-            myPointStruct[l].corner_tag, \
-            myPointStruct[l].boundary_tag, \
-            myPointStruct[l].node_bc, \
-            myPointStruct[l].cloud_index, \
-            myPointStruct[l].Dx, \
-            myPointStruct[l].Dy, \
-            myPointStruct[l].lap, \
-            myPointStruct[l].lap_Poison, \
-            myPointStruct[l].restriction_points, \
-            myPointStruct[l].prolongation_points )
-
         if (parameters.dimension == 3) {
             #pragma acc enter data copyin(\
                 myPointStruct[l].z_normal[:N], \
                 myPointStruct[l].Dz[:N * Nc])
-            #pragma acc enter data attach(\
-                myPointStruct[l].z_normal, \
-                myPointStruct[l].Dz)
         }
         
         if (myPointStruct[l].prol_mat != NULL)  {
             #pragma acc enter data copyin(myPointStruct[l].prol_mat[:N * Nc])
-            #pragma acc enter data attach(myPointStruct[l].prol_mat)
         }
         if (myPointStruct[l].restr_mat != NULL)  {
             #pragma acc enter data copyin(myPointStruct[l].restr_mat[:N * Nc])
-            #pragma acc enter data attach(myPointStruct[l].restr_mat)
         }
     }
 }
@@ -100,32 +81,6 @@ void copyin_field_to_gpu(FieldVariables *field, PointStructure *myPointStruct)
             field[l].res[:N], \
             field[l].source[:N] )
 
-        #pragma acc enter data attach( \
-            field[l].u, \
-            field[l].v, \
-            field[l].u_old, \
-            field[l].v_old, \
-            field[l].u_new, \
-            field[l].v_new, \
-            field[l].dudx, \
-            field[l].dudy, \
-            field[l].dvdx, \
-            field[l].dvdy, \
-            field[l].lapu, \
-            field[l].lapv, \
-            field[l].p, \
-            field[l].p_old, \
-            field[l].pprime, \
-            field[l].dpdn, \
-            field[l].dpdx, \
-            field[l].dpdy, \
-            field[l].hyper_u, \
-            field[l].hyper_v, \
-            field[l].lapu_old, \
-            field[l].lapv_old, \
-            field[l].res, \
-            field[l].source )
-
         if (parameters.dimension == 3) {
             #pragma acc enter data copyin( \
                 field[l].w[:N], \
@@ -140,21 +95,13 @@ void copyin_field_to_gpu(FieldVariables *field, PointStructure *myPointStruct)
                 field[l].dpdz[:N], \
                 field[l].hyper_w[:N], \
                 field[l].lapw_old[:N] )
-            #pragma acc enter data attach( \
-                field[l].w, \
-                field[l].w_old, \
-                field[l].w_new, \
-                field[l].dwdx, \
-                field[l].dwdy, \
-                field[l].dwdz, \
-                field[l].dvdz, \
-                field[l].dudz, \
-                field[l].lapw, \
-                field[l].dpdz, \
-                field[l].hyper_w, \
-                field[l].lapw_old )
         }
 
+        if (parameters.poisson_solver_type == 2) {
+            #pragma acc enter data copyin(\
+                field[l].color_offsets[0:field[l].num_colors + 1], \
+                field[l].color_node_list[:N])
+        }
         /* ---------------- compressible variables ---------------- */
         if (parameters.compressible_flow) {
 
@@ -170,33 +117,27 @@ void copyin_field_to_gpu(FieldVariables *field, PointStructure *myPointStruct)
                 field[l].tau_xy[:N], field[l].tau_xz[:N], field[l].tau_yz[:N], \
                 field[l].div_tau_x[:N], field[l].div_tau_y[:N], field[l].div_tau_z[:N], \
                 field[l].Q_visc[:N], field[l].Q_source[:N] )
-
-            #pragma acc enter data attach( \
-                field[l].rho, field[l].rho_old, field[l].rho_new, \
-                field[l].T_new, field[l].T, field[l].T_old, \
-                field[l].e, field[l].e_old, \
-                field[l].drhodx, field[l].drhody, field[l].drhodz, \
-                field[l].dTdx, field[l].dTdy, field[l].dTdz, \
-                field[l].dedx, field[l].dedy, field[l].dedz, \
-                field[l].mu, field[l].kappa, \
-                field[l].tau_xx, field[l].tau_yy, field[l].tau_zz, \
-                field[l].tau_xy, field[l].tau_xz, field[l].tau_yz, \
-                field[l].div_tau_x, field[l].div_tau_y, field[l].div_tau_z, \
-                field[l].Q_visc, field[l].Q_source )
         }
     }
 }
 
-void copypout_pointstructure_from_gpu(PointStructure* myPointStruct){
-    # pragma acc exit data copyout(myPointStruct[:parameters.num_levels])
+void free_pointstructure_from_gpu(PointStructure* myPointStruct){
+    int L = parameters.num_levels;
+    #pragma acc exit data delete(myPointStruct[:L])
 }
 
-void copypout_field_from_gpu(FieldVariables* field, PointStructure* myPointStruct){
-    # pragma acc exit data copyout(field[:parameters.num_levels])
+void free_field_from_gpu(FieldVariables* field, PointStructure* myPointStruct) {
+    int L = parameters.num_levels;
+    #pragma acc exit data delete(field[:L])
 }
 
 void copy_all_data_to_gpu(PointStructure* myPointStruct, FieldVariables* field){
     copyin_parameters_to_gpu();
     copyin_pointstructure_to_gpu(myPointStruct);
     copyin_field_to_gpu(field, myPointStruct);
+}
+
+void free_all_data_from_gpu(PointStructure* myPointStruct, FieldVariables* field){
+    free_pointstructure_from_gpu(myPointStruct);
+    free_field_from_gpu(field, myPointStruct);
 }

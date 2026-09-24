@@ -8,7 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldVariables* field){   
-    # pragma acc parallel loop present(field[0], myPointStruct[0])
+    # pragma acc parallel loop default(present)
     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
         field[0].u_old[i] = field[0].u[i];
         field[0].v_old[i] = field[0].v[i];
@@ -16,7 +16,7 @@ double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldV
         field[0].p_old[i] = field[0].p[i];
     }
 
-    #pragma acc data present(field[:parameters.num_levels], myPointStruct[:parameters.num_levels], parameters)
+    #pragma acc data present(myPointStruct, field, parameters)
     {
         FS_calculate_intermediate_velocity_vectorised(&myPointStruct[0], &field[0]);
         FS_calculate_mass_residual_vectorised(&myPointStruct[0], &field[0]);
@@ -25,7 +25,7 @@ double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldV
     }
     
     double steady_state_error_par = 0.0;
-    # pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error_par)
+    # pragma acc parallel loop default(present) reduction(+:steady_state_error_par)
     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
         double du = field[0].u[i] - field[0].u_old[i];
         double dv = field[0].v[i] - field[0].v_old[i];
@@ -37,14 +37,14 @@ double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldV
 
 double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field)
 {   
-    #pragma acc parallel loop present(field[0], myPointStruct[0])
+    #pragma acc parallel loop default(present)
     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
         field[0].u_old[i] = field[0].u[i];
         field[0].v_old[i] = field[0].v[i];
         field[0].p_old[i] = field[0].p[i];
     }
 
-    #pragma acc data present(field[:parameters.num_levels], myPointStruct[:parameters.num_levels], parameters)
+    #pragma acc data present(myPointStruct, field, parameters)
     {
         FS_calculate_intermediate_velocity_vectorised_2d(myPointStruct, field);
         FS_calculate_mass_residual_vectorised_2d(myPointStruct, field);
@@ -53,7 +53,7 @@ double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, Fie
     }
 
     double steady_state_error_par = 0.0;    
-    #pragma acc parallel loop present(field[0], myPointStruct[0]) reduction(+:steady_state_error_par) 
+    #pragma acc parallel loop default(present) reduction(+:steady_state_error_par) 
     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
         double du = field[0].u[i] - field[0].u_old[i];
         double dv = field[0].v[i] - field[0].v_old[i];
@@ -69,29 +69,27 @@ void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct
     int num_cloud_points = myPointStruct->num_cloud_points;
     
 // x-momentum
-    # pragma acc data present(field, myPointStruct, parameters)
-    {
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->u, field->dudy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->u, field->dudz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->u, field->lapu, myPointStruct->cloud_index, num_nodes, num_cloud_points, 4);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->v, field->dvdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 5);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 6);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->v, field->dvdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 7);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->v, field->lapv, myPointStruct->cloud_index, num_nodes, num_cloud_points, 8);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->w, field->dwdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 9);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->w, field->dwdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 10);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w, field->dwdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 11);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->w, field->lapw, myPointStruct->cloud_index, num_nodes, num_cloud_points, 12);    
-        # pragma acc wait(1,2,3,4,5,6,7,8,9,10,11,12)
+    
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->u, field->dudy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->u, field->dudz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->u, field->lapu, myPointStruct->cloud_index, num_nodes, num_cloud_points, 4);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->v, field->dvdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 5);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 6);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->v, field->dvdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 7);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->v, field->lapv, myPointStruct->cloud_index, num_nodes, num_cloud_points, 8);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->w, field->dwdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 9);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->w, field->dwdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 10);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w, field->dwdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 11);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->w, field->lapw, myPointStruct->cloud_index, num_nodes, num_cloud_points, 12);    
+    # pragma acc wait(1,2,3,4,5,6,7,8,9,10,11,12)
 
-        /* Hyperviscosity Evaluation: Biharmonic Operator \nabla^4 u = \nabla^2(\nabla^2 u) */
-        if (parameters.use_hyperviscosity) {
-            multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapu, field->hyper_u, myPointStruct->cloud_index, num_nodes, num_cloud_points, 13);
-            multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapv, field->hyper_v, myPointStruct->cloud_index, num_nodes, num_cloud_points, 14);
-            multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapw, field->hyper_w, myPointStruct->cloud_index, num_nodes, num_cloud_points, 15);
-            # pragma acc wait(13, 14, 15)
-        }
+    /* Hyperviscosity Evaluation: Biharmonic Operator \nabla^4 u = \nabla^2(\nabla^2 u) */
+    if (parameters.use_hyperviscosity) {
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapu, field->hyper_u, myPointStruct->cloud_index, num_nodes, num_cloud_points, 13);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapv, field->hyper_v, myPointStruct->cloud_index, num_nodes, num_cloud_points, 14);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapw, field->hyper_w, myPointStruct->cloud_index, num_nodes, num_cloud_points, 15);
+        # pragma acc wait(13, 14, 15)
     }
     
     double weight_curr = (parameters.time_scheme == 1) ? (1.0 - parameters.theta) : 1.0;
@@ -139,22 +137,21 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
     int num_cloud_points = myPointStruct->num_cloud_points;
     
 // x-momentum
-    #pragma acc data present(field, myPointStruct, parameters)
-    {
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->u, field->dudy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->u, field->lapu, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->v, field->dvdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 4);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 5);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->v, field->lapv, myPointStruct->cloud_index, num_nodes, num_cloud_points, 6);
-        # pragma acc wait(1,2,3,4,5,6)
-        /* Hyperviscosity Evaluation: Biharmonic Operator \nabla^4 u = \nabla^2(\nabla^2 u) */
-        if (parameters.use_hyperviscosity) {
-            multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapu, field->hyper_u, myPointStruct->cloud_index, num_nodes, num_cloud_points, 7);
-            multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapv, field->hyper_v, myPointStruct->cloud_index, num_nodes, num_cloud_points, 8);
-            # pragma acc wait(7, 8)
-        }
+
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->u, field->dudy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->u, field->lapu, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->v, field->dvdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 4);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 5);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->v, field->lapv, myPointStruct->cloud_index, num_nodes, num_cloud_points, 6);
+    # pragma acc wait(1,2,3,4,5,6)
+    /* Hyperviscosity Evaluation: Biharmonic Operator \nabla^4 u = \nabla^2(\nabla^2 u) */
+    if (parameters.use_hyperviscosity) {
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapu, field->hyper_u, myPointStruct->cloud_index, num_nodes, num_cloud_points, 7);
+        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->lap, field->lapv, field->hyper_v, myPointStruct->cloud_index, num_nodes, num_cloud_points, 8);
+        # pragma acc wait(7, 8)
     }
+
     double weight_curr = (parameters.time_scheme == 1) ? (1.0 - parameters.theta) : 1.0;
     double weight_old  = (parameters.time_scheme == 1) ? parameters.theta : 0.0;
     double gamma       = parameters.use_hyperviscosity ? parameters.gamma_hyper : 0.0;
@@ -174,12 +171,11 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
         field->lapu_old[i] = field->lapu[i];
         field->lapv_old[i] = field->lapv[i];
     }
-    #pragma acc data present(field, myPointStruct, parameters)
-    {
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p_old, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p_old, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
-        # pragma acc wait(1,2)
-    }
+    
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p_old, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p_old, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+    # pragma acc wait(1,2)
+
     # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
         if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
@@ -195,14 +191,13 @@ void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldV
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
     
-    # pragma acc data present(myPointStruct, field, parameters)
-    {
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u_new, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v_new, field->dvdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w_new, field->dwdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
-        # pragma acc wait(1,2,3)
-    }
-    # pragma acc parallel loop gang vector present(field, myPointStruct, parameters)
+    
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u_new, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v_new, field->dvdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w_new, field->dwdz, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
+    # pragma acc wait(1,2,3)
+
+    # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < num_nodes; i++){
         if (myPointStruct->corner_tag[i]) // skip corners
             continue;
@@ -221,13 +216,11 @@ void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, Fie
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
 
-    # pragma acc data present(myPointStruct, field, parameters)
-    {
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u_new, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v_new, field->dvdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
-        # pragma acc wait(1,2)
-    }
-    # pragma acc parallel loop present(field, myPointStruct, parameters)
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u_new, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v_new, field->dvdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+    # pragma acc wait(1,2)
+
+    # pragma acc parallel loop default(present)
     for (int i = 0; i < num_nodes; i++){
         if (myPointStruct->corner_tag[i]) // skip corners
             continue;
@@ -247,7 +240,7 @@ void FS_multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, Field
             if (parameters.poisson_solver_type == 1)    
                 FS_relaxation_vectorised_Jacobi(&myPointStruct[ilev], &field[ilev]);
             else if (parameters.poisson_solver_type == 2)
-                FS_relaxation_vectorised_Gauss_Seidel(&myPointStruct[ilev], &field[ilev]);
+                FS_relaxation_vectorised_colored_Gauss_Seidel(&myPointStruct[ilev], &field[ilev]);
             else if (parameters.poisson_solver_type == 3)
                 FS_relaxation_vectorised_BiCGStab(&myPointStruct[ilev], field[ilev].source, field[ilev].p, parameters.num_relax, parameters.poisson_solver_tolerance);
             FS_calculate_residuals_vectorised(&myPointStruct[ilev], &field[ilev]);
@@ -260,7 +253,7 @@ void FS_multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, Field
             if (parameters.poisson_solver_type == 1)
                 FS_relaxation_vectorised_Jacobi(&myPointStruct[ilev-1], &field[ilev-1]);
             else if (parameters.poisson_solver_type == 2)
-                FS_relaxation_vectorised_Gauss_Seidel(&myPointStruct[ilev-1], &field[ilev-1]);
+                FS_relaxation_vectorised_colored_Gauss_Seidel(&myPointStruct[ilev-1], &field[ilev-1]);
             else if (parameters.poisson_solver_type == 3)
                 FS_relaxation_vectorised_BiCGStab(&myPointStruct[ilev-1], field[ilev-1].source, field[ilev-1].p, parameters.num_relax, parameters.poisson_solver_tolerance);
         }
@@ -271,31 +264,34 @@ void FS_relaxation_vectorised_Jacobi(PointStructure* mypointstruct, FieldVariabl
 {
     int n = mypointstruct->num_cloud_points;
     int N = mypointstruct->num_nodes;
-    double jacobi_omega = isfinite(parameters.omega)
-                        ? fmin(fmax((double)parameters.omega, 0.0), 2.0 / 3.0)
-                        : 2.0 / 3.0;
-    #pragma acc parallel loop present(field->p[:N], field->p_old[:N])
+    
+    // Clamp omega to standard under-relaxation bound (<= 2/3) for multigrid smoothing
+    double jacobi_omega = isfinite(parameters.omega) 
+                        ? fmin(fmax((double)parameters.omega, 0.1), 0.667) 
+                        : 0.667;
+
+    #pragma acc parallel loop default(present)
     for (int i = 0; i < N; i++) {
         field->p_old[i] = field->p[i];
     }
+
     for (int iter = 0; iter < parameters.num_relax; iter++) {
-        #pragma acc parallel loop gang vector present(field->p[:N], field->p_old[:N], \
-            mypointstruct->cloud_index[:N*n], mypointstruct->lap_Poison[:N*n], parameters)
+        #pragma acc parallel loop gang vector default(present)
         for (int i = 0; i < N; i++) {
             double sum = 0.0;
             for (int j = 1; j < n; j++) {
-                int idx = i*n + j;
+                int idx = i * n + j;
                 sum += mypointstruct->lap_Poison[idx] * field->p_old[mypointstruct->cloud_index[idx]];
             }
-            double diag = mypointstruct->lap_Poison[i*n];
+            double diag = mypointstruct->lap_Poison[i * n];
             if (!isfinite(diag) || fabs(diag) < 1e-14) {
                 continue;
             }
             field->p[i] = jacobi_omega * (field->source[i] - sum) / diag
-                            + (1.0 - jacobi_omega) * field->p_old[i];
+                        + (1.0 - jacobi_omega) * field->p_old[i];
         }
 
-        #pragma acc parallel loop present(field->p[:N], field->p_old[:N])
+        #pragma acc parallel loop default(present)
         for (int i = 0; i < N; i++) {
             field->p_old[i] = field->p[i];
         }
@@ -308,7 +304,7 @@ void FS_relaxation_vectorised_Gauss_Seidel(PointStructure* mypointstruct, FieldV
     int N = mypointstruct->num_nodes;
 
     for (int iter = 0; iter < parameters.num_relax; iter++) {
-        #pragma acc parallel loop gang vector present(field->p[:N], field->source[:N], mypointstruct->cloud_index[:N*n], mypointstruct->lap_Poison[:N*n], parameters)
+        #pragma acc parallel loop gang vector default(present)
         for (int i = 0; i < N; i++) {
             double sum = 0.0;
             int base = i * n;
@@ -326,17 +322,51 @@ void FS_relaxation_vectorised_Gauss_Seidel(PointStructure* mypointstruct, FieldV
     }
 }
 
+void FS_relaxation_vectorised_colored_Gauss_Seidel(PointStructure* mypointstruct, FieldVariables* field)
+{
+    int n = mypointstruct->num_cloud_points;
+    int num_colors = field->num_colors;
+    double omega = parameters.omega;
+
+    for (int iter = 0; iter < parameters.num_relax; iter++) {
+        // Outer loop: Iterate sequentially over color groups
+        for (int c = 0; c < num_colors; c++) {
+            int start = field->color_offsets[c];
+            int end   = field->color_offsets[c + 1];
+
+            // Inner loop: Parallel sweep over all nodes sharing color 'c'
+            #pragma acc parallel loop gang vector default(present)
+            for (int k = start; k < end; k++) {
+                int i = field->color_node_list[k]; // Retrieve actual node index
+                
+                double sum = 0.0;
+                int base = i * n;
+                
+                for (int j = 1; j < n; j++) {
+                    int idx = mypointstruct->cloud_index[base + j];
+                    sum += mypointstruct->lap_Poison[base + j] * field->p[idx];
+                }
+                
+                double diag = mypointstruct->lap_Poison[base];
+                if (fabs(diag) >= 1e-14) {
+                    double p_gs = (field->source[i] - sum) / diag;
+                    field->p[i] = omega * p_gs + (1.0 - omega) * field->p[i];
+                }
+            }
+        }
+    }
+}
+
 void FS_restrict_residuals_vectorised(PointStructure* mypointStruct_f, PointStructure* mypointStruct_c, FieldVariables* field_f, FieldVariables* field_c)
 {
     int n = mypointStruct_f->num_cloud_points;
-    # pragma acc parallel loop gang vector present(field_f, field_c, mypointStruct_f, mypointStruct_c)
-    for (int i = 0; i < mypointStruct_c->num_nodes; i++){
-        if (mypointStruct_c->boundary_tag[i]==false){
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < mypointStruct_c->num_nodes; i++) {
+        if (!mypointStruct_c->boundary_tag[i]) {
             double results = 0.0;
             int i_restr = mypointStruct_c->restriction_points[i];
-            # pragma acc loop reduction(+:results)
-            for (int j = 0; j < n; j++){
-                results += mypointStruct_c->restr_mat[i*n + j] * field_f->res[mypointStruct_f->cloud_index[i_restr*n +j]];
+            for (int j = 0; j < n; j++) {
+                results += mypointStruct_c->restr_mat[i*n + j] * field_f->res[mypointStruct_f->cloud_index[i_restr*n + j]];
             }
             field_c->source[i] = results;
         }
@@ -346,21 +376,20 @@ void FS_restrict_residuals_vectorised(PointStructure* mypointStruct_f, PointStru
 void FS_prolongate_corrections_vectorised(PointStructure* mypointStruct_f, PointStructure* mypointStruct_c, FieldVariables* field_f, FieldVariables* field_c)
 {
     int n = mypointStruct_c->num_cloud_points;
-    # pragma acc parallel loop gang vector present(field_f, field_c, mypointStruct_f, mypointStruct_c)
-    for (int i = 0; i < mypointStruct_f->num_nodes; i++){
-        if (mypointStruct_f->boundary_tag[i]==false){
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < mypointStruct_f->num_nodes; i++) {
+        if (!mypointStruct_f->boundary_tag[i]) {
             int i_prol = mypointStruct_f->prolongation_points[i];
             double results = 0.0;
-            # pragma acc loop reduction(+:results)
-            for (int j = 0; j < n; j++){
-                results += mypointStruct_f->prol_mat[i*n + j] * field_c->p[mypointStruct_c->cloud_index[i_prol*n +j]];
+            for (int j = 0; j < n; j++) {
+                results += mypointStruct_f->prol_mat[i*n + j] * field_c->p[mypointStruct_c->cloud_index[i_prol*n + j]];
             }
-        field_f->p[i] = field_f->p[i] + results;
+            field_f->p[i] += results;
         }
     }
-    # pragma acc parallel loop gang vector present(field_c, mypointStruct_c)
-    for (int i = 0; i<mypointStruct_c->num_nodes; i++){
-        if (mypointStruct_c->boundary_tag[i]==false){
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < mypointStruct_c->num_nodes; i++) {
+        if (!mypointStruct_c->boundary_tag[i]) {
             field_c->p[i] = 0.0;
         }
     }
@@ -370,7 +399,7 @@ void FS_calculate_residuals_vectorised(PointStructure* mypointStruct, FieldVaria
 {
     int n = mypointStruct->num_cloud_points;
     double sum_res = 0.0;
-    # pragma acc parallel loop gang vector present(field, mypointStruct) reduction(+:sum_res)
+    # pragma acc parallel loop gang vector default(present) reduction(+:sum_res)
     for (int i = 0; i < mypointStruct->num_nodes; i++){
         if (!mypointStruct->boundary_tag[i]){
             double sum = 0;
@@ -386,12 +415,9 @@ void FS_calculate_residuals_vectorised(PointStructure* mypointStruct, FieldVaria
 
 void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables* field)
 {
-    # pragma acc data present(myPointStruct, field, parameters)
-    {
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 1);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 2);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->p, field->dpdz, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 3);
-    }
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 1);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 2);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->p, field->dpdz, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 3);
     # pragma acc wait(1,2,3)
     // Update Interior nodes
     # pragma acc parallel loop gang vector default(present)
@@ -443,14 +469,12 @@ void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables
             field->w[i] = field->w_new[i] - parameters.dt * field->dpdz[i]/parameters.rho;
         }
     }
-    
-    # pragma acc data present(myPointStruct, field, parameters)
-    {
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 4);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 5);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w, field->dwdz, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 6);
-    }
+
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 4);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 5);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w, field->dwdz, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 6);
     # pragma acc wait(4,5,6)
+
     double sum = 0.0;
     # pragma acc parallel loop gang vector default(present) reduction(+:sum)
     for (int i = 0; i < myPointStruct->num_nodes; i++)
@@ -465,12 +489,10 @@ void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariab
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
     
-    # pragma acc data present(myPointStruct, field, parameters)
-    {
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
-    }
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
     # pragma acc wait(1,2)
+
     #pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < num_nodes; i++){
         if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
@@ -498,12 +520,9 @@ void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariab
             field->v[i] = field->v_new[i] - parameters.dt * field->dpdy[i]/parameters.rho;
         }
     }
-    
-    # pragma acc data present(myPointStruct, field, parameters)
-    {   
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
-        multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy,  myPointStruct->cloud_index, num_nodes, num_cloud_points, 4);
-    }
+     
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
+    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy,  myPointStruct->cloud_index, num_nodes, num_cloud_points, 4);
     # pragma acc wait(3,4)
     
     double sum = 0.0;

@@ -12,11 +12,11 @@
 #include <time.h>
 #include <math.h>
 #include <string.h>
-#include <string.h>
 #include <assert.h>
 #include <ctype.h>
 #include <float.h>
 #include <sys/stat.h>
+#include <omp.h>
 
 #include "structures.h"
 
@@ -33,6 +33,7 @@ double calculate_dt(PointStructure* myPointStruct);
 void calculate_point_spacings(PointStructure* myPointStruct);
 void read_parameters_gridfilenames_and_meshdata(PointStructure** myPointStruct, char* flow_parameters_file, char* grid_file);
 void build_gmsh_node_mapping(PointStructure *myPS);
+void setup_point_cloud_multicoloring(PointStructure *ps, FieldVariables *field);
 
 // Initialization Function declarations
 BCType parse_bc_type(const char* s);
@@ -88,7 +89,7 @@ void check_restart_file(PointStructure* myPointStruct, FieldVariables* field);
 void write_solver_data(const PointStructure* myPointStruct, double steady_state_error, int it);
 int write_vtk_field(FieldVariables *field, PointStructure *myPS, int step);
 int write_vtk_mesh(const char *gmsh_filename, const char *mesh_filename);
-
+int read_and_interpolate_restart_vtk(const char *old_field_file,  FieldVariables *field,  PointStructure *newPS);
 
 // Math Library Function Declarations
 void create_matrix(double ***A, int n_rows, int n_cols);
@@ -189,6 +190,7 @@ double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, Fie
 void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
+void FS_relaxation_vectorised_colored_Gauss_Seidel(PointStructure* mypointstruct, FieldVariables* field);
 
 // Multigrid Modules
 double multigrid_time_implicit_solver_vectorised(PointStructure* myPointStruct, FieldVariables* field);
@@ -218,8 +220,9 @@ void solve_energy_equation_2d(PointStructure* myPointStruct, FieldVariables* fie
 void copyin_parameters_to_gpu();
 void copyin_pointstructure_to_gpu(PointStructure* myPointStruct);
 void copyin_field_to_gpu(FieldVariables* field, PointStructure* myPointStruct);
-void copypout_pointstructure_from_gpu(PointStructure* myPointStruct);
-void copypout_field_from_gpu(FieldVariables* field, PointStructure* myPointStruct);
+void free_pointstructure_from_gpu(PointStructure* myPointStruct);
+void free_field_from_gpu(FieldVariables* field, PointStructure* myPointStruct);
 void copy_all_data_to_gpu(PointStructure* myPointStruct, FieldVariables* field);
+void free_all_data_from_gpu(PointStructure* myPointStruct, FieldVariables* field);
 
 #endif

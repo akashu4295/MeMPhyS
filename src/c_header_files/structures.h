@@ -93,6 +93,7 @@ struct parameters
     int viscosity_model;   // 0=constant, 1=Sutherland, 2=power-law
     double Mach;           // Reference Mach number
     int energy_equation;   // 0=isothermal, 1=solve energy equation
+    short num_colors;          // Number of colors for colored Gauss-Seidel
     }; // child created only once and used globally
 
 extern struct parameters parameters;
@@ -196,7 +197,10 @@ typedef struct FieldVariables {
     double* lapu_old; // laplacian of u from previous time step
     double* lapv_old; // laplacian of v from previous time step
     double* lapw_old; // laplacian of w from previous time step
-
+    // Coloured Gauss-Seidel variables for parallelization
+    int num_colors;          // Total number of colors needed (typically 5 to 12 for 2D/3D clouds)
+    int *color_offsets;      // Array of size (num_colors + 1) marking start/end indices
+    int *color_node_list;    // Array of size num_nodes reordered by color group
     // TODO: For FAS and compressible flow, we need additional variables
     double* res_u; // residual of u-momentum equation
     double* res_v; // residual of v-momentum equation
@@ -242,6 +246,6 @@ void free_PointStructure(PointStructure* myPointStruct, int num_levels);
 void free_field(FieldVariables* field, int num_levels);
 void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
 void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
-void free_all_memory(PointStructure* myPointStruct, FieldVariables* field, int num_levels);
+void free_all_memory_from_cpu(PointStructure* myPointStruct, FieldVariables* field);
 
 #endif

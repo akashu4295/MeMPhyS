@@ -30,7 +30,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "src/c_header_files/functions.h"
-#include <time.h>
 
 struct parameters parameters;
 struct timer timer;
@@ -75,13 +74,19 @@ int main()
         initial_conditions(myPointStruct, field, 1);
         boundary_conditions(myPointStruct, field, 1);
     }
-    check_restart_file(&myPointStruct[0], &field[0]);
+    // check_restart_file(&myPointStruct[0], &field[0]);
+    if (parameters.restart) read_and_interpolate_restart_vtk(parameters.restart_filename, &field[0], &myPointStruct[0]);
     apply_boundary_conditions(myPointStruct, field, 1);
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
         create_laplacian_for_Poisson_equation_vectorised(&myPointStruct[ii]);
     clock_gettime(CLOCK_MONOTONIC, &clock_end);
     timer.time_initialisation = elapsed_seconds(clock_start, clock_end);
     printf("Time taken for initialisation: %lf\n", timer.time_initialisation);
+
+    // Coloring nodes for parallelization in Gauss-Seidel solver (only for Poisson solver type 2)
+    if (parameters.poisson_solver_type == 2)
+        for (int ilev = 0; ilev < parameters.num_levels; ilev++)
+            setup_point_cloud_multicoloring(&myPointStruct[ilev], &field[ilev]);
 
 ////////////// Copy data to GPU memory 
     clock_gettime(CLOCK_MONOTONIC, &clock_start);
@@ -188,6 +193,7 @@ int main()
     timer.time_total = elapsed_seconds(clock_program_begin, clock_end);
     printf("Time for execution (total, wall-clock): %lf\n", timer.time_total);
     write_solver_data(myPointStruct, steady_state_error, it);
-    free_all_memory(myPointStruct, field, parameters.num_levels);
+    free_all_data_from_gpu(myPointStruct, field);
+    free_all_memory_from_cpu(myPointStruct, field);
     return 0;
 } 

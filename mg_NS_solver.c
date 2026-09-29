@@ -29,7 +29,7 @@
 //        Please send your feedbacks and suggestions to akash.unnikrishnan@iitgn.ac.in
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "src/c_header_files/functions.h"
+#include "src/lib/functions.h"
 
 struct parameters parameters;
 struct timer timer;

@@ -8,8 +8,6 @@ thread safety and error handling.
 import os
 from datetime import datetime
 from typing import Optional
-import dearpygui.dearpygui as dpg
-from src.config import LOG_SCROLL_THRESHOLD
 import queue
 
 class Logger:
@@ -126,30 +124,13 @@ class Logger:
             return
         self._gui_queue.put(message)
 
-    def flush_gui_queue(self):
-        try:
-            if not dpg.is_dearpygui_running():
-                return
-            if not dpg.does_item_exist(self.log_child_tag):
-                return
-
-            messages = []
-            while not self._gui_queue.empty():
-                try:
-                    messages.append(self._gui_queue.get_nowait())
-                except queue.Empty:
-                    break
-
-            if not messages:
-                return
-
-            for msg in messages:
-                dpg.add_text(msg, parent=self.log_child_tag)
-
-            dpg.set_y_scroll(self.log_child_tag, -1.0)
-
-        except Exception as e:
-            print(f"flush error: {e}")
+    def drain_gui_queue(self) -> list[str]:
+        messages = []
+        while True:
+            try:
+                messages.append(self._gui_queue.get_nowait())
+            except queue.Empty:
+                return messages
     
     def _write_to_console(self, message: str, level: str = INFO):
         """Write message to console with color"""
@@ -158,26 +139,6 @@ class Logger:
             
         color = self.COLORS.get(level, self.COLORS[self.INFO])
         print(f"{color}{message}{self.RESET}")
-    
-    def _auto_scroll(self):
-        """Auto-scroll log window if user is near bottom"""
-        try:
-            # Check if DearPyGUI is running
-            if not dpg.is_dearpygui_running():
-                return
-                
-            if not dpg.does_item_exist(self.log_child_tag):
-                return
-            
-            max_scroll = dpg.get_y_scroll_max(self.log_child_tag)
-            current_scroll = dpg.get_y_scroll(self.log_child_tag)
-            
-            # If within threshold of bottom, scroll to bottom
-            if abs(max_scroll - current_scroll) < LOG_SCROLL_THRESHOLD:
-                dpg.set_y_scroll(self.log_child_tag, -1)
-        except Exception:
-            # Silently fail if scrolling doesn't work
-            pass
     
     def log(self, message: str, level: str = INFO, 
             to_file: bool = True, to_gui: bool = True, 
@@ -241,13 +202,8 @@ class Logger:
         self.separator(char, length)
 
     def clear(self):
-        """Clear the GUI log window"""
-        try:
-            if dpg.does_item_exist(self.log_child_tag):
-                dpg.delete_item(self.log_child_tag, children_only=True)
-                dpg.set_y_scroll(self.log_child_tag, 0.0)
-        except Exception as e:
-            print(f"Error clearing log window: {e}")
+        """Discard queued messages from the GUI log."""
+        self.drain_gui_queue()
     
     def log_exception(self, exception: Exception, context: str = ""):
         """

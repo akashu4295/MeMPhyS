@@ -40,7 +40,7 @@ endif
 
 # Files
 
-SRC_DIR = src/c_header_files
+SRC_DIR = src/lib
 SRC = $(wildcard $(SRC_DIR)/*.c)
 
 INIT = init.c

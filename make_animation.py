@@ -2,7 +2,7 @@
 """
 Render smooth-shaded animations of velocity magnitude and pressure from a
 sequence of MeMPhyS Solution_NNNNNN.vtk files (legacy ASCII VTK, written by
-write_vtk() in src/c_header_files/write_functions.c).
+write_vtk() in src/lib/legacy/write_functions.c).
 
 No pyvista/vtk dependency — parses the exact format MeMPhyS writes
 (POINTS / CELLS / CELL_TYPES / POINT_DATA with VECTORS velocity +

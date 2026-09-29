@@ -9,7 +9,12 @@
 #include "functions.h"
 #include <omp.h>
 #include "kdtree.h"
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#else
 #include <glob.h>
+#endif
 
 //////////////////////////////////////////////////////////////////////
 // Function Definitions
@@ -674,16 +679,41 @@ int write_vtk_mesh(const char *gmsh_filename, const char *mesh_filename)
     return 0;
 }
 
-/* Rewrite Solution.vtk.series: a ParaView file-series index listing every
-   Solution_*.vtk in the run folder up to `step`, with time = step * dt.
-   Opening Solution.vtk.series in ParaView loads all steps as one case. */
 static void write_vtk_series(int step)
 {
+#if defined(_WIN32) || defined(_WIN64)
+    WIN32_FIND_DATAA findFileData;
+    HANDLE hFind = FindFirstFileA("Solution_*.vtk", &findFileData);
+    if (hFind == INVALID_HANDLE_VALUE) return;
+
+    FILE *fp = fopen("Solution.vtk.series.tmp", "w");
+    if (!fp) {
+        FindClose(hFind);
+        return;
+    }
+
+    fprintf(fp, "{\n  \"file-series-version\" : \"1.0\",\n  \"files\" : [\n");
+    int first = 1;
+    do {
+        int s;
+        if (sscanf(findFileData.cFileName, "Solution_%d.vtk", &s) != 1 || s > step) continue;
+        fprintf(fp, "%s    { \"name\" : \"%s\", \"time\" : %.10g }",
+                first ? "" : ",\n", findFileData.cFileName, s * parameters.dt);
+        first = 0;
+    } while (FindNextFileA(hFind, &findFileData));
+
+    fprintf(fp, "\n  ]\n}\n");
+    fclose(fp);
+    FindClose(hFind);
+#else
     glob_t g;
     if (glob("Solution_[0-9]*.vtk", 0, NULL, &g) != 0) return;
 
     FILE *fp = fopen("Solution.vtk.series.tmp", "w");
-    if (!fp) { globfree(&g); return; }
+    if (!fp) {
+        globfree(&g);
+        return;
+    }
 
     fprintf(fp, "{\n  \"file-series-version\" : \"1.0\",\n  \"files\" : [\n");
     int first = 1;
@@ -697,7 +727,11 @@ static void write_vtk_series(int step)
     fprintf(fp, "\n  ]\n}\n");
     fclose(fp);
     globfree(&g);
-    rename("Solution.vtk.series.tmp", "Solution.vtk.series");  // swap in one go so ParaView never reads a half-written file
+#endif
+
+    // Windows rename() fails if target exists, so remove target first
+    remove("Solution.vtk.series");
+    rename("Solution.vtk.series.tmp", "Solution.vtk.series");
 }
 
 int write_vtk_field(FieldVariables *field, PointStructure *myPS, int step)

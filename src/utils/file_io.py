@@ -10,7 +10,6 @@ import csv
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 import pandas as pd
-import dearpygui.dearpygui as dpg
 
 from src.config import (
     BASE_PARAMETERS,

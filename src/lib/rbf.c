@@ -317,10 +317,10 @@ void create_full_gradx_matrix_vectorised(PointStructure* myPointStruct) {
         for (int j = 0; j < n; j++)
             myPointStruct->Dx[i*n+j] = B1[j];
 
-        free(grad);
-        free(A);
-        free(A_inv);
-        free(B1);
+        safe_free(grad);
+        safe_free(A);
+        safe_free(A_inv);
+        safe_free(B1);
     }
 }
 
@@ -344,10 +344,10 @@ void create_full_grady_matrix_vectorised(PointStructure* myPointStruct) {
         for (int j = 0; j < n; j++)
             myPointStruct->Dy[i*n+j] = B1[j];
 
-        free(grad);
-        free(A);
-        free(A_inv);
-        free(B1);
+        safe_free(grad);
+        safe_free(A);
+        safe_free(A_inv);
+        safe_free(B1);
     }
 }
 
@@ -371,10 +371,10 @@ void create_full_gradz_matrix_vectorised(PointStructure* myPointStruct) {
         for (int j = 0; j < n; j++)
             myPointStruct->Dz[i*n+j] = B1[j];
 
-        free(grad);
-        free(A);
-        free(A_inv);
-        free(B1);
+        safe_free(grad);
+        safe_free(A);
+        safe_free(A_inv);
+        safe_free(B1);
     }
 }
 
@@ -398,10 +398,10 @@ void create_full_laplacian_matrix_vectorised(PointStructure* myPointStruct) {
         for (int j = 0; j < n; j++)
             myPointStruct->lap[i*n+j] = B1[j];
 
-        free(lap);
-        free(A);
-        free(A_inv);
-        free(B1);
+        safe_free(lap);
+        safe_free(A);
+        safe_free(A_inv);
+        safe_free(B1);
     }
 }
 

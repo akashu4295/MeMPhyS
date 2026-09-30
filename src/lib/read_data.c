@@ -1072,10 +1072,10 @@ void create_restriction_matrix(PointStructure* myPointStruct_f,
             myPointStruct_c->restr_mat[i*m +j] = temp1[j];
         }
 
-        free(temp);
-        free(temp1);
-        free(A);
-        free(A_inv);
+        safe_free(temp);
+        safe_free(temp1);
+        safe_free(A);
+        safe_free(A_inv);
 
         if (i % 5000 == 0)
             fprintf(stderr, "  restriction matrix: [thread %d] node %d / %d (%.1f%%)\n",
@@ -1141,10 +1141,10 @@ void create_prolongation_matrix(PointStructure* myPointStruct_f, PointStructure*
         for (short j = 0; j < (m); j++)
             myPointStruct_f->prol_mat[i*m +j] = temp1[j];
 
-        free(temp);
-        free(temp1);
-        free(A);
-        free(A_inv);
+        safe_free(temp);
+        safe_free(temp1);
+        safe_free(A);
+        safe_free(A_inv);
 
         if (i % 5000 == 0)
             fprintf(stderr, "  prolongation matrix: [thread %d] node %d / %d (%.1f%%)\n",

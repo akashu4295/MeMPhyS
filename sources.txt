@@ -8,9 +8,11 @@ src/lib/test_derivatives.c
 src/lib/timple_solver.c
 src/lib/fractional_step_solver.c
 src/lib/write_data.c
+src/lib/read_data.c
 src/lib/initialisation.c
 src/lib/openACC_functions.c
 -lm
 -O3
 -march=native
 -fopenmp
+-fopenacc

@@ -1,26 +1,60 @@
 // Author : Akash Unnikrishnan
 // Clean SIMD + GPU safe version
+#define _GNU_SOURCE // Required for posix_memalign on POSIX/GCC
 
 #include "functions.h"
 
+#ifdef _WIN32
+#include <malloc.h> // Header for _aligned_malloc and _aligned_free
+#endif
+
 #define ALIGNMENT 64
-#define PIVOT_TOL 1e-14   /* TODO: expose as user parameter */
+#define PIVOT_TOL 1e-14 
+
 
 ////////////////////////////////////////////////////////////////////////
 // Safe aligned allocation (CPU SIMD friendly, GPU safe)
 ////////////////////////////////////////////////////////////////////////
 
-static void* safe_malloc(size_t size)
-{
-    void *ptr = NULL;
 
-    if (posix_memalign(&ptr, ALIGNMENT, size) != 0) {
-        fprintf(stderr,"Allocation failed\n");
+void* safe_malloc(size_t size) {
+    void *ptr = NULL;
+    #ifdef _WIN32
+        // Windows API: _aligned_malloc(size, alignment)
+        ptr = _aligned_malloc(size, ALIGNMENT);
+    #else
+        // POSIX API: posix_memalign(memptr, alignment, size)
+        if (posix_memalign(&ptr, (size_t)ALIGNMENT, size) != 0) {
+            ptr = NULL;
+        }
+    #endif
+    if (ptr == NULL) {
+        fprintf(stderr, "Error: Memory allocation failed.\n");
         exit(EXIT_FAILURE);
     }
 
     return ptr;
 }
+
+void safe_free(void *ptr) {
+    if (ptr == NULL) return;
+    #ifdef _WIN32
+        _aligned_free(ptr);
+    #else
+        free(ptr);
+    #endif
+}
+// static void* safe_malloc(size_t size)
+// {
+//     void *ptr = NULL;
+
+//     if (posix_memalign(&ptr, ALIGNMENT, size) != 0) {
+//         fprintf(stderr,"Allocation failed\n");
+//         exit(EXIT_FAILURE);
+//     }
+
+//     return ptr;
+// }
 
 ////////////////////////////////////////////////////////////////////////
 // Basic utilities
@@ -307,7 +341,7 @@ void matrixInverse_Gauss_Jordan_vectorised(
         for(int j=0;j<n;j++)
             Ainv[i*n+j]=aug[i*W+j+n];
 
-    free(aug);
+    safe_free(aug);
 }
 
 void matrixInverse_Gauss_Jordan(
@@ -328,8 +362,8 @@ void matrixInverse_Gauss_Jordan(
         for(int j=0;j<n;j++)
             inverse[i][j]=Ai[i*n+j];
 
-    free(A);
-    free(Ai);
+    safe_free(A);
+    safe_free(Ai);
 }
 
 ////////////////////////////////////////////////////////////////////////

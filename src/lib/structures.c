@@ -1,4 +1,5 @@
 #include "structures.h"
+#include "functions.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -279,42 +280,6 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
     }
 }
 
-__attribute__((weak)) // This function can be overridden by a user-defined function in another file
-void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels)
-{
-    for (int ii = 0; ii < numlevels; ii++){
-        for (int i = 0; i < myPointStruct[ii].num_nodes; i++){
-            myPointStruct[ii].node_bc[i].type = BC_INTERIOR;
-            myPointStruct[ii].node_bc[i].u = 0;
-            myPointStruct[ii].node_bc[i].v = 0;
-            myPointStruct[ii].node_bc[i].w = 0;
-            myPointStruct[ii].node_bc[i].p = 0;
-            myfieldvariables[ii].u[i] = 0;
-            myfieldvariables[ii].v[i] = 0;
-            myfieldvariables[ii].w[i] = 0;
-            myfieldvariables[ii].p[i] = 0;
-            myfieldvariables[ii].p_old[i] = 0;
-        }
-        if (parameters.compressible_flow){
-            for (int i = 0; i < myPointStruct[ii].num_nodes; i++) {
-                myPointStruct[ii].node_bc[i].T = 0.0;
-                myPointStruct[ii].node_bc[i].rho = 0.0;
-                myPointStruct[ii].node_bc[i].p_total = 0.0;
-                myPointStruct[ii].node_bc[i].T_total = 0.0;
-                myfieldvariables[ii].T[i] = 0.0;
-                myfieldvariables[ii].rho[i] = 0.0;
-                myfieldvariables[ii].e[i] = 0.0;
-            }
-        }
-    }
-}
-
-__attribute__((weak)) // This function can be overridden by a user-defined function in another file
-void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels)
-{
-    // Do Nothing for now - this function will be used to set specific boundary conditions after initialization
-}
-
 void free_PointStructure(PointStructure* myPointStruct, int num_levels) {
     for (int i = 0; i < num_levels; i++) {
         free(myPointStruct[i].x);
@@ -331,12 +296,12 @@ void free_PointStructure(PointStructure* myPointStruct, int num_levels) {
         free(myPointStruct[i].pow_y);
         free(myPointStruct[i].pow_z);
         free(myPointStruct[i].cloud_index);
-        free(myPointStruct[i].Dx);
-        free(myPointStruct[i].Dy);
+        safe_free(myPointStruct[i].Dx);
+        safe_free(myPointStruct[i].Dy);
         free(myPointStruct[i].prolongation_points);
         free(myPointStruct[i].restriction_points);
-        free(myPointStruct[i].lap);
-        free(myPointStruct[i].lap_Poison);
+        safe_free(myPointStruct[i].lap);
+        safe_free(myPointStruct[i].lap_Poison);
         free(myPointStruct[i].rcm_order);
         free(myPointStruct[i].x_gmsh);
         free(myPointStruct[i].y_gmsh);
@@ -345,7 +310,7 @@ void free_PointStructure(PointStructure* myPointStruct, int num_levels) {
         free(myPointStruct[i].corner_nearest_solver);
         
         if (parameters.dimension == 3)
-            free(myPointStruct[i].Dz);
+            safe_free(myPointStruct[i].Dz);
         
         if (i != num_levels-1) {
             free(myPointStruct[i].prol_mat);

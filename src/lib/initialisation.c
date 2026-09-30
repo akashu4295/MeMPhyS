@@ -507,3 +507,39 @@ void check_restart_file(PointStructure* myPointStruct, FieldVariables *field) {
                "num_time_steps is the final step number, not the number of extra steps.\n",
                parameters.num_time_steps);
 } 
+
+
+WEAK_FUNC void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels)
+{
+    // Do Nothing for now - this function will be used to set specific boundary conditions after initialization
+}
+
+
+WEAK_FUNC void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels)
+{
+    for (int ii = 0; ii < numlevels; ii++){
+        for (int i = 0; i < myPointStruct[ii].num_nodes; i++){
+            myPointStruct[ii].node_bc[i].type = BC_INTERIOR;
+            myPointStruct[ii].node_bc[i].u = 0;
+            myPointStruct[ii].node_bc[i].v = 0;
+            myPointStruct[ii].node_bc[i].w = 0;
+            myPointStruct[ii].node_bc[i].p = 0;
+            myfieldvariables[ii].u[i] = 0;
+            myfieldvariables[ii].v[i] = 0;
+            myfieldvariables[ii].w[i] = 0;
+            myfieldvariables[ii].p[i] = 0;
+            myfieldvariables[ii].p_old[i] = 0;
+        }
+        if (parameters.compressible_flow){
+            for (int i = 0; i < myPointStruct[ii].num_nodes; i++) {
+                myPointStruct[ii].node_bc[i].T = 0.0;
+                myPointStruct[ii].node_bc[i].rho = 0.0;
+                myPointStruct[ii].node_bc[i].p_total = 0.0;
+                myPointStruct[ii].node_bc[i].T_total = 0.0;
+                myfieldvariables[ii].T[i] = 0.0;
+                myfieldvariables[ii].rho[i] = 0.0;
+                myfieldvariables[ii].e[i] = 0.0;
+            }
+        }
+    }
+}

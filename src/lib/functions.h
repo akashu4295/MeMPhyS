@@ -4,6 +4,12 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
+#if defined(__GNUC__) || defined(__clang__)
+  #define WEAK_FUNC __attribute__((weak))
+#else
+  #define WEAK_FUNC
+#endif
+
 // #include <time.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -42,7 +48,8 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps);
 int bc_priority(BCType t);
 void assign_node_bc(PointStructure* ps, int node, BCValue new_bc);
 void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
-
+WEAK_FUNC void boundary_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
+WEAK_FUNC void initial_conditions(PointStructure* myPointStruct, FieldVariables* myfieldvariables, int numlevels);
 // RBF Function declarations
 double calculate_phs_rbf(double *x, double *c, int phs, int dimension);
 void create_A_matrix_from_cloud_indices_vectorised(PointStructure* myPointStruct, double* A, int cloud_index);
@@ -92,6 +99,8 @@ int write_vtk_mesh(const char *gmsh_filename, const char *mesh_filename);
 int read_and_interpolate_restart_vtk(const char *old_field_file,  FieldVariables *field,  PointStructure *newPS);
 
 // Math Library Function Declarations
+void* safe_malloc(size_t size);
+void safe_free(void *ptr);
 void create_matrix(double ***A, int n_rows, int n_cols);
 void create_matrix_int(int ***A, int n_rows, int n_cols);
 double** create_matrix1(int n_rows, int n_cols);

@@ -103,6 +103,8 @@ def write_parameter_csv(values: dict[str, Any], path: str | Path = "flow_paramet
     with Path(path).open("w", newline="", encoding="utf-8") as stream:
         writer = csv.writer(stream)
         for spec in PARAMETERS:
+            if spec.section == "Compressible properties" and not bool(values.get("compressible_flow", 0)):
+                continue
             value = values.get(spec.key, spec.default)
             if spec.kind == "bool":
                 value = int(bool(value))

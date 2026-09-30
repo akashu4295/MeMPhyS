@@ -26,6 +26,7 @@ PARAMETERS = (
     ParameterSpec("num_time_steps", "Number of time steps", 10000, "int", "Flow and time", "Maximum number of solver time steps."),
     ParameterSpec("write_interval", "Write interval", 10, "int", "Flow and time", "Write solution output every N steps."),
     ParameterSpec("Re", "Reynolds number", 10.0, "float", "Flow and time"),
+    ParameterSpec("time_step", "Maximum time step (dt)", 0.1, "float", "Flow and time", "Caps the mesh-based automatic time step."),
     ParameterSpec("courant_number", "Courant number", 0.1, "float", "Flow and time", "Controls the mesh-based automatic time step."),
     ParameterSpec("steady_tolerance", "Steady-state tolerance", 1e-8, "float", "Flow and time"),
     ParameterSpec("compressible_flow", "Enable compressible flow", 0, "bool", "Flow and time"),

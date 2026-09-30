@@ -6,6 +6,7 @@ test_derivative,1
 num_time_steps,10000
 write_interval,10
 Re,10
+time_step,0.1
 courant_number,0.1
 steady_tolerance,1e-08
 compressible_flow,0

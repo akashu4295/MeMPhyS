@@ -30,6 +30,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "src/lib/functions.h"
+#if defined(_WIN32) || defined(_WIN64)
+    #include <direct.h>
+    #define chdir _chdir
+#else
+    #include <unistd.h>
+#endif
 
 struct parameters parameters;
 struct timer timer;
@@ -38,8 +44,17 @@ static double elapsed_seconds(struct timespec start, struct timespec end){
     return (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    // ./a.out <case_dir> runs inside case_dir (inputs and results live there); no argument = current folder
+    if (argc > 1){
+        if (chdir(argv[1]) != 0){
+            printf("ERROR: cannot open case folder '%s'\n", argv[1]);
+            exit(1);
+        }
+        printf("Case folder: %s\n", argv[1]);
+    }
+
     struct timespec clock_start, clock_end, clock_program_begin;
     clock_gettime(CLOCK_MONOTONIC, &clock_program_begin);
     PointStructure* myPointStruct;

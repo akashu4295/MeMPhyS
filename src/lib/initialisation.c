@@ -495,7 +495,7 @@ void check_restart_file(PointStructure* myPointStruct, FieldVariables *field) {
     if (!parameters.restart) return;
 
     printf("Checking restart file: %s\n", parameters.restart_filename);
-    if (read_vtk_restart(parameters.restart_filename, field, myPointStruct) != 0) {
+    if (read_and_interpolate_restart_vtk(parameters.restart_filename, field, myPointStruct) != 0) {
         fprintf(stderr, "Restart failed, exiting.\n");
         exit(1);
     }

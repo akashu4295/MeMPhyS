@@ -90,8 +90,7 @@ int main(int argc, char *argv[])
         boundary_conditions(myPointStruct, field, 1);
     }
     // check_restart_file(&myPointStruct[0], &field[0]);
-    if (parameters.restart) read_and_interpolate_restart_vtk(parameters.restart_filename, &field[0], &myPointStruct[0]);
-    apply_boundary_conditions(myPointStruct, field, 1);
+    check_restart_file(&myPointStruct[0], &field[0]);
     for (int ii = 0; ii<parameters.num_levels ; ii = ii +1)
         create_laplacian_for_Poisson_equation_vectorised(&myPointStruct[ii]);
     clock_gettime(CLOCK_MONOTONIC, &clock_end);

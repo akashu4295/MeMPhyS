@@ -920,7 +920,7 @@ int read_and_interpolate_restart_vtk(const char *old_field_file,
         pt[1] = newPS->y[i];
         pt[2] = (parameters.dimension == 3) ? newPS->z[i] : 0.0;
 
-        int target_k = newPS->rcm_order[i];
+        int target_k = i;
 
         /* Find K-nearest neighbors */
         int *neigh_indices = find_neighbours(pt, ptree, search_radius, K);

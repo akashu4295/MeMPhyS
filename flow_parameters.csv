@@ -4,8 +4,8 @@ phs_deg,3
 cloud_size_multiplier,2
 test_derivative,1
 num_time_steps,10000
-write_interval,10
-Re,10
+write_interval,100
+Re,80
 time_step,0.1
 courant_number,0.1
 steady_tolerance,1e-08

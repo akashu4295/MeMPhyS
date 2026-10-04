@@ -176,12 +176,31 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p_old, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
     # pragma acc wait(1,2)
 
+    // # pragma acc parallel loop gang vector default(present)
+    // for (int i = 0; i < myPointStruct->num_nodes; i++){
+    //     if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+    //         myPointStruct->node_bc[i].type != BC_PRESSURE_OUTLET){
+    //         field->u_new[i] = field->u[i] + parameters.dt * (field->dpdx[i]);
+    //         field->v_new[i] = field->v[i] + parameters.dt * (field->dpdy[i]);
+    //     }
+    // }
+    /* ---- ENFORCE BOUNDARY CONDITIONS ON u* ---- */
     # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
-        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
-            myPointStruct->node_bc[i].type != BC_PRESSURE_OUTLET){
-            field->u_new[i] = field->u[i] + parameters.dt * (field->dpdx[i]);
-            field->v_new[i] = field->v[i] + parameters.dt * (field->dpdy[i]);
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i]){
+            if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET 
+                    || myPointStruct->node_bc[i].type == BC_WALL){
+                // Strict physical conditions for inlets and walls
+                field->u_new[i] = myPointStruct->node_bc[i].u;
+                field->v_new[i] = myPointStruct->node_bc[i].v;
+            }
+            else if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
+                // Convective Boundary Condition (Orlanski) to let vortices exit
+                // Note: Replace U_c with your bulk convective velocity (e.g., U_infinity)
+                double U_c = 1.0; 
+                field->u_new[i] = field->u[i] - parameters.dt * U_c * field->dudx[i];
+                field->v_new[i] = field->v[i] - parameters.dt * U_c * field->dvdx[i];
+            }
         }
     }
 }
@@ -493,34 +512,50 @@ void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariab
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
     # pragma acc wait(1,2)
 
-    #pragma acc parallel loop gang vector default(present)
-    for (int i = 0; i < num_nodes; i++){
-        if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
-            double sumux = 0.0, sumuy = 0.0, sumvx = 0.0, sumvy = 0.0;
-            for (int j = 1; j < num_cloud_points; j++){
-                int k = i*num_cloud_points + j;
-                sumux -= myPointStruct->Dx[k] * field->u[myPointStruct->cloud_index[k]];
-                sumuy -= myPointStruct->Dy[k] * field->u[myPointStruct->cloud_index[k]];
-                sumvx -= myPointStruct->Dx[k] * field->v[myPointStruct->cloud_index[k]];
-                sumvy -= myPointStruct->Dy[k] * field->v[myPointStruct->cloud_index[k]];
-            }
-            double Ap = myPointStruct->Dx[i*num_cloud_points] * myPointStruct->x_normal[i]
-                        + myPointStruct->Dy[i*num_cloud_points] * myPointStruct->y_normal[i];
-            field->u[i] = (sumux * myPointStruct->x_normal[i] + sumuy * myPointStruct->y_normal[i]) / Ap;
-            field->v[i] = (sumvx * myPointStruct->x_normal[i] + sumvy * myPointStruct->y_normal[i]) / Ap;
-        }
-        else if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET 
-                    || myPointStruct->node_bc[i].type == BC_WALL 
-                    || myPointStruct->node_bc[i].type == BC_VELOCITY_OUTLET){
+    // #pragma acc parallel loop gang vector default(present)
+    // for (int i = 0; i < num_nodes; i++){
+    //     if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
+    //         double sumux = 0.0, sumuy = 0.0, sumvx = 0.0, sumvy = 0.0;
+    //         for (int j = 1; j < num_cloud_points; j++){
+    //             int k = i*num_cloud_points + j;
+    //             sumux -= myPointStruct->Dx[k] * field->u[myPointStruct->cloud_index[k]];
+    //             sumuy -= myPointStruct->Dy[k] * field->u[myPointStruct->cloud_index[k]];
+    //             sumvx -= myPointStruct->Dx[k] * field->v[myPointStruct->cloud_index[k]];
+    //             sumvy -= myPointStruct->Dy[k] * field->v[myPointStruct->cloud_index[k]];
+    //         }
+    //         double Ap = myPointStruct->Dx[i*num_cloud_points] * myPointStruct->x_normal[i]
+    //                     + myPointStruct->Dy[i*num_cloud_points] * myPointStruct->y_normal[i];
+    //         field->u[i] = (sumux * myPointStruct->x_normal[i] + sumuy * myPointStruct->y_normal[i]) / Ap;
+    //         field->v[i] = (sumvx * myPointStruct->x_normal[i] + sumvy * myPointStruct->y_normal[i]) / Ap;
+    //     }
+    //     else if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET 
+    //                 || myPointStruct->node_bc[i].type == BC_WALL 
+    //                 || myPointStruct->node_bc[i].type == BC_VELOCITY_OUTLET){
+    //         field->u[i] = myPointStruct->node_bc[i].u;
+    //         field->v[i] = myPointStruct->node_bc[i].v;
+    //     }
+    //     else {//if (!myPointStruct->boundary_tag[i]){
+    //         field->u[i] = field->u_new[i] - parameters.dt * field->dpdx[i]/parameters.rho;
+    //         field->v[i] = field->v_new[i] - parameters.dt * field->dpdy[i]/parameters.rho;
+    //     }
+    // }
+     
+    // Update nodes
+    # pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++){
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] && 
+            myPointStruct->node_bc[i].type != BC_PRESSURE_OUTLET){
+            // Bypass projection for fixed boundaries (Inlets/Walls) to prevent float drift
             field->u[i] = myPointStruct->node_bc[i].u;
             field->v[i] = myPointStruct->node_bc[i].v;
         }
-        else {//if (!myPointStruct->boundary_tag[i]){
+        else {
+            // Interior nodes AND Pressure Outlet MUST use the projection step
             field->u[i] = field->u_new[i] - parameters.dt * field->dpdx[i]/parameters.rho;
             field->v[i] = field->v_new[i] - parameters.dt * field->dpdy[i]/parameters.rho;
         }
     }
-     
+
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy,  myPointStruct->cloud_index, num_nodes, num_cloud_points, 4);
     # pragma acc wait(3,4)

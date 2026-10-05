@@ -35,6 +35,7 @@ typedef struct {
     double v_n, v_t;
     double p, T, rho;
     double p_total, T_total;
+    double U_c;   // convective exit vel at a pressure outlet
 } BCValue;
 
 typedef struct {

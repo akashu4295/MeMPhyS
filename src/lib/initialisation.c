@@ -99,6 +99,7 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
     }
 
     int lineno = 0;
+    double U_inlet = NAN;
 
     while (fgets(line, sizeof(line), file)) {
         lineno++;
@@ -114,7 +115,7 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
 
         BCValue bc;
         bc.type = BC_DEFAULT;
-        bc.u = 0.0; bc.v = 0.0; bc.w = 0.0; bc.p = 0.0; bc.v_n = 0; bc.v_t = 0;
+        bc.u = 0.0; bc.v = 0.0; bc.w = 0.0; bc.p = 0.0; bc.v_n = 0; bc.v_t = 0; bc.U_c = NAN;
         if (parameters.compressible_flow){
             bc.p_total = parameters.p_ref;
             bc.rho = parameters.rho_ref;
@@ -200,6 +201,13 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
             else if (!strcmp(key, "T_total") || !strcmp(key, "Ttotal")) {
                 bc.T_total = atof(val); have_T_total = 1;
             }
+
+            else if (!strcmp(key, "U_c")) {
+                if (bc.type == BC_PRESSURE_OUTLET)
+                    bc.U_c = atof(val);
+                else
+                    printf("BC CSV warning (line %d): U_c only applies to pressure_outlet, ignored\n", lineno);
+            }
             else {
                 printf("BC CSV warning (line %d): unknown key '%s'\n",
                        lineno, key);
@@ -221,6 +229,9 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
             printf("BC CSV error (line %d): pressure BC requires p\n", lineno);
             continue;
         }
+
+        if (bc.type == BC_VELOCITY_INLET && isnan(U_inlet))
+            U_inlet = bc.u;
         
         // Compressible flow validations
         if (parameters.compressible_flow) {
@@ -265,6 +276,12 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
                    lineno, name);
         }
     }
+
+    /* Pressure outlets get U_c = the inlet line's u */
+    for (int i = 0; i < ps->num_boundary_types; i++)
+        if (ps->boundary_map[i].bc.type == BC_PRESSURE_OUTLET && isnan(ps->boundary_map[i].bc.U_c))
+            ps->boundary_map[i].bc.U_c = U_inlet;
+
     fclose(file);
 }
 

@@ -83,6 +83,10 @@ int main(int argc, char *argv[])
     if (bcf != NULL){
         fclose(bcf);  // close immediately, we just tested existence
         printf("Boundary conditions applied from bc.csv file\n");
+        for (int i = 0; i < myPointStruct[0].num_boundary_types; i++)
+            if (myPointStruct[0].boundary_map[i].bc.type == BC_PRESSURE_OUTLET)
+                printf("  %s: pressure outlet, U_c = %g\n",
+                       myPointStruct[0].boundary_map[i].name, myPointStruct[0].boundary_map[i].bc.U_c);
     }
     else{
         printf("bc.csv not found: using default init.c file for boundary conditions\n");

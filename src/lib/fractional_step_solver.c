@@ -197,7 +197,7 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
             else if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
                 // Convective Boundary Condition (Orlanski) to let vortices exit
                 // Note: Replace U_c with your bulk convective velocity (e.g., U_infinity)
-                double U_c = 1.0; 
+                double U_c = myPointStruct->node_bc[i].U_c;
                 field->u_new[i] = field->u[i] - parameters.dt * U_c * field->dudx[i];
                 field->v_new[i] = field->v[i] - parameters.dt * U_c * field->dvdx[i];
             }

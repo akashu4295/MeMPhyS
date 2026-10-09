@@ -115,19 +115,26 @@ void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct
         field->lapv_old[i] = field->lapv[i];
         field->lapw_old[i] = field->lapw[i];
     }
-    // /* ---- ENFORCE BOUNDARY CONDITIONS ON u* ---- */
-    // # pragma acc parallel loop gang vector default(present)
-    // for (int i = 0; i < myPointStruct->num_nodes; i++){
-    //     if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i]){
-    //         if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET 
-    //                 || myPointStruct->node_bc[i].type == BC_WALL 
-    //                 || myPointStruct->node_bc[i].type == BC_VELOCITY_OUTLET){
-    //             field->u_new[i] = myPointStruct->node_bc[i].u;
-    //             field->v_new[i] = myPointStruct->node_bc[i].v;
-    //             field->w_new[i] = myPointStruct->node_bc[i].w;
-    //         }
-    //     }
-    // }
+    /* ---- ENFORCE BOUNDARY CONDITIONS ON u* ---- */
+    # pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++){
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i]){
+            if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET 
+                    || myPointStruct->node_bc[i].type == BC_WALL){
+                // Strict physical conditions for inlets and walls
+                field->u_new[i] = myPointStruct->node_bc[i].u;
+                field->v_new[i] = myPointStruct->node_bc[i].v;
+                field->w_new[i] = myPointStruct->node_bc[i].w;
+            }
+            else if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
+                // Convective Boundary Condition (Orlanski) to let vortices exit
+                double U_c = myPointStruct->node_bc[i].U_c;
+                field->u_new[i] = field->u[i] - parameters.dt * U_c * field->dudx[i];
+                field->v_new[i] = field->v[i] - parameters.dt * U_c * field->dvdx[i];
+                field->w_new[i] = field->w[i] - parameters.dt * U_c * field->dwdx[i];
+            }
+        }
+    }
 }
 
 // # pragma acc routine
@@ -172,9 +179,9 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
         field->lapv_old[i] = field->lapv[i];
     }
     
-    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p_old, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
-    multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p_old, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
-    # pragma acc wait(1,2)
+    // multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->p_old, field->dpdx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 1);
+    // multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->p_old, field->dpdy, myPointStruct->cloud_index, num_nodes, num_cloud_points, 2);
+    // # pragma acc wait(1,2)
 
     // # pragma acc parallel loop gang vector default(present)
     // for (int i = 0; i < myPointStruct->num_nodes; i++){
@@ -196,7 +203,6 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
             }
             else if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET){
                 // Convective Boundary Condition (Orlanski) to let vortices exit
-                // Note: Replace U_c with your bulk convective velocity (e.g., U_infinity)
                 double U_c = myPointStruct->node_bc[i].U_c;
                 field->u_new[i] = field->u[i] - parameters.dt * U_c * field->dudx[i];
                 field->v_new[i] = field->v[i] - parameters.dt * U_c * field->dvdx[i];
@@ -382,7 +388,7 @@ void FS_restrict_residuals_vectorised(PointStructure* mypointStruct_f, PointStru
     #pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < mypointStruct_c->num_nodes; i++) {
         double results = 0.0;
-        if (!mypointStruct_c->boundary_tag[i]) {
+        if (!mypointStruct_c->boundary_tag[i] && !mypointStruct_c->corner_tag[i]) {
             int i_restr = mypointStruct_c->restriction_points[i];
             for (int j = 0; j < n; j++) {
                 results += mypointStruct_c->restr_mat[i*n + j] * field_f->res[mypointStruct_f->cloud_index[i_restr*n + j]];
@@ -397,7 +403,7 @@ void FS_prolongate_corrections_vectorised(PointStructure* mypointStruct_f, Point
     int n = mypointStruct_c->num_cloud_points;
     #pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < mypointStruct_f->num_nodes; i++) {
-        if (!mypointStruct_f->boundary_tag[i]) {
+        if (!mypointStruct_f->boundary_tag[i] && !mypointStruct_f->corner_tag[i]) {
             int i_prol = mypointStruct_f->prolongation_points[i];
             double results = 0.0;
             for (int j = 0; j < n; j++) {

@@ -18,10 +18,10 @@ theta,0.5
 Poisson_solver_type,1
 poisson_solver_tolerance,1e-03
 sor_parameter,1
-num_vcycles,1
-num_relax,50
+num_vcycles,10
+num_relax,20
 num_colors,1
-use_hyperviscosity,1
+use_hyperviscosity,0
 gamma_hyper,1e-6
 write_processed_grid_data,0
 restart,0

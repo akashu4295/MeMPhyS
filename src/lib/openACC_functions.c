@@ -37,11 +37,13 @@ void copyin_pointstructure_to_gpu(PointStructure *myPointStruct)
                 myPointStruct[l].Dz[:N * Nc])
         }
         
-        if (myPointStruct[l].prol_mat != NULL)  {
-            #pragma acc enter data copyin(myPointStruct[l].prol_mat[:N * Nc])
+        if (myPointStruct[l].prol_mat != NULL && l + 1 < L)  {
+            size_t prolongation_size = (size_t)N * myPointStruct[l + 1].num_cloud_points;
+            #pragma acc enter data copyin(myPointStruct[l].prol_mat[:prolongation_size])
         }
-        if (myPointStruct[l].restr_mat != NULL)  {
-            #pragma acc enter data copyin(myPointStruct[l].restr_mat[:N * Nc])
+        if (myPointStruct[l].restr_mat != NULL && l > 0)  {
+            size_t restriction_size = (size_t)N * myPointStruct[l - 1].num_cloud_points;
+            #pragma acc enter data copyin(myPointStruct[l].restr_mat[:restriction_size])
         }
     }
 }

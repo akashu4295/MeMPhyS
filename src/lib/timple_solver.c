@@ -597,7 +597,7 @@ void restrict_residuals_vectorised(PointStructure* mypointStruct_f, PointStructu
     #pragma acc parallel loop gang vector present(field_f, field_c, mypointStruct_f, mypointStruct_c)
     for (int i = 0; i < num_nodes_c; i++) {
         double results = 0.0;
-        if (mypointStruct_c->boundary_tag[i] == false) {
+        if (!mypointStruct_c->boundary_tag[i] && !mypointStruct_c->corner_tag[i]) {
             int base_c = i * n_f; 
             int i_restr_node = mypointStruct_c->restriction_points[i];
             int base_f = i_restr_node * n_f;
@@ -620,7 +620,7 @@ void prolongate_corrections_vectorised(PointStructure* mypointStruct_f, PointStr
     #pragma acc parallel loop gang vector present(field_f, field_c, mypointStruct_f, mypointStruct_c)
     for (int i = 0; i < num_nodes_f; i++) {
         // Only prolongate corrections for interior nodes
-        if (mypointStruct_f->boundary_tag[i] == false) {
+        if (!mypointStruct_f->boundary_tag[i] && !mypointStruct_f->corner_tag[i]) {
             int i_prol_node = mypointStruct_f->prolongation_points[i];
             int base_f = i * n_c;
             int base_c = i_prol_node * n_c;

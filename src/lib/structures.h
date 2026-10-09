@@ -157,8 +157,8 @@ typedef struct PointStructure {
     double* Dz; // z-derivative matrix
     double* lap; // laplacian matrix
     double* lap_Poison; // laplacian matrix for Poisson solver
-    double* restr_mat;// restriction matrix
-    double* prol_mat;// prolongation matrix
+    double* restr_mat;// [coarse nodes][fine cloud points]
+    double* prol_mat;// [fine nodes][coarse cloud points]
 }PointStructure;
 
 typedef struct FieldVariables {

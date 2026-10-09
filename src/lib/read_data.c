@@ -1019,32 +1019,35 @@ void create_restriction_matrix(PointStructure* myPointStruct_f,
 {
     // allocate memory for restriction matrix
     
-    short m = myPointStruct_f->num_cloud_points;
-    short n = myPointStruct_f->num_poly_terms;
-    short mpn = m+n;
+    int m = myPointStruct_f->num_cloud_points;
+    int n = myPointStruct_f->num_poly_terms;
+    int mpn = m+n;
 
-    myPointStruct_c->restr_mat = (double*)malloc(myPointStruct_c->num_nodes * m * sizeof(double));
+    size_t matrix_size = (size_t)myPointStruct_c->num_nodes * m;
+    myPointStruct_c->restr_mat = safe_malloc(matrix_size * sizeof(*myPointStruct_c->restr_mat));
 
-    // Initialise to zeros
-    for (int i = 0; i < myPointStruct_c->num_nodes * m; i++)
+    for (size_t i = 0; i < matrix_size; i++)
         myPointStruct_c->restr_mat[i] = 0;
 
-    int num_boundary_nodes = myPointStruct_c->num_boundary_nodes;
     int num_nodes = myPointStruct_c->num_nodes;
 
     // Each iteration gets its own work matrices so OpenMP threads don't overwrite each other
     #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < num_nodes; i++)
     {
-        if (myPointStruct_c->boundary_tag[i] == true)
+        if (myPointStruct_c->boundary_tag[i] || myPointStruct_c->corner_tag[i])
             continue;  // Skip boundary nodes
+        int i_restr = myPointStruct_c->restriction_points[i];
+        if (i_restr < 0 || i_restr >= myPointStruct_f->num_nodes) {
+            fprintf(stderr, "Invalid restriction point %d for coarse node %d\n", i_restr, i);
+            exit(EXIT_FAILURE);
+        }
         double *A_inv = create_matrix_vectorised(mpn,mpn);
         double *A     = create_matrix_vectorised(mpn,mpn);
         double *temp  = create_vector(mpn);
         double *temp1 = create_vector(m); // coefficients of restriction matrix
 
-        int i_restr = myPointStruct_c->restriction_points[i];
-        create_A_matrix_from_cloud_indices_vectorised(myPointStruct_f, A, myPointStruct_f->cloud_index[i_restr * myPointStruct_f->num_cloud_points]);
+        create_A_matrix_from_cloud_indices_vectorised(myPointStruct_f, A, i_restr);
         matrixInverse_Gauss_Jordan_vectorised(A, A_inv, m+n);
 
         double point1[3], point2[3];
@@ -1059,17 +1062,24 @@ void create_restriction_matrix(PointStructure* myPointStruct_f,
             point2[2] = myPointStruct_f->z[myPointStruct_f->cloud_index[k]];
             temp[j] = calculate_phs_rbf(point1, point2, parameters.phs_degree, parameters.dimension);
         }
-        double seed_pt[3] = {myPointStruct_f->x[i_restr],
-                             myPointStruct_f->y[i_restr],
-                             myPointStruct_f->z[i_restr]};
-        for (short j = 0; j < n; j++) 
+        int seed_index = myPointStruct_f->cloud_index[i_restr * m];
+        double seed_pt[3] = {myPointStruct_f->x[seed_index],
+                             myPointStruct_f->y[seed_index],
+                             myPointStruct_f->z[seed_index]};
+        for (int j = 0; j < n; j++)
             temp[j+m] = pow(point1[0]-seed_pt[0], myPointStruct_f->pow_x[j])
                                 * pow(point1[1]-seed_pt[1], myPointStruct_f->pow_y[j])
                                 * pow(point1[2]-seed_pt[2], myPointStruct_f->pow_z[j]);
         
-        multiply_vector_matrix_columnwise_vectorised(temp, A_inv, temp1, m+n, m);
+        /* The interpolation coefficients solve A*w = temp; do not transpose A_inv. */
+        for (int j = 0; j < m; j++) {
+            double sum = 0.0;
+            for (int k = 0; k < mpn; k++)
+                sum += A_inv[j * mpn + k] * temp[k];
+            temp1[j] = sum;
+        }
         
-        for (short j = 0; j < m; j++)
+        for (int j = 0; j < m; j++)
         {
             myPointStruct_c->restr_mat[i*m +j] = temp1[j];
         }
@@ -1087,34 +1097,35 @@ void create_restriction_matrix(PointStructure* myPointStruct_f,
 
 void create_prolongation_matrix(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c)
 {    
-    short m = myPointStruct_c->num_cloud_points;
-    short n = myPointStruct_c->num_poly_terms;
-    short mpn = m+n;
+    int m = myPointStruct_c->num_cloud_points;
+    int n = myPointStruct_c->num_poly_terms;
+    int mpn = m+n;
     
-    myPointStruct_f->prol_mat = (double*)malloc(myPointStruct_f->num_nodes *m * sizeof(double));
+    size_t matrix_size = (size_t)myPointStruct_f->num_nodes * m;
+    myPointStruct_f->prol_mat = safe_malloc(matrix_size * sizeof(*myPointStruct_f->prol_mat));
     
-    // Initialise to zeros
-    for (int i = 0; i < myPointStruct_f->num_nodes * m; i++)
-    {
+    for (size_t i = 0; i < matrix_size; i++)
         myPointStruct_f->prol_mat[i] = 0;
-    }
 
-    int num_boundary_nodes = myPointStruct_f->num_boundary_nodes;
     int num_nodes = myPointStruct_f->num_nodes;
 
     // Each iteration gets its own work matrices so OpenMP threads don't overwrite each other
     #pragma omp parallel for schedule(dynamic, 256)
     for (int i = 0; i < num_nodes; i++)
     {
-        if (myPointStruct_f->boundary_tag[i] == true)
+        if (myPointStruct_f->boundary_tag[i] || myPointStruct_f->corner_tag[i])
             continue;  // Skip boundary nodes
+        int i_prol = myPointStruct_f->prolongation_points[i];
+        if (i_prol < 0 || i_prol >= myPointStruct_c->num_nodes) {
+            fprintf(stderr, "Invalid prolongation point %d for fine node %d\n", i_prol, i);
+            exit(EXIT_FAILURE);
+        }
         double *A_inv = create_matrix_vectorised(mpn,mpn);
         double *A     = create_matrix_vectorised(mpn,mpn);
         double *temp  = create_vector(mpn);
         double *temp1 = create_vector(m);
 
-        int i_prol = myPointStruct_f->prolongation_points[i];
-        create_A_matrix_from_cloud_indices_vectorised(myPointStruct_c, A, myPointStruct_c->cloud_index[i_prol * myPointStruct_c->num_cloud_points]);
+        create_A_matrix_from_cloud_indices_vectorised(myPointStruct_c, A, i_prol);
         matrixInverse_Gauss_Jordan_vectorised(A, A_inv, m+n);
         
         double point1[3], point2[3], seed_pt[3];
@@ -1122,7 +1133,7 @@ void create_prolongation_matrix(PointStructure* myPointStruct_f, PointStructure*
         point1[1] = myPointStruct_f->y[i];
         point1[2] = myPointStruct_f->z[i];
         
-        for (short j = 0; j < m; j++) {
+        for (int j = 0; j < m; j++) {
             int k = i_prol*myPointStruct_c->num_cloud_points + j;
             point2[0] = myPointStruct_c->x[myPointStruct_c->cloud_index[k]];
             point2[1] = myPointStruct_c->y[myPointStruct_c->cloud_index[k]];
@@ -1130,17 +1141,24 @@ void create_prolongation_matrix(PointStructure* myPointStruct_f, PointStructure*
             temp[j] = calculate_phs_rbf(point1, point2, parameters.phs_degree, 
                                                         parameters.dimension);
         }
-        seed_pt[0]= myPointStruct_c->x[i_prol];
-        seed_pt[1]= myPointStruct_c->y[i_prol];
-        seed_pt[2]= myPointStruct_c->z[i_prol];
-        for (short j = 0; j < n; j++) 
+        int seed_index = myPointStruct_c->cloud_index[i_prol * m];
+        seed_pt[0] = myPointStruct_c->x[seed_index];
+        seed_pt[1] = myPointStruct_c->y[seed_index];
+        seed_pt[2] = myPointStruct_c->z[seed_index];
+        for (int j = 0; j < n; j++)
             temp[j+m] = pow(point1[0]-seed_pt[0], myPointStruct_c->pow_x[j])
                                 * pow(point1[1]-seed_pt[1], myPointStruct_c->pow_y[j])
                                 * pow(point1[2]-seed_pt[2], myPointStruct_c->pow_z[j]);
         
-        multiply_vector_matrix_columnwise_vectorised(temp, A_inv, temp1, m+n, m);
+        /* The interpolation coefficients solve A*w = temp; do not transpose A_inv. */
+        for (int j = 0; j < m; j++) {
+            double sum = 0.0;
+            for (int k = 0; k < mpn; k++)
+                sum += A_inv[j * mpn + k] * temp[k];
+            temp1[j] = sum;
+        }
         
-        for (short j = 0; j < (m); j++)
+        for (int j = 0; j < m; j++)
             myPointStruct_f->prol_mat[i*m +j] = temp1[j];
 
         safe_free(temp);

@@ -129,7 +129,7 @@ void restrict_solution_fas(PointStructure* fineStruct, PointStructure* coarseStr
 
     #pragma acc parallel loop gang vector present(field_f, field_c, fineStruct, coarseStruct)
     for (int i = 0; i < num_nodes_c; i++) {
-        if (!coarseStruct->boundary_tag[i]) {
+        if (!coarseStruct->boundary_tag[i] && !coarseStruct->corner_tag[i]) {
             int base_c = i * n_f; 
             int i_restr_node = coarseStruct->restriction_points[i];
             int base_f = i_restr_node * n_f;
@@ -164,7 +164,7 @@ void prolongate_corrections_fas(PointStructure* fineStruct, PointStructure* coar
 
     #pragma acc parallel loop gang vector present(field_f, field_c, fineStruct, coarseStruct)
     for (int i = 0; i < num_nodes_f; i++) {
-        if (!fineStruct->boundary_tag[i]) {
+        if (!fineStruct->boundary_tag[i] && !fineStruct->corner_tag[i]) {
             int i_prol_node = fineStruct->prolongation_points[i];
             int base_f = i * n_c;
             int base_c = i_prol_node * n_c;

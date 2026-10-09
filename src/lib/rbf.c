@@ -25,7 +25,7 @@ void create_A_matrix_from_cloud_indices_vectorised(PointStructure* myPointStruct
     int n = myPointStruct->num_poly_terms;
     int mpn = m+n;
     
-    int* cloud = (int*) malloc (myPointStruct->num_cloud_points * sizeof(int));
+    int* cloud = safe_malloc((size_t)myPointStruct->num_cloud_points * sizeof(*cloud));
     for (int i = 0; i<m; i++)
         cloud[i] = myPointStruct->cloud_index[cloud_index*m +i];
         

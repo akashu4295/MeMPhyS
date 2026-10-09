@@ -174,7 +174,7 @@ double* create_vector(int n)
 void free_matrix(double **A,int n_rows)
 {
     for(int i=0;i<n_rows;i++) free(A[i]);
-    free(A);
+    safe_free(A);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -309,7 +309,7 @@ void matrixInverse_Gauss_Jordan_vectorised(
 
         if(max<PIVOT_TOL){
             fprintf(stderr,"Singular matrix\n");
-            free(aug);
+            safe_free(aug);
             return;
         }
 

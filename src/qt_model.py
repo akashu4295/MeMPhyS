@@ -41,8 +41,6 @@ PARAMETERS = (
     ParameterSpec("num_vcycles", "Multigrid V-cycles", 10, "int", "Pressure solver"),
     ParameterSpec("num_relax", "Relaxation steps", 100, "int", "Pressure solver"),
     ParameterSpec("num_colors", "Color count", 1, "int", "Pressure solver", "Used for colored Gauss-Seidel."),
-    ParameterSpec("facRe", "Reynolds correction factor", 1.0, "float", "Advanced numerics"),
-    ParameterSpec("facdt", "Time-step correction factor", 1.0, "float", "Advanced numerics"),
     ParameterSpec("use_hyperviscosity", "Enable hyperviscosity", 0, "bool", "Advanced numerics"),
     ParameterSpec("gamma_hyper", "Hyperviscosity coefficient", 1e-3, "float", "Advanced numerics"),
     ParameterSpec("write_processed_grid_data", "Write processed grid data", 0, "bool", "Advanced numerics"),

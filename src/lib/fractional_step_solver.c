@@ -381,14 +381,14 @@ void FS_restrict_residuals_vectorised(PointStructure* mypointStruct_f, PointStru
     int n = mypointStruct_f->num_cloud_points;
     #pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < mypointStruct_c->num_nodes; i++) {
+        double results = 0.0;
         if (!mypointStruct_c->boundary_tag[i]) {
-            double results = 0.0;
             int i_restr = mypointStruct_c->restriction_points[i];
             for (int j = 0; j < n; j++) {
                 results += mypointStruct_c->restr_mat[i*n + j] * field_f->res[mypointStruct_f->cloud_index[i_restr*n + j]];
             }
-            field_c->source[i] = results;
         }
+        field_c->source[i] = results; // source
     }
 }
 
@@ -408,9 +408,9 @@ void FS_prolongate_corrections_vectorised(PointStructure* mypointStruct_f, Point
     }
     #pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < mypointStruct_c->num_nodes; i++) {
-        if (!mypointStruct_c->boundary_tag[i]) {
+        // if (!mypointStruct_c->boundary_tag[i]) {
             field_c->p[i] = 0.0;
-        }
+        // }
     }
 }
 
@@ -426,7 +426,10 @@ void FS_calculate_residuals_vectorised(PointStructure* mypointStruct, FieldVaria
                 sum += mypointStruct->lap_Poison[i*n + j]*field->p[mypointStruct->cloud_index[i*n + j]];
             }
             field->res[i] = field->source[i] - sum;
-            sum_res += fabs(field->res[i]);
+            // sum_res += fabs(field->res[i]);
+        }
+        else{
+            field->res[i] = 0.0;
         }
     }
     // printf("Poisson residual: %e\n", sum_res);

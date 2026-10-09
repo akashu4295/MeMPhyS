@@ -428,9 +428,12 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                 }
 
                 case BC_PRESSURE_OUTLET:
+                if (ii == 0)  // Only apply pressure BC at the finest level
+                {
                     field[ii].p[i] = myPointStruct[ii].node_bc[i].p;
                     myPointStruct[ii].flag_outlets = true;
                     break;
+                }
 
                 case BC_SYMMETRY:
                     /* Zero normal velocity and gradients handled in solver */

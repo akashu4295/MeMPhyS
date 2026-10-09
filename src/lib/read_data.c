@@ -1034,8 +1034,10 @@ void create_restriction_matrix(PointStructure* myPointStruct_f,
 
     // Each iteration gets its own work matrices so OpenMP threads don't overwrite each other
     #pragma omp parallel for schedule(dynamic, 256)
-    for (int i = num_boundary_nodes; i < num_nodes; i++)
+    for (int i = 0; i < num_nodes; i++)
     {
+        if (myPointStruct_c->boundary_tag[i] == true)
+            continue;  // Skip boundary nodes
         double *A_inv = create_matrix_vectorised(mpn,mpn);
         double *A     = create_matrix_vectorised(mpn,mpn);
         double *temp  = create_vector(mpn);
@@ -1084,9 +1086,7 @@ void create_restriction_matrix(PointStructure* myPointStruct_f,
 }
 
 void create_prolongation_matrix(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c)
-{
-    // allocate memory for restriction matrix
-    
+{    
     short m = myPointStruct_c->num_cloud_points;
     short n = myPointStruct_c->num_poly_terms;
     short mpn = m+n;
@@ -1104,8 +1104,10 @@ void create_prolongation_matrix(PointStructure* myPointStruct_f, PointStructure*
 
     // Each iteration gets its own work matrices so OpenMP threads don't overwrite each other
     #pragma omp parallel for schedule(dynamic, 256)
-    for (int i = num_boundary_nodes; i < num_nodes; i++)
+    for (int i = 0; i < num_nodes; i++)
     {
+        if (myPointStruct_f->boundary_tag[i] == true)
+            continue;  // Skip boundary nodes
         double *A_inv = create_matrix_vectorised(mpn,mpn);
         double *A     = create_matrix_vectorised(mpn,mpn);
         double *temp  = create_vector(mpn);
@@ -1315,8 +1317,11 @@ double calculate_dt(PointStructure* myPointStruct){
     double dt = 1e10;
     double d = myPointStruct->d_min;
     double termd =  parameters.dimension* parameters.nu/(d*d);
+    double termd2 = 0.0;
+    if (parameters.use_hyperviscosity)
+        termd2 =  parameters.dimension* parameters.gamma_hyper/(d*d*d*d);
     double termc =    1/d;
-    dt = 1/(termd + termc);
+    dt = 1/(termd + termd2 + termc);
     return (fmin(dt*parameters.courant_number/parameters.dimension, parameters.dt));
 }
 

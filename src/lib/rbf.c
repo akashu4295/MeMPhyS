@@ -93,7 +93,8 @@ void gradx_matrix_vectorised(PointStructure* myPointStruct, double* grad, int cl
         pt1[0] = myPointStruct->x[cloud[i]];
         pt1[1] = myPointStruct->y[cloud[i]];
         pt1[2] = myPointStruct->z[cloud[i]];
-        // grad[i*mpn +m] = 0;
+        grad[i*mpn + m] = 0.0;
+        grad[(0 + m)*mpn + i] = 0.0;
         for (int j = 1; j < n; j++) {
             if (myPointStruct->pow_x[j] == 0) {
                 grad[i*mpn +j + m] = 0;
@@ -138,7 +139,8 @@ void grady_matrix_vectorised(PointStructure* myPointStruct, double* grad, int cl
         pt1[0] = myPointStruct->x[cloud[i]]; 
         pt1[1] = myPointStruct->y[cloud[i]]; 
         pt1[2] = myPointStruct->z[cloud[i]]; 
-        // grad[i*mpn +0] = 0;
+        grad[i*mpn + m] = 0.0;
+        grad[(0 + m)*mpn + i] = 0.0;
         for (int j = 1; j < n; j++) {
             if (myPointStruct->pow_y[j] == 0)
                 grad[i*mpn +j+m] = 0;
@@ -184,7 +186,8 @@ void gradz_matrix_vectorised(PointStructure* myPointStruct, double* grad, int cl
         pt1[0] = myPointStruct->x[cloud[i]]; 
         pt1[1] = myPointStruct->y[cloud[i]]; 
         pt1[2] = myPointStruct->z[cloud[i]];
-        // grad[i*mpn +0] = 0;
+        grad[i*mpn + m] = 0.0;
+        grad[(0 + m)*mpn + i] = 0.0;
         for (int j = 1; j < n; j++) {
             if (myPointStruct->pow_z[j] == 0)
                 grad[i*mpn +j+m] = 0;

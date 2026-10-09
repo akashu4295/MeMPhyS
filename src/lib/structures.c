@@ -156,6 +156,7 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             (*field)[ii].rho = NULL;
             (*field)[ii].rho_old = NULL;
             (*field)[ii].rho_new = NULL;
+            (*field)[ii].T = NULL;
             (*field)[ii].T_old = NULL;
             (*field)[ii].T_new = NULL;
             (*field)[ii].e = NULL;
@@ -313,10 +314,10 @@ void free_PointStructure(PointStructure* myPointStruct, int num_levels) {
             safe_free(myPointStruct[i].Dz);
         
         if (i != num_levels-1) {
-            free(myPointStruct[i].prol_mat);
+            safe_free(myPointStruct[i].prol_mat);
         }
         if (i != 0) {
-            free(myPointStruct[i].restr_mat);
+            safe_free(myPointStruct[i].restr_mat);
         }
     }
     free(myPointStruct);
@@ -349,8 +350,22 @@ void free_field(FieldVariables* field, int num_levels) {
         free(field[i].hyper_v);
         free(field[i].lapu_old);
         free(field[i].lapv_old);
-        free(field[i].color_node_list);
-        free(field[i].color_offsets);
+        free(field[i].res_u);
+        free(field[i].res_v);
+        free(field[i].res_p);
+        free(field[i].source_u);
+        free(field[i].source_v);
+        free(field[i].source_p);
+        free(field[i].u_restricted);
+        free(field[i].v_restricted);
+        free(field[i].p_restricted);
+        free(field[i].res_u_restricted);
+        free(field[i].res_v_restricted);
+        free(field[i].res_p_restricted);
+        if (parameters.poisson_solver_type == 2) {
+            free(field[i].color_node_list);
+            free(field[i].color_offsets);
+        }
         if (parameters.dimension == 3) {
             free(field[i].w);
             free(field[i].w_new);
@@ -364,6 +379,8 @@ void free_field(FieldVariables* field, int num_levels) {
             free(field[i].lapw);
             free(field[i].hyper_w);
             free(field[i].lapw_old);
+            free(field[i].res_w);
+            free(field[i].source_w);
         }
 
         // Free compressible variables (if allocated)

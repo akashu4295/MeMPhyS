@@ -1,7 +1,0 @@
-CODE Bugs and TODOs
-1. Implement Full Multigrid
-2. Scaling mass outflow to balance the mass inflow
-
-Problem selection:
-1. Flow bifurcations
-2. Asymmetric stenosis (blockage of blood vessels)

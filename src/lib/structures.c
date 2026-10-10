@@ -111,7 +111,7 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
         }
         
         // ========== COMPRESSIBLE FLOW VARIABLES (CONDITIONAL) ==========
-        if (parameters.compressible_flow) {
+        if (parameters.use_compressible_flow) {
             // Primary thermodynamic variables
             (*field)[ii].rho = (double*) malloc(N * sizeof(double));
             (*field)[ii].rho_old = (double*) malloc(N * sizeof(double));
@@ -225,7 +225,7 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
                 (*field)[ii].dwdz[i] = 0.0;
                 (*field)[ii].lapw[i] = 0.0;
             }
-            if (parameters.fractional_step){
+            if (parameters.use_fractional_step){
                 (*field)[ii].lapu_old[i] = 0.0;
                 (*field)[ii].lapv_old[i] = 0.0;
                 if (parameters.dimension == 3) {
@@ -241,7 +241,7 @@ void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPoin
             }
 
             // Compressible variables (if allocated)
-            if (parameters.compressible_flow) {
+            if (parameters.use_compressible_flow) {
                 (*field)[ii].rho[i] = parameters.rho_ref;
                 (*field)[ii].rho_old[i] = parameters.rho_ref;
                 (*field)[ii].rho_new[i] = parameters.rho_ref;
@@ -384,7 +384,7 @@ void free_field(FieldVariables* field, int num_levels) {
         }
 
         // Free compressible variables (if allocated)
-        if (parameters.compressible_flow) {
+        if (parameters.use_compressible_flow) {
             free(field[i].T);
             free(field[i].rho);
             free(field[i].rho_old);

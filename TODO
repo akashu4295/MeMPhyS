@@ -1,7 +1,6 @@
 CODE Bugs and TODOs
-1. Multigrid solver not working after latest restructuring of boundary conditions implementation.
-2. Implement Full Multigrid
-3. Scaling mass outflow to balance the mass inflow
+1. Implement Full Multigrid
+2. Scaling mass outflow to balance the mass inflow
 
 Problem selection:
 1. Flow bifurcations

@@ -70,17 +70,19 @@ struct parameters
     double facRe;//Reynolds number factor for defect correction
     double facdt;//dual time step factor
     double nu; // kinematic viscosity
-    bool fractional_step; // fractional step flag
+    bool use_fractional_step; // fractional step flag
+    bool use_timple; // timple time stepping flag
+    bool use_fas; // FAS multigrid flag
+    bool use_compressible_flow; // flag to indicate whether to solve compressible flow equations
+    bool use_hyperviscosity; // flag to indicate whether to use hyperviscosity
     short poisson_solver_type; // Solver type Jacobi/Gauss Seidel/Bicgstab etc...
     short time_scheme; // Time integration scheme: 0=explicit, 1=implicit
     double theta; // theta parameter for implicit time integration 0.5 for Crank Nichollson, 1.0 for backward Euler
-    bool use_hyperviscosity; // flag to indicate whether to use hyperviscosity
     double gamma_hyper; // hyperviscosity parameter
     bool restart; // flag to indicate whether to restart from a previous solution
     char restart_filename[250]; // filename to restart from
     bool write_grid_data; // flag to indicate whether to write grid data
     int start_step; // first time step to run: 0 normally, (step in restart filename) + 1 on restart
-    bool compressible_flow;
     double gamma;          // Ratio of specific heats (1.4 for air)
     double R_gas;          // Gas constant (287 J/(kg·K) for air)
     double Pr;             // Prandtl number (0.71 for air)

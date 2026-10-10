@@ -22,17 +22,19 @@ PARAMETERS = (
     ParameterSpec("poly_deg", "Polynomial degree", 3, "int", "Meshless discretization", "Degree of the appended polynomial basis."),
     ParameterSpec("phs_deg", "PHS degree", 3, "int", "Meshless discretization", "Odd degree of the polyharmonic spline basis."),
     ParameterSpec("cloud_size_multiplier", "Cloud size multiplier", 2, "int", "Meshless discretization", "Scales the local RBF-FD stencil size."),
-    ParameterSpec("test_derivative", "Derivative test", 0, "int", "Meshless discretization", "Run the derivative verification test before solving."),
+    ParameterSpec("use_compressible_flow", "Enable compressible flow", 0, "bool", "Flow and time"),
+    ParameterSpec("use_fractional_step", "Use fractional-step solver", 1, "bool", "Time integration"),
+    ParameterSpec("use_timple", "Use TIMPLE solver", 0, "bool", "Time integration"),
+    ParameterSpec("use_fas", "Use FAS multigrid solver", 0, "bool", "Time integration"),
+    ParameterSpec("use_hyperviscosity", "Enable hyperviscosity", 0, "bool", "Advanced numerics"),
+    ParameterSpec("iter_momentum", "Momentum iterations", 5, "int", "Time integration"),
+    ParameterSpec("iter_timple", "Time-implicit iterations", 0, "int", "Time integration"),
     ParameterSpec("num_time_steps", "Number of time steps", 10000, "int", "Flow and time", "Maximum number of solver time steps."),
-    ParameterSpec("write_interval", "Write interval", 10, "int", "Flow and time", "Write solution output every N steps."),
     ParameterSpec("Re", "Reynolds number", 10.0, "float", "Flow and time"),
     ParameterSpec("time_step", "Maximum time step (dt)", 0.1, "float", "Flow and time", "Caps the mesh-based automatic time step."),
     ParameterSpec("courant_number", "Courant number", 0.1, "float", "Flow and time", "Controls the mesh-based automatic time step."),
     ParameterSpec("steady_tolerance", "Steady-state tolerance", 1e-8, "float", "Flow and time"),
-    ParameterSpec("compressible_flow", "Enable compressible flow", 0, "bool", "Flow and time"),
-    ParameterSpec("fractional_step", "Navier-Stokes method", 1, "choice", "Time integration", choices=(("Fractional step", 1), ("Time implicit", 0))),
-    ParameterSpec("iter_momentum", "Momentum iterations", 5, "int", "Time integration"),
-    ParameterSpec("iter_timple", "Time-implicit iterations", 1, "int", "Time integration"),
+    ParameterSpec("test_derivative", "Derivative test", 0, "int", "Flow and time", "Run the derivative verification test before solving."),
     ParameterSpec("time_scheme", "Time integration scheme", 0, "choice", "Time integration", choices=(("Explicit", 0), ("Implicit", 1))),
     ParameterSpec("theta", "Theta", 0.5, "float", "Time integration", "Implicit time integration weighting; 0.5 is Crank-Nicolson."),
     ParameterSpec("Poisson_solver_type", "Poisson solver", 1, "choice", "Pressure solver", choices=(("Jacobi", 1), ("Gauss-Seidel", 2), ("BiCGStab", 3))),
@@ -41,8 +43,8 @@ PARAMETERS = (
     ParameterSpec("num_vcycles", "Multigrid V-cycles", 10, "int", "Pressure solver"),
     ParameterSpec("num_relax", "Relaxation steps", 100, "int", "Pressure solver"),
     ParameterSpec("num_colors", "Color count", 1, "int", "Pressure solver", "Used for colored Gauss-Seidel."),
-    ParameterSpec("use_hyperviscosity", "Enable hyperviscosity", 0, "bool", "Advanced numerics"),
     ParameterSpec("gamma_hyper", "Hyperviscosity coefficient", 1e-3, "float", "Advanced numerics"),
+    ParameterSpec("write_interval", "Write interval", 10, "int", "Flow and time", "Write solution output every N steps."),
     ParameterSpec("write_processed_grid_data", "Write processed grid data", 0, "bool", "Advanced numerics"),
     ParameterSpec("restart", "Restart from a previous solution", 0, "bool", "Initial and restart"),
     ParameterSpec("restart_filename", "Restart VTK file", "Field_000029.vtk", "str", "Initial and restart"),
@@ -64,6 +66,23 @@ PARAMETERS = (
 
 PARAMETER_BY_KEY = {spec.key: spec for spec in PARAMETERS}
 
+CSV_SECTION_HEADERS = {
+    "domain_dimensions": "Meshless parameters",
+    "use_compressible_flow": "Solver Controls",
+    "time_scheme": "Time integration scheme (0: Explicit, 1: Implicit, theta = 0.5 -> Crank Nicholson)",
+    "Poisson_solver_type": "Poisson Solver Controls (1: Jacobi, 2: Gauss Seidel, 3: BiCGstab)",
+    "num_vcycles": "Multigrid controls (if num_levels>1 and total relaxations = num_vcylces*num_relax)",
+    "num_colors": "Coloured Gauss Seidel",
+    "gamma_hyper": "Hyperviscosity value",
+    "write_interval": "Read and Write controls",
+    "gamma": "Compressible properties",
+}
+
+PARAMETER_KEY_ALIASES = {
+    "compressible_flow": "use_compressible_flow",
+    "fractional_step": "use_fractional_step",
+}
+
 
 def default_parameters() -> dict[str, Any]:
     return {spec.key: spec.default for spec in PARAMETERS}
@@ -75,11 +94,16 @@ def read_parameter_csv(path: str | Path = "flow_parameters.csv") -> dict[str, An
     if not path.is_file():
         return values
 
+    seen_keys = set()
     with path.open(newline="", encoding="utf-8-sig") as stream:
         for row in csv.reader(stream):
             if len(row) < 2:
                 continue
-            key, raw_value = row[0].strip(), row[1].strip()
+            source_key, raw_value = row[0].strip(), row[1].strip()
+            key = source_key
+            key = PARAMETER_KEY_ALIASES.get(key, key)
+            if source_key != key and key in seen_keys:
+                continue
             spec = PARAMETER_BY_KEY.get(key)
             if spec is None:
                 continue
@@ -94,21 +118,30 @@ def read_parameter_csv(path: str | Path = "flow_parameters.csv") -> dict[str, An
                     values[key] = raw_value
             except ValueError:
                 continue
+            if source_key == "fractional_step" and "use_timple" not in seen_keys:
+                values["use_timple"] = int(values[key] == 0)
+            seen_keys.add(key)
     return values
 
 
 def write_parameter_csv(values: dict[str, Any], path: str | Path = "flow_parameters.csv") -> None:
     with Path(path).open("w", newline="", encoding="utf-8") as stream:
-        writer = csv.writer(stream)
+        writer = csv.writer(stream, lineterminator="\n")
+        has_rows = False
         for spec in PARAMETERS:
-            if spec.section == "Compressible properties" and not bool(values.get("compressible_flow", 0)):
+            if spec.section == "Compressible properties" and not bool(values.get("use_compressible_flow", 0)):
                 continue
+            if spec.key in CSV_SECTION_HEADERS:
+                if has_rows:
+                    writer.writerow(())
+                stream.write(f"// {CSV_SECTION_HEADERS[spec.key]}\n")
             value = values.get(spec.key, spec.default)
             if spec.kind == "bool":
                 value = int(bool(value))
             elif spec.kind == "float":
                 value = format(float(value), ".12g")
             writer.writerow((spec.key, value))
+            has_rows = True
 
 
 def read_grid_csv(path: str | Path = "grid_filenames.csv") -> list[str]:

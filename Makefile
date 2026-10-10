@@ -70,4 +70,4 @@ check_mode:
 	@echo $(MODE) > $(MODE_FILE)
 
 clean:
-	rm -f $(TARGET) $(MODE_FILE)
+	rm -f $(TARGET) $(MODE_FILE) *.vtk Solution.vtk.series Convergence.csv Solver_data.txt a.out memphys_solver

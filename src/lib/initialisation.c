@@ -116,7 +116,7 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
         BCValue bc;
         bc.type = BC_DEFAULT;
         bc.u = 0.0; bc.v = 0.0; bc.w = 0.0; bc.p = 0.0; bc.v_n = 0; bc.v_t = 0; bc.U_c = NAN;
-        if (parameters.compressible_flow){
+        if (parameters.use_compressible_flow){
             bc.p_total = parameters.p_ref;
             bc.rho = parameters.rho_ref;
             bc.T = parameters.T_ref;
@@ -234,7 +234,7 @@ void read_boundary_conditions_file(char* bcfile, PointStructure* ps){
             U_inlet = bc.u;
         
         // Compressible flow validations
-        if (parameters.compressible_flow) {
+        if (parameters.use_compressible_flow) {
             // For velocity inlets in compressible flow, need temperature
             if (bc.type == BC_VELOCITY_INLET && !have_T && !have_rho) {
                 printf("BC CSV warning (line %d): velocity inlet in compressible flow should specify T or rho (using T_ref)\n", lineno);
@@ -339,7 +339,7 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                             field[ii].w[i] = myPointStruct[ii].node_bc[i].w;
                     }
 
-                    if (parameters.compressible_flow) {
+                    if (parameters.use_compressible_flow) {
                         field[ii].T[i]   = myPointStruct[ii].node_bc[i].T;
                         field[ii].rho[i] = myPointStruct[ii].node_bc[i].rho;
                         field[ii].p[i]   = myPointStruct[ii].node_bc[i].p;
@@ -394,7 +394,7 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                             field[ii].w[i] = 0.0;
                     }
 
-                    if (parameters.compressible_flow) {
+                    if (parameters.use_compressible_flow) {
                         field[ii].T[i]   = myPointStruct[ii].node_bc[i].T;
                         field[ii].rho[i] = parameters.p_ref /
                             (parameters.R_gas * field[ii].T[i]);
@@ -440,7 +440,7 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                     break;
 
                 case BC_SUPERSONIC_INLET:
-                    if (parameters.compressible_flow) {
+                    if (parameters.use_compressible_flow) {
                         double vn = myPointStruct[ii].node_bc[i].v_n;
                         double vt = myPointStruct[ii].node_bc[i].v_t;
 
@@ -472,14 +472,14 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                     break;
 
                 case BC_SUBSONIC_INLET:
-                    if (parameters.compressible_flow) {
+                    if (parameters.use_compressible_flow) {
                         field[ii].T[i] = myPointStruct[ii].node_bc[i].T_total;
                         field[ii].p[i] = myPointStruct[ii].node_bc[i].p_total;
                     }
                     break;
 
                 case BC_SUBSONIC_OUTLET:
-                    if (parameters.compressible_flow) {
+                    if (parameters.use_compressible_flow) {
                         field[ii].p[i] = myPointStruct[ii].node_bc[i].p;
                     }
                     break;
@@ -491,7 +491,7 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                         field[ii].w[i] = 0.0;
                     field[ii].p[i] = 0.0;
 
-                    if (parameters.compressible_flow) {
+                    if (parameters.use_compressible_flow) {
                         field[ii].T[i]   = parameters.T_ref;
                         field[ii].rho[i] = parameters.rho_ref;
                     }
@@ -550,7 +550,7 @@ WEAK_FUNC void initial_conditions(PointStructure* myPointStruct, FieldVariables*
             myfieldvariables[ii].p[i] = 0;
             myfieldvariables[ii].p_old[i] = 0;
         }
-        if (parameters.compressible_flow){
+        if (parameters.use_compressible_flow){
             for (int i = 0; i < myPointStruct[ii].num_nodes; i++) {
                 myPointStruct[ii].node_bc[i].T = 0.0;
                 myPointStruct[ii].node_bc[i].rho = 0.0;

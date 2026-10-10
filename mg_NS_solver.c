@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
     double steady_state_error = 0.0;
     int it = 0, num_nodes = myPointStruct[0].num_nodes;
 
-    if (parameters.fractional_step)
+    if (parameters.use_fractional_step)
         if (parameters.dimension == 3){
             for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
             {
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
                 }
             }
         }
-    else{
+    else if (parameters.use_timple){
         if (parameters.dimension == 3){
             for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
             {
@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &clock_end);
     timer.time_total = elapsed_seconds(clock_start, clock_end);
     printf("Time taken for the solver: %lf\n", timer.time_total);
-    write_vtk_field(field, myPointStruct, it+1); // Write field data to VTK for visualization
+    write_vtk_field(field, myPointStruct, -1); // Write field data to VTK for visualization
 
 ////////////// Time stepping loop ends
     printf("Time_step, dt : %lf\n",parameters.dt);

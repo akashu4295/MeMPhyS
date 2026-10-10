@@ -478,7 +478,7 @@ class MainWindow(QMainWindow):
                 continue
             widget = _make_input(spec, self.parameters[spec.key])
             self.parameter_widgets[spec.key] = widget
-            if spec.key in {"fractional_step", "compressible_flow"}:
+            if spec.key in {"use_timple", "use_compressible_flow"}:
                 if spec.kind == "choice":
                     widget.currentIndexChanged.connect(self._refresh_conditional_fields)
                 else:
@@ -654,8 +654,8 @@ class MainWindow(QMainWindow):
             edit.setText(path)
 
     def _refresh_conditional_fields(self, *_):
-        method = self.parameter_widgets.get("fractional_step")
-        implicit = method.currentData() == 0 if method else self.parameters.get("fractional_step", 1) == 0
+        timple = self.parameter_widgets.get("use_timple")
+        implicit = timple.isChecked() if timple else bool(self.parameters.get("use_timple", 0))
         for key in ("iter_momentum", "iter_timple"):
             widget = self.parameter_widgets.get(key)
             if widget:
@@ -663,7 +663,7 @@ class MainWindow(QMainWindow):
         restart = self.parameter_widgets.get("restart")
         if restart:
             self.parameter_widgets["restart_filename"].parentWidget().setVisible(bool(restart.isChecked()))
-        compressible = self.parameter_widgets.get("compressible_flow")
+        compressible = self.parameter_widgets.get("use_compressible_flow")
         if compressible:
             self.compressible_section.setEnabled(compressible.isChecked())
 

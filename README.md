@@ -113,7 +113,7 @@ python gui.py
 
 ### `flow_parameters.csv`
 
-This file defines the core physical and numerical parameters for the simulation. Each line is of the format `parameter_name,value`. Here are some key parameters:
+This file defines the core physical and numerical parameters for the simulation. Each parameter line is of the format `parameter_name,value`; lines beginning with `//` are section comments. The desktop GUI preserves the solver's parameter names, including the solver-selection flags such as `use_fractional_step`, `use_timple`, and `use_compressible_flow`. Here are some key parameters:
 
 * `domain_dimensions`: Dimensionality of the domain (2 or 3).
 * `poly_deg`: Degree of the appended polynomial (recommended: \[2–15]).

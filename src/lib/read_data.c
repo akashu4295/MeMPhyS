@@ -164,9 +164,17 @@ void read_flow_parameters(const char *filename)
             parameters.num_relax = atoi(val);
             printf("PARAMETERS: %s = %d\n", key, parameters.num_relax);
         }
-        else if (!strcmp(key, "fractional_step")){
-            parameters.fractional_step = atoi(val) != 0;
-            printf("PARAMETERS: %s = %hd\n", key, parameters.fractional_step);
+        else if (!strcmp(key, "use_fractional_step")){
+            parameters.use_fractional_step = atoi(val) != 0;
+            printf("PARAMETERS: %s = %hd\n", key, parameters.use_fractional_step);
+        }
+        else if (!strcmp(key, "use_timple")){
+            parameters.use_timple = atoi(val) != 0;
+            printf("PARAMETERS: %s = %hd\n", key, parameters.use_timple);
+        }
+        else if (!strcmp(key, "use_fas")){
+            parameters.use_fas = atoi(val) != 0;
+            printf("PARAMETERS: %s = %hd\n", key, parameters.use_fas);
         }
         else if (!strcmp(key, "facRe")){
             parameters.facRe = atof(val);
@@ -215,73 +223,73 @@ void read_flow_parameters(const char *filename)
         }
         /* ---- compressible block ---- */
 
-        else if (!strcmp(key, "compressible_flow")){
-            parameters.compressible_flow = atoi(val) != 0;
-            printf("PARAMETERS: %s = %hd\n", key, parameters.compressible_flow);
+        else if (!strcmp(key, "use_compressible_flow")){
+            parameters.use_compressible_flow = atoi(val) != 0;
+            printf("PARAMETERS: %s = %hd\n", key, parameters.use_compressible_flow);
         }
         else if (!strcmp(key, "gamma")){
             parameters.gamma = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.gamma);
         }
         else if (!strcmp(key, "R_gas")){
             parameters.R_gas = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.R_gas);
         }
         else if (!strcmp(key, "Pr")){
             parameters.Pr = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.Pr);
         }
         else if (!strcmp(key, "Cv")){
             parameters.cv = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.cv);
         }
         else if (!strcmp(key, "Cp")){
             parameters.cp = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.cp);
         }
         else if (!strcmp(key, "T_ref")){
             parameters.T_ref = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.T_ref);
         }
         else if (!strcmp(key, "rho_ref")){
             parameters.rho_ref = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.rho_ref);
         }
         else if (!strcmp(key, "p_ref")){
             parameters.p_ref = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.p_ref);
         }
         else if (!strcmp(key, "mu_ref")){
             parameters.mu_ref = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.mu_ref);
         }
         else if (!strcmp(key, "T_sutherland")){
             parameters.T_sutherland = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.T_sutherland);
         }
         else if (!strcmp(key, "viscosity_model")){
             parameters.viscosity_model = atoi(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %hd\n", key, parameters.viscosity_model);
         }
         else if (!strcmp(key, "Mach")){
             parameters.Mach = atof(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %f\n", key, parameters.Mach);
         }
         else if (!strcmp(key, "energy_equation")){
             parameters.energy_equation = atoi(val);
-            if (parameters.compressible_flow)
+            if (parameters.use_compressible_flow)
                 printf("PARAMETERS: %s = %hd\n", key, parameters.energy_equation);
         }
         else
@@ -291,7 +299,7 @@ void read_flow_parameters(const char *filename)
     fclose(file);
 
     /* ---- derived quantities ---- */
-    if (parameters.compressible_flow)
+    if (parameters.use_compressible_flow)
     {
         parameters.rho = parameters.rho_ref;
         parameters.mu  = parameters.mu_ref;
@@ -587,7 +595,7 @@ void read_PointStructure(PointStructure* myPointStruct)
                 BCValue bc;
                 bc.type = BC_INTERIOR;
                 bc.u = 0.0; bc.v = 0.0; bc.w = 0.0; bc.p = 0.0; 
-                if (parameters.compressible_flow){
+                if (parameters.use_compressible_flow){
                     bc.p_total = parameters.p_ref;
                     bc.rho = parameters.rho_ref;
                     bc.T = parameters.T_ref;
@@ -675,7 +683,7 @@ void read_PointStructure(PointStructure* myPointStruct)
                 BCValue bc;
                 bc.type = BC_INTERIOR;
                 bc.u = 0.0; bc.v = 0.0; bc.w = 0.0; bc.p = 0.0; 
-                if (parameters.compressible_flow){
+                if (parameters.use_compressible_flow){
                     bc.p_total = parameters.p_ref;
                     bc.rho = parameters.rho_ref;
                     bc.T = parameters.T_ref;

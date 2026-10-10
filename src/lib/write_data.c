@@ -490,11 +490,15 @@ static const char* get_time_scheme_name(int scheme) {
     }
 }
 
-static const char* get_algorithm_name(int fractional_step) {
-    switch (fractional_step) {
-        case 0:  return "Time Implicit";
-        case 1:  return "Fractional Step";
-        default: return "Unknown Algorithm";
+static const char* get_algorithm_name() {
+    if (parameters.use_fractional_step) {
+        return "Fractional Step";
+    } else if (parameters.use_timple) {
+        return "TIMPLE";
+    } else if (parameters.use_fas) {
+        return "FAS Multigrid";
+    } else {
+        return "Unknown";
     }
 }
 
@@ -532,7 +536,7 @@ void write_solver_data(const PointStructure* point_struct, double steady_state_e
 
     // Section 3: Numerical Model & Basis Function
     fprintf(file, "--- NUMERICAL MODEL PARAMETERS -------------------------------------------------\n");
-    fprintf(file, "  %-30s : %s\n",  "Algorithm Type",       get_algorithm_name(parameters.fractional_step));
+    fprintf(file, "  %-30s : %s\n",  "Algorithm Type",       get_algorithm_name());
     fprintf(file, "  %-30s : %d\n",  "Polynomial Degree",    parameters.poly_degree);
     fprintf(file, "  %-30s : %d\n",  "PHS Degree",           parameters.phs_degree);
     fprintf(file, "  %-30s : %.6f\n", "Courant Number",       parameters.courant_number);
@@ -737,8 +741,12 @@ static void write_vtk_series(int step)
 int write_vtk_field(FieldVariables *field, PointStructure *myPS, int step)
 {
     char vtk_filename[256];
-    sprintf(vtk_filename, "Solution_%06d.vtk", step);
-
+    if (step < 0) {
+        sprintf(vtk_filename, "Solution.vtk");
+    } else {
+        sprintf(vtk_filename, "Solution_%06d.vtk", step);
+    }
+    
     FILE *fp_out = fopen(vtk_filename, "w");
     if (!fp_out) return -1;
 

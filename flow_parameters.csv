@@ -1,28 +1,45 @@
+// Meshless parameters
 domain_dimensions,2
 poly_deg,3
 phs_deg,3
 cloud_size_multiplier,2
-test_derivative,1
+
+// Solver Controls
+use_compressible_flow,0
+use_fractional_step,1
+use_timple,0
+use_fas,0
+use_hyperviscosity,0
+iter_momentum,5
+iter_timple,0
 num_time_steps,10000
-write_interval,100
 Re,10
 time_step,0.1
 courant_number,0.1
 steady_tolerance,1e-08
-compressible_flow,0
-fractional_step,1
-iter_momentum,5
-iter_timple,0
+test_derivative,1
+
+// Time integration scheme (0: Explicit, 1: Implicit, theta = 0.5 -> Crank Nicholson)
 time_scheme,0
 theta,0.5
+
+// Poisson Solver Controls (1: Jacobi, 2: Gauss Seidel, 3: BiCGstab)
 Poisson_solver_type,1
-poisson_solver_tolerance,1e-03
+poisson_solver_tolerance,0.001
 sor_parameter,1
-num_vcycles,10
-num_relax,20
+
+// Multigrid controls (if num_levels>1 and total relaxations = num_vcylces*num_relax)
+num_vcycles,5
+num_relax,10
+
+// Coloured Gauss Seidel
 num_colors,1
-use_hyperviscosity,0
-gamma_hyper,1e-6
+
+// Hyperviscosity value
+gamma_hyper,1e-06
+
+// Read and Write controls
+write_interval,100
 write_processed_grid_data,0
 restart,0
 restart_filename,Field_000029.vtk

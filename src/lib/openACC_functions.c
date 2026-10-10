@@ -105,7 +105,7 @@ void copyin_field_to_gpu(FieldVariables *field, PointStructure *myPointStruct)
                 field[l].color_node_list[:N])
         }
         /* ---------------- compressible variables ---------------- */
-        if (parameters.compressible_flow) {
+        if (parameters.use_compressible_flow) {
 
             #pragma acc enter data copyin( \
                 field[l].rho[:N], field[l].rho_old[:N], field[l].rho_new[:N], \

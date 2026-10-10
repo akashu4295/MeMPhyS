@@ -1,31 +1,12 @@
 """
-Utilities package for MeMPhyS GUI
+Shared utilities for MeMPhyS
 
-This package contains utility modules for:
-- Font management (fonts.py)
-- File I/O operations (file_io.py)
-- Platform-specific utilities (platform_utils.py)
+This package contains file, platform, output, and Gmsh utilities.
 
 Example:
     from src.utils import initialize_fonts, write_parameters_csv
     from src.utils.platform_utils import open_folder, get_platform
 """
-
-# Font utilities
-from .fonts import (
-    find_system_font,
-    load_font,
-    initialize_fonts,
-    set_default_font,
-    change_font,
-    get_available_fonts,
-    get_available_sizes,
-    get_current_font,
-    list_system_fonts,
-    validate_font_file,
-    get_font_info,
-    create_font_with_fallback,
-)
 
 # File I/O utilities
 from .file_io import (
@@ -88,22 +69,6 @@ from .output_manager import (
     clean_old_outputs,
 )
 
-# Configuration management
-from .config_manager import (
-    save_user_preferences,
-    load_user_preferences,
-    apply_user_preferences,
-    save_app_options,
-    load_app_options,
-    apply_app_options,
-    save_session_state,
-    load_session_state,
-    restore_session_state,
-    save_configuration,
-    load_configuration,
-    auto_save_on_exit,
-)
-
 # Gmsh and BC management
 from .gmsh_bc_manager import (
     launch_gmsh,
@@ -122,20 +87,6 @@ from .gmsh_bc_manager import (
 )
 
 __all__ = [
-    # Font utilities
-    'find_system_font',
-    'load_font',
-    'initialize_fonts',
-    'set_default_font',
-    'change_font',
-    'get_available_fonts',
-    'get_available_sizes',
-    'get_current_font',
-    'list_system_fonts',
-    'validate_font_file',
-    'get_font_info',
-    'create_font_with_fallback',
-    
     # File I/O utilities
     'validate_file_path',
     'validate_mesh_file',

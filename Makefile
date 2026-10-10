@@ -40,7 +40,7 @@ endif
 
 # Files
 
-SRC_DIR = src/c_header_files
+SRC_DIR = src/lib
 SRC = $(wildcard $(SRC_DIR)/*.c)
 
 INIT = init.c
@@ -70,4 +70,4 @@ check_mode:
 	@echo $(MODE) > $(MODE_FILE)
 
 clean:
-	rm -f $(TARGET) $(MODE_FILE)
+	rm -f $(TARGET) $(MODE_FILE) *.vtk Solution.vtk.series Convergence.csv Solver_data.txt a.out memphys_solver

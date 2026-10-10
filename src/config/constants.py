@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 # ============================================================
 
 LOG_DIR = "./logs"
-HEADER_DIR = "src/c_header_files"
+HEADER_DIR = "src/lib"
 OUTPUT_DIR = "./output"
 
 # Create directories if they don't exist

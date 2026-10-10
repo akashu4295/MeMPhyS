@@ -20,14 +20,14 @@ a.out
 *.bak
 *.json
 *.mp4
-*.geo
-*.msh
 *REPORT*
 solver*
 Solution.csv
 Convergence.csv
 .vscode/
 *.m
+*.vtk
+*.ipynb
 fractional_step_solver.n001.cubin
 fractional_step_solver.n001.fatbin
 fractional_step_solver.n001.gpu
@@ -60,3 +60,7 @@ bc2*
 *_pycache_*
 *:Zone.Identifier
 *Zone.Identifier*
+Solver_data*
+make_animation.py
+test_multigrid.c
+TODO

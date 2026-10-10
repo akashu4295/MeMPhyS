@@ -1,12 +1,11 @@
 """
 Configuration package for MeMPhyS GUI
 
-This package contains all configuration constants, parameters, and theme definitions.
+This package contains configuration constants and solver parameters.
 Import from this package to access application settings.
 
 Example:
     from src.config.constants import BASE_PARAMETERS, LOG_DIR
-    from src.config.themes import initialize_all_themes
 """
 
 from .constants import (
@@ -124,32 +123,6 @@ from .constants import (
     FILE_DIALOG_HEIGHT,
 )
 
-from .theme_registry import (
-    _THEMED_TEXTS,
-    themed_texts,
-    update_themed_texts,
-)
-
-from .themes import (
-    create_button_theme,
-    create_secondary_button_theme,
-    create_menu_bar_theme,
-    create_input_theme,
-    create_window_theme,
-    create_plot_theme,
-    create_combo_theme,
-    create_checkbox_theme,
-    create_separator_theme,
-    create_modal_theme,
-    create_disabled_theme,
-    create_success_button_theme,
-    create_error_button_theme,
-    initialize_all_themes,
-    apply_dark_theme,
-    apply_light_theme,
-    toggle_theme,
-)
-
 __all__ = [
     # Constants
     'LOG_DIR',
@@ -217,28 +190,4 @@ __all__ = [
     'FILE_DIALOG_WIDTH',
     'FILE_DIALOG_HEIGHT',
     
-    # Themes
-    'create_button_theme',
-    'create_secondary_button_theme',
-    'create_menu_bar_theme',
-    'create_input_theme',
-    'create_window_theme',
-    'create_plot_theme',
-    'create_combo_theme',
-    'create_checkbox_theme',
-    'create_separator_theme',
-    'create_modal_theme',
-    'create_disabled_theme',
-    'create_success_button_theme',
-    'create_error_button_theme',
-    'initialize_all_themes',
-    'apply_dark_theme',
-    'apply_light_theme',
-    'toggle_theme',
-
-    # REGISTRY
-    '_THEMED_TEXTS',
-    'themed_texts',
-    'update_themed_texts',
-
 ]

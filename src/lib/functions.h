@@ -191,14 +191,14 @@ void FS_multigrid_Poisson_solver_vectorised(PointStructure* myPointStruct, Field
 void FS_relaxation_vectorised_Gauss_Seidel(PointStructure* mypointstruct, FieldVariables* field);
 void FS_relaxation_vectorised_Jacobi(PointStructure* mypointstruct, FieldVariables* field);
 void FS_relaxation_vectorised_BiCGStab(PointStructure* mypointstruct, const double* b, double* x, int max_iter, double tol);
-void FS_calculate_residuals_vectorised(PointStructure* myPointStruct, FieldVariables* field);
+double FS_calculate_residuals_vectorised(PointStructure* myPointStruct, FieldVariables* field);
 void FS_restrict_residuals_vectorised(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);
 void FS_prolongate_corrections_vectorised(PointStructure* myPointStruct_f, PointStructure* myPointStruct_c, FieldVariables* field_f, FieldVariables* field_c);
 void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables* field);
-double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
+double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field, double* mass_res, double* poisson_res);
 void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
-void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
+double FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field);
 void FS_relaxation_vectorised_colored_Gauss_Seidel(PointStructure* mypointstruct, FieldVariables* field);
 
 // Multigrid Modules

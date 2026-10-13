@@ -35,7 +35,7 @@ double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldV
     return (steady_state_error_par/(parameters.dimension * myPointStruct[0].num_nodes * parameters.dt));
 }
 
-double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field)
+double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field, double* mass_res, double* poisson_res)
 {   
     #pragma acc parallel loop default(present)
     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
@@ -49,7 +49,8 @@ double fractional_step_explicit_vectorised_2d(PointStructure* myPointStruct, Fie
         FS_calculate_intermediate_velocity_vectorised_2d(myPointStruct, field);
         FS_calculate_mass_residual_vectorised_2d(myPointStruct, field);
         FS_multigrid_Poisson_solver_vectorised(myPointStruct, field);
-        FS_update_velocity_vectorised_2d(myPointStruct, field);
+        *poisson_res = FS_calculate_residuals_vectorised(&myPointStruct[0], &field[0]);  // final |b - A*p| after the solve
+        *mass_res = FS_update_velocity_vectorised_2d(myPointStruct, field);
     }
 
     double steady_state_error_par = 0.0;    
@@ -420,7 +421,7 @@ void FS_prolongate_corrections_vectorised(PointStructure* mypointStruct_f, Point
     }
 }
 
-void FS_calculate_residuals_vectorised(PointStructure* mypointStruct, FieldVariables* field)
+double FS_calculate_residuals_vectorised(PointStructure* mypointStruct, FieldVariables* field)
 {
     int n = mypointStruct->num_cloud_points;
     double sum_res = 0.0;
@@ -432,13 +433,14 @@ void FS_calculate_residuals_vectorised(PointStructure* mypointStruct, FieldVaria
                 sum += mypointStruct->lap_Poison[i*n + j]*field->p[mypointStruct->cloud_index[i*n + j]];
             }
             field->res[i] = field->source[i] - sum;
-            // sum_res += fabs(field->res[i]);
+            sum_res += fabs(field->res[i]);
         }
         else{
             field->res[i] = 0.0;
         }
     }
     // printf("Poisson residual: %e\n", sum_res);
+    return sum_res/mypointStruct->num_nodes;
 }
 
 void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables* field)
@@ -512,7 +514,7 @@ void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables
     printf("Mass residual: %e\n", (sum)/myPointStruct->num_nodes);
 }
 
-void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field)
+double FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariables* field)
 {
     int num_nodes = myPointStruct->num_nodes;
     int num_cloud_points = myPointStruct->num_cloud_points;
@@ -577,6 +579,7 @@ void FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVariab
             sum += parameters.rho*fabs(field->dudx[i]+field->dvdy[i]);
 
     printf("Mass residual: %e\n", sum/num_nodes);
+    return (sum)/myPointStruct->num_nodes;
 }
 
 /* ============================================================

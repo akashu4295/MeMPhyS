@@ -116,8 +116,10 @@ int main(int argc, char *argv[])
 ////////////// Time stepping loop starts here
     clock_gettime(CLOCK_MONOTONIC, &clock_start);
     FILE *cnvgf = fopen("Convergence.csv", parameters.restart ? "a" : "w");  // on restart, append to the old history
+    if (!parameters.restart) fprintf(cnvgf, "time_step, steady_state_error, mass_residual, poisson_residual\n");
     write_vtk_mesh(myPointStruct[0].mesh_filename, "mesh.vtk"); // Write mesh data to VTK for visualization
     double steady_state_error = 0.0;
+    double mass_res = 0.0, poisson_res = 0.0;
     int it = 0, num_nodes = myPointStruct[0].num_nodes;
 
     if (parameters.use_fractional_step)
@@ -142,10 +144,10 @@ int main(int argc, char *argv[])
         else{
             for (it = parameters.start_step; it<parameters.num_time_steps; it++ ) 
             {
-                steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field);
-                printf("Time step: %d, Steady state error: %e\n", it, steady_state_error);
+                steady_state_error = fractional_step_explicit_vectorised_2d(myPointStruct, field, &mass_res, &poisson_res);
+                printf("Time step: %d, Steady state error: %e, Poisson residual: %e\n", it, steady_state_error, poisson_res);
                 fflush(stdout);
-                fprintf(cnvgf,"%d, %e\n", it, steady_state_error);
+                fprintf(cnvgf,"%d, %e, %e, %e\n", it, steady_state_error, mass_res, poisson_res);
                 fflush(cnvgf);
                 if (steady_state_error < parameters.steady_state_tolerance){
                     printf("Converged at time step: %d\n", it);

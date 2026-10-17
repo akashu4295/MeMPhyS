@@ -12,6 +12,7 @@
 //////////////////////////////////////////////////////////////////////////////
 #define MAX_BC_NAME 64
 #define MAX_BC_TYPES 32
+#define MAX_CORNER_NB 4           // max immediate neighbours averaged at a corner
 
 typedef enum {
     BC_INTERIOR = 0,
@@ -142,6 +143,8 @@ typedef struct PointStructure {
     double *z_gmsh;            // Original node Z coords
     int *orig_to_solver;       // Size total_gmsh_nodes 
     int *corner_nearest_solver;// Size total_gmsh_nodes 
+    int *corner_nb;            // Size total_gmsh_nodes*MAX_CORNER_NB, immediate neighbours of a corner (gmsh index while reading, solver index after mapping)
+    short *corner_nb_count;    // Size total_gmsh_nodes, valid entries in corner_nb
     int* point_index; // index of the point in the original dataset
     double* x_normal; // x component of the normal vector
     double* y_normal; // y component of the normal vector

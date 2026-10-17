@@ -348,6 +348,21 @@ void build_gmsh_node_mapping(PointStructure *myPS)
             kd_res_free(res);
         }
     }
+    
+    /* corners: keep only immediate neighbours that are solver nodes, stored as pre-RCM solver indices */
+    for (int i = 0; i < myPS->num_nodes; i++) {
+        if (myPS->orig_to_solver[i] != -1) continue;
+        int cnt = 0;
+        for (int k = 0; k < myPS->corner_nb_count[i]; k++) {
+            int s = myPS->orig_to_solver[myPS->corner_nb[i*MAX_CORNER_NB + k]];
+            if (s >= 0) myPS->corner_nb[i*MAX_CORNER_NB + cnt++] = s;
+        }
+        if (cnt == 0) {
+            myPS->corner_nb[i*MAX_CORNER_NB] = myPS->corner_nearest_solver[i];
+            cnt = 1;
+        }
+        myPS->corner_nb_count[i] = cnt;
+    }
 
     free_kdtree(ptree);
 }
@@ -442,6 +457,18 @@ void setup_point_cloud_multicoloring(PointStructure *ps, FieldVariables *field)
     free(available);
     free(counts);
     free(current_pos);
+}
+
+/* store b as a boundary-edge neighbour of gmsh node a (both 0-based); used to average corner values in the VTK */
+static void add_corner_nb(PointStructure *ps, int a, int b)
+{
+    short n = ps->corner_nb_count[a];
+    for (int j = 0; j < n; j++)
+        if (ps->corner_nb[a*MAX_CORNER_NB + j] == b) return;   // already stored
+    if (n < MAX_CORNER_NB) {
+        ps->corner_nb[a*MAX_CORNER_NB + n] = b;
+        ps->corner_nb_count[a] = n + 1;
+    }
 }
 
 void read_PointStructure(PointStructure* myPointStruct)
@@ -618,6 +645,8 @@ void read_PointStructure(PointStructure* myPointStruct)
                 if (e_type == 1)  // 2-node line
                 {
                     fscanf(file, "%d %d", &e_node1, &e_node2);
+                    add_corner_nb(myPointStruct, e_node1 - 1, e_node2 - 1);
+                    add_corner_nb(myPointStruct, e_node2 - 1, e_node1 - 1);
 
                     myPointStruct->boundary_tag[e_node1 - 1] = true;
                     myPointStruct->boundary_tag[e_node2 - 1] = true;

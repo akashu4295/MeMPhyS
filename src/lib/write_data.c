@@ -738,6 +738,18 @@ static void write_vtk_series(int step)
     rename("Solution.vtk.series.tmp", "Solution.vtk.series");
 }
 
+/* value of solver array f at gmsh node g; corners take the average of their immediate neighbours */
+static double gmsh_node_value(const PointStructure *ps, const double *f, int g)
+{
+    int s = ps->orig_to_solver[g];
+    if (s >= 0) return f[ps->rcm_order[s]];
+    double sum = 0.0;
+    int n = ps->corner_nb_count[g];
+    for (int j = 0; j < n; j++)
+        sum += f[ps->rcm_order[ps->corner_nb[g*MAX_CORNER_NB + j]]];
+    return sum / n;
+}
+
 int write_vtk_field(FieldVariables *field, PointStructure *myPS, int step)
 {
     char vtk_filename[256];
@@ -781,31 +793,19 @@ int write_vtk_field(FieldVariables *field, PointStructure *myPS, int step)
     /* Velocity Vector */
     fprintf(fp_out, "VECTORS velocity double\n");
     for (int i = 0; i < total_nodes; i++) {
-        int pre_rcm_s = myPS->orig_to_solver[i];
-        if (pre_rcm_s < 0) {
-            pre_rcm_s = myPS->corner_nearest_solver[i];
-        }
-
-        int k = myPS->rcm_order[pre_rcm_s];
-
-        if (parameters.dimension == 2) {
-            fprintf(fp_out, "%.16e %.16e 0.0\n", field->u[k], field->v[k]);
-        } else {
-            fprintf(fp_out, "%.16e %.16e %.16e\n", field->u[k], field->v[k], field->w[k]);
-        }
+        double u = gmsh_node_value(myPS, field->u, i);
+        double v = gmsh_node_value(myPS, field->v, i);
+        if (parameters.dimension == 2)
+            fprintf(fp_out, "%.16e %.16e 0.0\n", u, v);
+        else
+            fprintf(fp_out, "%.16e %.16e %.16e\n", u, v, gmsh_node_value(myPS, field->w, i));
     }
+
 
     /* Pressure Scalar */
     fprintf(fp_out, "\nSCALARS pressure double 1\nLOOKUP_TABLE default\n");
-    for (int i = 0; i < total_nodes; i++) {
-        int pre_rcm_s = myPS->orig_to_solver[i];
-        if (pre_rcm_s < 0) {
-            pre_rcm_s = myPS->corner_nearest_solver[i];
-        }
-
-        int k = myPS->rcm_order[pre_rcm_s];
-        fprintf(fp_out, "%.16e\n", field->p[k]);
-    }
+    for (int i = 0; i < total_nodes; i++)
+    fprintf(fp_out, "%.16e\n", gmsh_node_value(myPS, field->p, i));
 
     /* Peclet number: |velocity| * (distance to nearest cloud neighbour) / nu, per node */
     fprintf(fp_out, "\nSCALARS peclet double 1\n");

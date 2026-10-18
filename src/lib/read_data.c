@@ -221,6 +221,17 @@ void read_flow_parameters(const char *filename)
             parameters.write_grid_data = atoi(val) != 0;
             printf("PARAMETERS: %s = %hd\n", key, parameters.write_grid_data);
         }
+
+        /*---------monitors---------*/
+        else if (!strcmp(key, "monitor_interval")){
+            parameters.monitor_interval = atoi(val);
+            printf("PARAMETERS: %s = %d\n", key, parameters.monitor_interval);
+        }
+
+        else if (!strcmp(key, "monitor_max_velocity")){
+            parameters.monitor_max_velocity = atoi(val) != 0;
+            printf("PARAMETERS: %s = %hd\n", key, parameters.monitor_max_velocity);
+        }
         /* ---- compressible block ---- */
 
         else if (!strcmp(key, "use_compressible_flow")){
@@ -348,7 +359,7 @@ void build_gmsh_node_mapping(PointStructure *myPS)
             kd_res_free(res);
         }
     }
-    
+
     /* corners: keep only immediate neighbours that are solver nodes, stored as pre-RCM solver indices */
     for (int i = 0; i < myPS->num_nodes; i++) {
         if (myPS->orig_to_solver[i] != -1) continue;

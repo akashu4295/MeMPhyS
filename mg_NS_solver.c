@@ -117,6 +117,7 @@ int main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &clock_start);
     FILE *cnvgf = fopen("Convergence.csv", parameters.restart ? "a" : "w");  // on restart, append to the old history
     if (!parameters.restart) fprintf(cnvgf, "time_step, flow_time, steady_state_error, mass_residual, poisson_residual\n");
+    monitors_init();
     write_vtk_mesh(myPointStruct[0].mesh_filename, "mesh.vtk"); // Write mesh data to VTK for visualization
     double steady_state_error = 0.0;
     double mass_res = 0.0, poisson_res = 0.0;
@@ -131,6 +132,7 @@ int main(int argc, char *argv[])
                 fflush(stdout);
                 fprintf(cnvgf,"%d, %.10e, %e\n", it, it * parameters.dt, steady_state_error);
                 fflush(cnvgf);
+                monitors_write(myPointStruct, field, it);
                 if (steady_state_error < parameters.steady_state_tolerance){
                     printf("Converged at time step: %d\n", it);
                     break;
@@ -149,6 +151,7 @@ int main(int argc, char *argv[])
                 fflush(stdout);
                 fprintf(cnvgf,"%d, %.10e, %e, %e, %e\n", it, it * parameters.dt, steady_state_error, mass_res, poisson_res);
                 fflush(cnvgf);
+                monitors_write(myPointStruct, field, it);
                 if (steady_state_error < parameters.steady_state_tolerance){
                     printf("Converged at time step: %d\n", it);
                     break;
@@ -168,6 +171,7 @@ int main(int argc, char *argv[])
                 fflush(stdout);
                 fprintf(cnvgf,"%d, %.10e, %e\n", it, it * parameters.dt, steady_state_error);
                 fflush(cnvgf);
+                monitors_write(myPointStruct, field, it);
                 if (steady_state_error < parameters.steady_state_tolerance){
                     printf("Converged at time step: %d\n", it);
                     break;
@@ -186,6 +190,7 @@ int main(int argc, char *argv[])
                     fflush(stdout);
                     fprintf(cnvgf,"%d, %.10e, %e\n", it, it * parameters.dt, steady_state_error);
                     fflush(cnvgf);
+                    monitors_write(myPointStruct, field, it);
                     if (steady_state_error < parameters.steady_state_tolerance){
                         printf("Converged at time step: %d\n", it);
                         break;
@@ -198,6 +203,7 @@ int main(int argc, char *argv[])
             }
     }
     fclose(cnvgf); 
+    monitors_close();
     clock_gettime(CLOCK_MONOTONIC, &clock_end);
     timer.time_total = elapsed_seconds(clock_start, clock_end);
     printf("Time taken for the solver: %lf\n", timer.time_total);

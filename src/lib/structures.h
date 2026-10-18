@@ -61,6 +61,8 @@ struct parameters
     int num_time_steps; // Number of time steps
     short num_levels; // Number of levels in the multigrid
     int write_interval; // Interval for writing the data
+    int monitor_interval; // steps between Monitor.csv rows, 0 = monitoring off
+    bool monitor_max_velocity; // monitor: write max |u| and max |p|
     float omega; // relaxation parameter
     double dt; // time step
     short iter_momentum; // number of iterations for momentum equation

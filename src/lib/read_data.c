@@ -1076,7 +1076,7 @@ void correct_normal_directions(PointStructure *myPointStruct)
         {   
             x_avg = 0; y_avg = 0; z_avg = 0; count = 0;
 
-            for (int j = myPointStruct->num_cloud_points-1; j > 0; j--){
+            for (int j = 1; j < myPointStruct->num_cloud_points; j++){
                 if (myPointStruct->boundary_tag[myPointStruct->cloud_index[i*n +j]] == false){
                     x_avg += myPointStruct->x[myPointStruct->cloud_index[i*n +j]];
                     y_avg += myPointStruct->y[myPointStruct->cloud_index[i*n +j]];

@@ -100,6 +100,11 @@ struct parameters
     double Mach;           // Reference Mach number
     int energy_equation;   // 0=isothermal, 1=solve energy equation
     short num_colors;          // Number of colors for colored Gauss-Seidel
+    char monitor_body[MAX_BC_NAME]; // monitor: boundary name (as in bc.csv) for Cd/Cl/Cp, empty = none
+    bool monitor_cd; // monitor: write Cd, Cd_p, Cd_v on monitor_body
+    bool monitor_cl; // monitor: write Cl, Cl_p, Cl_v on monitor_body
+    double U_ref; // reference velocity for force coefficients
+    double L_ref; // reference length for force coefficients (e.g. cylinder diameter)
     }; // child created only once and used globally
 
 extern struct parameters parameters;
@@ -147,6 +152,8 @@ typedef struct PointStructure {
     int *corner_nearest_solver;// Size total_gmsh_nodes 
     int *corner_nb;            // Size total_gmsh_nodes*MAX_CORNER_NB, immediate neighbours of a corner (gmsh index while reading, solver index after mapping)
     short *corner_nb_count;    // Size total_gmsh_nodes, valid entries in corner_nb
+    int num_body_edges;        // number of boundary edges on monitor_body
+    int *body_edges;           // Size 2*num_body_edges, end nodes of those edges (gmsh index)
     int* point_index; // index of the point in the original dataset
     double* x_normal; // x component of the normal vector
     double* y_normal; // y component of the normal vector

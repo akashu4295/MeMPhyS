@@ -4,7 +4,7 @@
 
 static FILE *monitor_file = NULL;   // stays NULL when monitoring is off
 
-void monitors_init(void)
+void monitors_init(PointStructure* myPointStruct)
 {
     if (parameters.monitor_interval <= 0) return;
 
@@ -14,11 +14,16 @@ void monitors_init(void)
         return;
     }
 
+    if (parameters.monitor_cd || parameters.monitor_cl)
+        macro_forces_init(&myPointStruct[0]);
+
     fseek(monitor_file, 0, SEEK_END);
     if (ftell(monitor_file) > 0) return;   // appending to an existing file: header already there
 
     fprintf(monitor_file, "time_step, flow_time");
     if (parameters.monitor_max_velocity) fprintf(monitor_file, ", max_velocity, max_abs_pressure");
+    if (parameters.monitor_cd) fprintf(monitor_file, ", Cd, Cd_p, Cd_v");
+    if (parameters.monitor_cl) fprintf(monitor_file, ", Cl, Cl_p, Cl_v");
     fprintf(monitor_file, "\n");
     fflush(monitor_file);
 }
@@ -35,12 +40,21 @@ void monitors_write(PointStructure* myPointStruct, FieldVariables* field, int it
         fprintf(monitor_file, ", %.10e, %.10e", out[0], out[1]);
     }
 
+    if (parameters.monitor_cd || parameters.monitor_cl){
+        double f[6];
+        macro_forces(&myPointStruct[0], &field[0], f);
+        if (parameters.monitor_cd) fprintf(monitor_file, ", %.10e, %.10e, %.10e", f[0], f[1], f[2]);
+        if (parameters.monitor_cl) fprintf(monitor_file, ", %.10e, %.10e, %.10e", f[3], f[4], f[5]);
+    }
+
     fprintf(monitor_file, "\n");
     fflush(monitor_file);
 }
 
 void monitors_close(void)
 {
+    if (monitor_file && (parameters.monitor_cd || parameters.monitor_cl))
+        macro_forces_free();
     if (monitor_file) fclose(monitor_file);
     monitor_file = NULL;
 }

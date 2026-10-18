@@ -226,10 +226,13 @@ void solve_momentum_equations_2d(PointStructure* myPointStruct, FieldVariables* 
 void solve_energy_equation_2d(PointStructure* myPointStruct, FieldVariables* field);
 
 // Monitor Function Declarations
-void monitors_init(void);
+void monitors_init(PointStructure* myPointStruct);
 void monitors_write(PointStructure* myPointStruct, FieldVariables* field, int it);
 void monitors_close(void);
 void macro_max_velocity(PointStructure* myPointStruct, FieldVariables* field, double* out);
+void macro_forces_init(PointStructure* myPointStruct);
+void macro_forces(PointStructure* myPointStruct, FieldVariables* field, double* out);
+void macro_forces_free(void);
 
 // OpenACC Function Declarations
 void copyin_parameters_to_gpu();

@@ -29,6 +29,8 @@ void AllocateMemoryPointStructure(PointStructure* myPointStruct, int nodes) {
     myPointStruct->corner_nearest_solver = (int*)malloc(myPointStruct->num_nodes * sizeof(int));
     myPointStruct->corner_nb = (int*)malloc(myPointStruct->num_nodes * MAX_CORNER_NB * sizeof(int));
     myPointStruct->corner_nb_count = (short*)calloc(myPointStruct->num_nodes, sizeof(short));
+    myPointStruct->num_body_edges = 0;
+    myPointStruct->body_edges = NULL;
 }
 
 void AllocateMemoryFieldVariables(FieldVariables** field, PointStructure* myPointStruct, int num_levels) {
@@ -311,6 +313,7 @@ void free_PointStructure(PointStructure* myPointStruct, int num_levels) {
         free(myPointStruct[i].z_gmsh);
         free(myPointStruct[i].corner_nb);
         free(myPointStruct[i].corner_nb_count);
+        free(myPointStruct[i].body_edges);
         free(myPointStruct[i].orig_to_solver);
         free(myPointStruct[i].corner_nearest_solver);
         

@@ -232,6 +232,35 @@ void read_flow_parameters(const char *filename)
             parameters.monitor_max_velocity = atoi(val) != 0;
             printf("PARAMETERS: %s = %hd\n", key, parameters.monitor_max_velocity);
         }
+
+        else if (!strcmp(key, "monitor_forces")){
+            char coef[16], body[MAX_BC_NAME];
+            if (sscanf(val, " %15[^, ] , %63[^ ,]", coef, body) != 2){
+                printf("ERROR: monitor_forces needs <cd|cl>,<boundary name>, got '%s'\n", val);
+                exit(1);
+            }
+            if (parameters.monitor_body[0] != '\0' && strcmp(parameters.monitor_body, body) != 0){
+                printf("ERROR: monitor_forces: all coefficients must use the same boundary ('%s' vs '%s')\n", parameters.monitor_body, body);
+                exit(1);
+            }
+            strcpy(parameters.monitor_body, body);
+            if (!strcmp(coef, "cd")) parameters.monitor_cd = true;
+            else if (!strcmp(coef, "cl")) parameters.monitor_cl = true;
+            else {
+                printf("ERROR: monitor_forces: unknown coefficient '%s' (use cd or cl)\n", coef);
+                exit(1);
+            }
+            printf("PARAMETERS: %s = %s on %s\n", key, coef, body);
+        }
+        else if (!strcmp(key, "U_ref")){
+            parameters.U_ref = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.U_ref);
+        }
+        else if (!strcmp(key, "L_ref")){
+            parameters.L_ref = atof(val);
+            printf("PARAMETERS: %s = %f\n", key, parameters.L_ref);
+        }        
+
         /* ---- compressible block ---- */
 
         else if (!strcmp(key, "use_compressible_flow")){
@@ -614,6 +643,18 @@ void read_PointStructure(PointStructure* myPointStruct)
     short phys_id;
     double dx, dy, dz, dx1, dy1, dz1;
     
+    /* physical id of the monitor_body boundary (Cd/Cl), -1 if not monitoring */
+    short body_phys_id = -1;
+    if (parameters.monitor_body[0] != '\0') {
+        for (int i = 0; i < myPointStruct->num_boundary_types; i++)
+            if (!strcmp(myPointStruct->boundary_map[i].name, parameters.monitor_body))
+                body_phys_id = myPointStruct->boundary_map[i].physical_id;
+        if (body_phys_id < 0) {
+            printf("ERROR: monitor_forces boundary '%s' not found in bc.csv / mesh physical names\n", parameters.monitor_body);
+            exit(1);
+        }
+    }
+
     if (parameters.dimension == 2)
     {
         for (int ie = 0; ie < myPointStruct->num_elem; ie++)
@@ -658,6 +699,14 @@ void read_PointStructure(PointStructure* myPointStruct)
                     fscanf(file, "%d %d", &e_node1, &e_node2);
                     add_corner_nb(myPointStruct, e_node1 - 1, e_node2 - 1);
                     add_corner_nb(myPointStruct, e_node2 - 1, e_node1 - 1);
+
+                    if (phys_id == body_phys_id) {
+                        int ne = myPointStruct->num_body_edges;
+                        myPointStruct->body_edges = (int*)realloc(myPointStruct->body_edges, 2 * (ne + 1) * sizeof(int));
+                        myPointStruct->body_edges[2*ne]     = e_node1 - 1;
+                        myPointStruct->body_edges[2*ne + 1] = e_node2 - 1;
+                        myPointStruct->num_body_edges = ne + 1;
+                    }
 
                     myPointStruct->boundary_tag[e_node1 - 1] = true;
                     myPointStruct->boundary_tag[e_node2 - 1] = true;

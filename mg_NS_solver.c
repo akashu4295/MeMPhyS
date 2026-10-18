@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &clock_start);
     FILE *cnvgf = fopen("Convergence.csv", parameters.restart ? "a" : "w");  // on restart, append to the old history
     if (!parameters.restart) fprintf(cnvgf, "time_step, flow_time, steady_state_error, mass_residual, poisson_residual\n");
-    monitors_init();
+    monitors_init(myPointStruct);
     write_vtk_mesh(myPointStruct[0].mesh_filename, "mesh.vtk"); // Write mesh data to VTK for visualization
     double steady_state_error = 0.0;
     double mass_res = 0.0, poisson_res = 0.0;

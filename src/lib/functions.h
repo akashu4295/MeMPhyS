@@ -233,6 +233,8 @@ void macro_max_velocity(PointStructure* myPointStruct, FieldVariables* field, do
 void macro_forces_init(PointStructure* myPointStruct);
 void macro_forces(PointStructure* myPointStruct, FieldVariables* field, double* out);
 void macro_forces_free(void);
+void macro_probes_init(PointStructure* myPointStruct);
+void macro_probes(PointStructure* myPointStruct, FieldVariables* field, double* out);
 
 // OpenACC Function Declarations
 void copyin_parameters_to_gpu();

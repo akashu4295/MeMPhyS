@@ -261,6 +261,23 @@ void read_flow_parameters(const char *filename)
             printf("PARAMETERS: %s = %f\n", key, parameters.L_ref);
         }        
 
+        else if (!strcmp(key, "monitor_probe")){
+            if (parameters.num_probes >= MAX_PROBES){
+                printf("ERROR: monitor_probe: at most %d probes\n", MAX_PROBES);
+                exit(1);
+            }
+            int k = parameters.num_probes;
+            parameters.probe_z[k] = 0.0;
+            int nread = sscanf(val, " %lf , %lf , %lf", &parameters.probe_x[k], &parameters.probe_y[k], &parameters.probe_z[k]);
+            if (nread < 2){
+                printf("ERROR: monitor_probe needs x,y (or x,y,z), got '%s'\n", val);
+                exit(1);
+            }
+            parameters.num_probes++;
+            printf("PARAMETERS: %s %d = (%f, %f, %f)\n", key, k + 1,
+                   parameters.probe_x[k], parameters.probe_y[k], parameters.probe_z[k]);
+        }
+
         /* ---- compressible block ---- */
 
         else if (!strcmp(key, "use_compressible_flow")){

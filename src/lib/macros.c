@@ -31,6 +31,57 @@ void macro_max_velocity(PointStructure* myPointStruct, FieldVariables* field, do
 }
 
 /////////////////////////////////////////////////////////////////////////////
+// Velocity probes: u, v (, w) at the solver node nearest each requested point
+/////////////////////////////////////////////////////////////////////////////
+
+static int probe_node[MAX_PROBES];   // solver index (RCM order) of each probe
+
+/* find the nearest solver node to each requested probe point (once, after RCM) */
+void macro_probes_init(PointStructure* myPointStruct)
+{
+    int N = myPointStruct->num_nodes;
+    for (int k = 0; k < parameters.num_probes; k++){
+        double px = parameters.probe_x[k], py = parameters.probe_y[k], pz = parameters.probe_z[k];
+        double best = DBL_MAX;
+        for (int i = 0; i < N; i++){
+            double dx = myPointStruct->x[i] - px, dy = myPointStruct->y[i] - py;
+            double dz = (parameters.dimension == 3) ? myPointStruct->z[i] - pz : 0.0;
+            double d2 = dx*dx + dy*dy + dz*dz;
+            if (d2 < best){ best = d2; probe_node[k] = i; }
+        }
+        int i = probe_node[k];
+        printf("Monitor probe %d: requested (%f, %f, %f), using node (%f, %f, %f), distance %.3e\n",
+               k + 1, px, py, pz, myPointStruct->x[i], myPointStruct->y[i],
+               (parameters.dimension == 3) ? myPointStruct->z[i] : 0.0, sqrt(best));
+    }
+}
+
+/* out[nv*k + 0..nv-1] = u, v (, w) at probe k, nv = 2 in 2D, 3 in 3D */
+void macro_probes(PointStructure* myPointStruct, FieldVariables* field, double* out)
+{
+    int np = parameters.num_probes;
+    int *node = probe_node;
+
+    if (parameters.dimension == 3){
+        # pragma acc parallel loop default(present) copyin(node[0:np]) copyout(out[0:3*np])
+        for (int k = 0; k < np; k++){
+            int i = node[k];
+            out[3*k]     = field->u[i];
+            out[3*k + 1] = field->v[i];
+            out[3*k + 2] = field->w[i];
+        }
+    }
+    else{
+        # pragma acc parallel loop default(present) copyin(node[0:np]) copyout(out[0:2*np])
+        for (int k = 0; k < np; k++){
+            int i = node[k];
+            out[2*k]     = field->u[i];
+            out[2*k + 1] = field->v[i];
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////
 // Forces on monitor_body: Cd, Cl (pressure + viscous)
 /////////////////////////////////////////////////////////////////////////////
 

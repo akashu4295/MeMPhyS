@@ -13,6 +13,7 @@
 #define MAX_BC_NAME 64
 #define MAX_BC_TYPES 32
 #define MAX_CORNER_NB 4           // max immediate neighbours averaged at a corner
+#define MAX_PROBES 16             // max velocity probes in Monitor.csv
 
 typedef enum {
     BC_INTERIOR = 0,
@@ -105,6 +106,10 @@ struct parameters
     bool monitor_cl; // monitor: write Cl, Cl_p, Cl_v on monitor_body
     double U_ref; // reference velocity for force coefficients
     double L_ref; // reference length for force coefficients (e.g. cylinder diameter)
+    int num_probes; // monitor: number of velocity probes
+    double probe_x[MAX_PROBES]; // monitor: requested probe coordinates
+    double probe_y[MAX_PROBES];
+    double probe_z[MAX_PROBES];
     }; // child created only once and used globally
 
 extern struct parameters parameters;

@@ -64,3 +64,4 @@ Solver_data*
 make_animation.py
 test_multigrid.c
 TODO
+Monitor*.csv

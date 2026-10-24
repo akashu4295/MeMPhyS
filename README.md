@@ -133,6 +133,19 @@ You can customize these settings to suit your problem configuration.
 
 ---
 
+### Boundary conditions
+
+Boundary conditions are assigned to Gmsh physical names in `bc.csv`. For
+incompressible fractional-step cases, `far_field` (also accepted as
+`farfield`) applies zero normal gradients to velocity and pressure; it does
+not require additional values:
+
+```csv
+farfield,far_field
+```
+
+---
+
 ### `grid_filenames.csv`
 
 * First line: `num_levels` – Number of mesh refinement levels or hierarchies.

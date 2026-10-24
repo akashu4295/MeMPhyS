@@ -21,13 +21,14 @@ typedef enum {
     BC_VELOCITY_INLET = 2,
     BC_PRESSURE_OUTLET = 3,
     BC_VELOCITY_OUTLET = 4,
-    BC_ISOTHERMAL_WALL = 5,     // Wall with fixed T
-    BC_ADIABATIC_WALL = 6,      // Wall with ∂T/∂n = 0
-    BC_SYMMETRY = 7,            // Zero normal velocity and gradients
-    BC_SUPERSONIC_INLET = 8,    // All variables specified
-    BC_SUPERSONIC_OUTLET = 9,   // All variables extrapolated
-    BC_SUBSONIC_INLET = 10,      // Specify T, p_total, direction
-    BC_SUBSONIC_OUTLET = 11,     // Specify p_static, extrapolate others
+    BC_FAR_FIELD = 5,          // Far-field boundary condition for external flows
+    BC_ISOTHERMAL_WALL = 6,     // Wall with fixed T
+    BC_ADIABATIC_WALL = 7,      // Wall with ∂T/∂n = 0
+    BC_SYMMETRY = 8,            // Zero normal velocity and gradients
+    BC_SUPERSONIC_INLET = 9,    // All variables specified
+    BC_SUPERSONIC_OUTLET = 10,   // All variables extrapolated
+    BC_SUBSONIC_INLET = 11,      // Specify T, p_total, direction
+    BC_SUBSONIC_OUTLET = 12,     // Specify p_static, extrapolate others
     BC_DEFAULT = 20    // 
 } BCType;
 

@@ -136,6 +136,97 @@ void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct
             }
         }
     }
+
+    /* Apply zero normal gradients to the intermediate far-field velocity. */
+        #pragma acc parallel loop gang vector default(present)
+        for (int i = 0; i < myPointStruct->num_nodes; i++) {
+            if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+                myPointStruct->node_bc[i].type == BC_FAR_FIELD) {
+                int base = i * num_cloud_points;
+                double normal_diag = myPointStruct->Dx[base] * myPointStruct->x_normal[i]
+                                   + myPointStruct->Dy[base] * myPointStruct->y_normal[i]
+                                   + myPointStruct->Dz[base] * myPointStruct->z_normal[i];
+                double normal_sum = 0.0;
+                for (int j = 1; j < num_cloud_points; j++) {
+                    int k = base + j;
+                    int neighbor = myPointStruct->cloud_index[k];
+                    double normal_weight = myPointStruct->Dx[k] * myPointStruct->x_normal[i]
+                                         + myPointStruct->Dy[k] * myPointStruct->y_normal[i]
+                                         + myPointStruct->Dz[k] * myPointStruct->z_normal[i];
+                    normal_sum += normal_weight * field->u_new[neighbor];
+                }
+                if (fabs(normal_diag) > 1e-14)
+                    field->res[i] = -normal_sum / normal_diag;
+            }
+        }
+        #pragma acc parallel loop gang vector default(present)
+        for (int i = 0; i < myPointStruct->num_nodes; i++)
+            if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+                myPointStruct->node_bc[i].type == BC_FAR_FIELD &&
+                fabs(myPointStruct->Dx[i * num_cloud_points] * myPointStruct->x_normal[i]
+                   + myPointStruct->Dy[i * num_cloud_points] * myPointStruct->y_normal[i]
+                   + myPointStruct->Dz[i * num_cloud_points] * myPointStruct->z_normal[i]) > 1e-14)
+                field->u_new[i] = field->res[i];
+
+        #pragma acc parallel loop gang vector default(present)
+        for (int i = 0; i < myPointStruct->num_nodes; i++) {
+            if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+                myPointStruct->node_bc[i].type == BC_FAR_FIELD) {
+                int base = i * num_cloud_points;
+                double normal_diag = myPointStruct->Dx[base] * myPointStruct->x_normal[i]
+                                   + myPointStruct->Dy[base] * myPointStruct->y_normal[i]
+                                   + myPointStruct->Dz[base] * myPointStruct->z_normal[i];
+                double normal_sum = 0.0;
+                for (int j = 1; j < num_cloud_points; j++) {
+                    int k = base + j;
+                    int neighbor = myPointStruct->cloud_index[k];
+                    double normal_weight = myPointStruct->Dx[k] * myPointStruct->x_normal[i]
+                                         + myPointStruct->Dy[k] * myPointStruct->y_normal[i]
+                                         + myPointStruct->Dz[k] * myPointStruct->z_normal[i];
+                    normal_sum += normal_weight * field->v_new[neighbor];
+                }
+                if (fabs(normal_diag) > 1e-14)
+                    field->res[i] = -normal_sum / normal_diag;
+            }
+        }
+        #pragma acc parallel loop gang vector default(present)
+        for (int i = 0; i < myPointStruct->num_nodes; i++)
+            if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+                myPointStruct->node_bc[i].type == BC_FAR_FIELD &&
+                fabs(myPointStruct->Dx[i * num_cloud_points] * myPointStruct->x_normal[i]
+                   + myPointStruct->Dy[i * num_cloud_points] * myPointStruct->y_normal[i]
+                   + myPointStruct->Dz[i * num_cloud_points] * myPointStruct->z_normal[i]) > 1e-14)
+                field->v_new[i] = field->res[i];
+
+        #pragma acc parallel loop gang vector default(present)
+        for (int i = 0; i < myPointStruct->num_nodes; i++) {
+            if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+                myPointStruct->node_bc[i].type == BC_FAR_FIELD) {
+                int base = i * num_cloud_points;
+                double normal_diag = myPointStruct->Dx[base] * myPointStruct->x_normal[i]
+                                   + myPointStruct->Dy[base] * myPointStruct->y_normal[i]
+                                   + myPointStruct->Dz[base] * myPointStruct->z_normal[i];
+                double normal_sum = 0.0;
+                for (int j = 1; j < num_cloud_points; j++) {
+                    int k = base + j;
+                    int neighbor = myPointStruct->cloud_index[k];
+                    double normal_weight = myPointStruct->Dx[k] * myPointStruct->x_normal[i]
+                                         + myPointStruct->Dy[k] * myPointStruct->y_normal[i]
+                                         + myPointStruct->Dz[k] * myPointStruct->z_normal[i];
+                    normal_sum += normal_weight * field->w_new[neighbor];
+                }
+                if (fabs(normal_diag) > 1e-14)
+                    field->res[i] = -normal_sum / normal_diag;
+            }
+        }
+        #pragma acc parallel loop gang vector default(present)
+        for (int i = 0; i < myPointStruct->num_nodes; i++)
+            if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+                myPointStruct->node_bc[i].type == BC_FAR_FIELD &&
+                fabs(myPointStruct->Dx[i * num_cloud_points] * myPointStruct->x_normal[i]
+                   + myPointStruct->Dy[i * num_cloud_points] * myPointStruct->y_normal[i]
+                   + myPointStruct->Dz[i * num_cloud_points] * myPointStruct->z_normal[i]) > 1e-14)
+                field->w_new[i] = field->res[i];
 }
 
 // # pragma acc routine
@@ -210,6 +301,61 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
             }
         }
     }
+
+    /* Extrapolate far-field velocities so their normal derivatives vanish. */
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < num_nodes; i++) {
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD) {
+            int base = i * num_cloud_points;
+            double normal_diag = myPointStruct->Dx[base] * myPointStruct->x_normal[i]
+                               + myPointStruct->Dy[base] * myPointStruct->y_normal[i];
+            double normal_sum = 0.0;
+            for (int j = 1; j < num_cloud_points; j++) {
+                int k = base + j;
+                int neighbor = myPointStruct->cloud_index[k];
+                double normal_weight = myPointStruct->Dx[k] * myPointStruct->x_normal[i]
+                                     + myPointStruct->Dy[k] * myPointStruct->y_normal[i];
+                normal_sum += normal_weight * field->u_new[neighbor];
+            }
+            if (fabs(normal_diag) > 1e-14)
+                field->res[i] = -normal_sum / normal_diag;
+        }
+    }
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < num_nodes; i++)
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD &&
+            fabs(myPointStruct->Dx[i * num_cloud_points] * myPointStruct->x_normal[i]
+               + myPointStruct->Dy[i * num_cloud_points] * myPointStruct->y_normal[i]) > 1e-14)
+            field->u_new[i] = field->res[i];
+
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < num_nodes; i++) {
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD) {
+            int base = i * num_cloud_points;
+            double normal_diag = myPointStruct->Dx[base] * myPointStruct->x_normal[i]
+                               + myPointStruct->Dy[base] * myPointStruct->y_normal[i];
+            double normal_sum = 0.0;
+            for (int j = 1; j < num_cloud_points; j++) {
+                int k = base + j;
+                int neighbor = myPointStruct->cloud_index[k];
+                double normal_weight = myPointStruct->Dx[k] * myPointStruct->x_normal[i]
+                                     + myPointStruct->Dy[k] * myPointStruct->y_normal[i];
+                normal_sum += normal_weight * field->v_new[neighbor];
+            }
+            if (fabs(normal_diag) > 1e-14)
+                field->res[i] = -normal_sum / normal_diag;
+        }
+    }
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < num_nodes; i++)
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD &&
+            fabs(myPointStruct->Dx[i * num_cloud_points] * myPointStruct->x_normal[i]
+               + myPointStruct->Dy[i * num_cloud_points] * myPointStruct->y_normal[i]) > 1e-14)
+            field->v_new[i] = field->res[i];
 }
 
 void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldVariables* field)
@@ -231,6 +377,8 @@ void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldV
             field->source[i] = parameters.rho*(field->dudx[i]+field->dvdy[i]+field->dwdz[i])/parameters.dt;
         else if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET) // pressure outlet boundary nodes
             field->source[i] = myPointStruct->node_bc[i].p;
+        else if (myPointStruct->node_bc[i].type == BC_FAR_FIELD)
+            field->source[i] = 0.0;
         else
             field->source[i] = parameters.rho*((field->u_new[i] - field->u[i])*myPointStruct->x_normal[i] + (field->v_new[i] - field->v[i])*myPointStruct->y_normal[i] + (field->w_new[i] - field->w[i])*myPointStruct->z_normal[i])/parameters.dt;
             // field->source[i] = 0;
@@ -254,6 +402,8 @@ void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, Fie
             field->source[i] = parameters.rho*(field->dudx[i]+field->dvdy[i])/parameters.dt;
         else if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET) // pressure outlet boundary nodes
             field->source[i] = myPointStruct->node_bc[i].p;
+        else if (myPointStruct->node_bc[i].type == BC_FAR_FIELD)
+            field->source[i] = 0.0;
         else
             field->source[i] = parameters.rho*((field->u_new[i] - field->u[i])*myPointStruct->x_normal[i] + (field->v_new[i] - field->v[i])*myPointStruct->y_normal[i])/parameters.dt;
     }
@@ -484,7 +634,8 @@ void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables
             field->v[i] = (sumvx * myPointStruct->x_normal[i] + sumvy * myPointStruct->y_normal[i] + sumvz * myPointStruct->z_normal[i]) / Ap;
             field->w[i] = (sumwx * myPointStruct->x_normal[i] + sumwy * myPointStruct->y_normal[i] + sumwz * myPointStruct->z_normal[i]) / Ap;
         }
-        else if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i]){
+        else if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+                 myPointStruct->node_bc[i].type != BC_FAR_FIELD){
             if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET 
                     || myPointStruct->node_bc[i].type == BC_WALL 
                     || myPointStruct->node_bc[i].type == BC_VELOCITY_OUTLET){
@@ -499,6 +650,97 @@ void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables
             field->w[i] = field->w_new[i] - parameters.dt * field->dpdz[i]/parameters.rho;
         }
     }
+
+    /* Reapply zero normal gradients after projection, using stable neighbor values. */
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++) {
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD) {
+            int base = i * myPointStruct->num_cloud_points;
+            double normal_diag = myPointStruct->Dx[base] * myPointStruct->x_normal[i]
+                               + myPointStruct->Dy[base] * myPointStruct->y_normal[i]
+                               + myPointStruct->Dz[base] * myPointStruct->z_normal[i];
+            double normal_sum = 0.0;
+            for (int j = 1; j < myPointStruct->num_cloud_points; j++) {
+                int k = base + j;
+                int neighbor = myPointStruct->cloud_index[k];
+                double normal_weight = myPointStruct->Dx[k] * myPointStruct->x_normal[i]
+                                     + myPointStruct->Dy[k] * myPointStruct->y_normal[i]
+                                     + myPointStruct->Dz[k] * myPointStruct->z_normal[i];
+                normal_sum += normal_weight * field->u[neighbor];
+            }
+            if (fabs(normal_diag) > 1e-14)
+                field->u_new[i] = -normal_sum / normal_diag;
+        }
+    }
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++)
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD &&
+            fabs(myPointStruct->Dx[i * myPointStruct->num_cloud_points] * myPointStruct->x_normal[i]
+               + myPointStruct->Dy[i * myPointStruct->num_cloud_points] * myPointStruct->y_normal[i]
+               + myPointStruct->Dz[i * myPointStruct->num_cloud_points] * myPointStruct->z_normal[i]) > 1e-14)
+            field->u[i] = field->u_new[i];
+
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++) {
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD) {
+            int base = i * myPointStruct->num_cloud_points;
+            double normal_diag = myPointStruct->Dx[base] * myPointStruct->x_normal[i]
+                               + myPointStruct->Dy[base] * myPointStruct->y_normal[i]
+                               + myPointStruct->Dz[base] * myPointStruct->z_normal[i];
+            double normal_sum = 0.0;
+            for (int j = 1; j < myPointStruct->num_cloud_points; j++) {
+                int k = base + j;
+                int neighbor = myPointStruct->cloud_index[k];
+                double normal_weight = myPointStruct->Dx[k] * myPointStruct->x_normal[i]
+                                     + myPointStruct->Dy[k] * myPointStruct->y_normal[i]
+                                     + myPointStruct->Dz[k] * myPointStruct->z_normal[i];
+                normal_sum += normal_weight * field->v[neighbor];
+            }
+            if (fabs(normal_diag) > 1e-14)
+                field->v_new[i] = -normal_sum / normal_diag;
+        }
+    }
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++)
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD &&
+            fabs(myPointStruct->Dx[i * myPointStruct->num_cloud_points] * myPointStruct->x_normal[i]
+               + myPointStruct->Dy[i * myPointStruct->num_cloud_points] * myPointStruct->y_normal[i]
+               + myPointStruct->Dz[i * myPointStruct->num_cloud_points] * myPointStruct->z_normal[i]) > 1e-14)
+            field->v[i] = field->v_new[i];
+
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++) {
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD) {
+            int base = i * myPointStruct->num_cloud_points;
+            double normal_diag = myPointStruct->Dx[base] * myPointStruct->x_normal[i]
+                               + myPointStruct->Dy[base] * myPointStruct->y_normal[i]
+                               + myPointStruct->Dz[base] * myPointStruct->z_normal[i];
+            double normal_sum = 0.0;
+            for (int j = 1; j < myPointStruct->num_cloud_points; j++) {
+                int k = base + j;
+                int neighbor = myPointStruct->cloud_index[k];
+                double normal_weight = myPointStruct->Dx[k] * myPointStruct->x_normal[i]
+                                     + myPointStruct->Dy[k] * myPointStruct->y_normal[i]
+                                     + myPointStruct->Dz[k] * myPointStruct->z_normal[i];
+                normal_sum += normal_weight * field->w[neighbor];
+            }
+            if (fabs(normal_diag) > 1e-14)
+                field->w_new[i] = -normal_sum / normal_diag;
+        }
+    }
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < myPointStruct->num_nodes; i++)
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD &&
+            fabs(myPointStruct->Dx[i * myPointStruct->num_cloud_points] * myPointStruct->x_normal[i]
+               + myPointStruct->Dy[i * myPointStruct->num_cloud_points] * myPointStruct->y_normal[i]
+               + myPointStruct->Dz[i * myPointStruct->num_cloud_points] * myPointStruct->z_normal[i]) > 1e-14)
+            field->w[i] = field->w_new[i];
 
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 4);
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 5);
@@ -555,7 +797,8 @@ double FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVari
     # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
         if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] && 
-            myPointStruct->node_bc[i].type != BC_PRESSURE_OUTLET){
+            myPointStruct->node_bc[i].type != BC_PRESSURE_OUTLET &&
+            myPointStruct->node_bc[i].type != BC_FAR_FIELD){
             // Bypass projection for fixed boundaries (Inlets/Walls) to prevent float drift
             field->u[i] = myPointStruct->node_bc[i].u;
             field->v[i] = myPointStruct->node_bc[i].v;
@@ -566,6 +809,61 @@ double FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVari
             field->v[i] = field->v_new[i] - parameters.dt * field->dpdy[i]/parameters.rho;
         }
     }
+
+    /* Reapply zero normal gradients after projection, using stable neighbor values. */
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < num_nodes; i++) {
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD) {
+            int base = i * num_cloud_points;
+            double normal_diag = myPointStruct->Dx[base] * myPointStruct->x_normal[i]
+                               + myPointStruct->Dy[base] * myPointStruct->y_normal[i];
+            double normal_sum = 0.0;
+            for (int j = 1; j < num_cloud_points; j++) {
+                int k = base + j;
+                int neighbor = myPointStruct->cloud_index[k];
+                double normal_weight = myPointStruct->Dx[k] * myPointStruct->x_normal[i]
+                                     + myPointStruct->Dy[k] * myPointStruct->y_normal[i];
+                normal_sum += normal_weight * field->u[neighbor];
+            }
+            if (fabs(normal_diag) > 1e-14)
+                field->u_new[i] = -normal_sum / normal_diag;
+        }
+    }
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < num_nodes; i++)
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD &&
+            fabs(myPointStruct->Dx[i * num_cloud_points] * myPointStruct->x_normal[i]
+               + myPointStruct->Dy[i * num_cloud_points] * myPointStruct->y_normal[i]) > 1e-14)
+            field->u[i] = field->u_new[i];
+
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < num_nodes; i++) {
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD) {
+            int base = i * num_cloud_points;
+            double normal_diag = myPointStruct->Dx[base] * myPointStruct->x_normal[i]
+                               + myPointStruct->Dy[base] * myPointStruct->y_normal[i];
+            double normal_sum = 0.0;
+            for (int j = 1; j < num_cloud_points; j++) {
+                int k = base + j;
+                int neighbor = myPointStruct->cloud_index[k];
+                double normal_weight = myPointStruct->Dx[k] * myPointStruct->x_normal[i]
+                                     + myPointStruct->Dy[k] * myPointStruct->y_normal[i];
+                normal_sum += normal_weight * field->v[neighbor];
+            }
+            if (fabs(normal_diag) > 1e-14)
+                field->v_new[i] = -normal_sum / normal_diag;
+        }
+    }
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < num_nodes; i++)
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_FAR_FIELD &&
+            fabs(myPointStruct->Dx[i * num_cloud_points] * myPointStruct->x_normal[i]
+               + myPointStruct->Dy[i * num_cloud_points] * myPointStruct->y_normal[i]) > 1e-14)
+            field->v[i] = field->v_new[i];
 
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy,  myPointStruct->cloud_index, num_nodes, num_cloud_points, 4);

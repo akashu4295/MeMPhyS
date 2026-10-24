@@ -20,6 +20,7 @@ BCType parse_bc_type(const char* s){
     if (!strcmp(s, "velocity_inlet")) return BC_VELOCITY_INLET;
     if (!strcmp(s, "velocity_outlet")) return BC_VELOCITY_OUTLET;
     if (!strcmp(s, "pressure_outlet")) return BC_PRESSURE_OUTLET;
+    if (!strcmp(s, "far_field") || !strcmp(s, "farfield")) return BC_FAR_FIELD;
     if (!strcmp(s, "isothermal_wall")) return BC_ISOTHERMAL_WALL;
     if (!strcmp(s, "adiabatic_wall")) return BC_ADIABATIC_WALL;
     if (!strcmp(s, "symmetry")) return BC_SYMMETRY;
@@ -295,7 +296,8 @@ int bc_priority(BCType t){
 }
 
 void assign_node_bc(PointStructure* ps, int node, BCValue new_bc){
-    if (bc_priority(new_bc.type) > bc_priority(ps->node_bc[node].type)) 
+    if (ps->node_bc[node].type == BC_INTERIOR ||
+        bc_priority(new_bc.type) > bc_priority(ps->node_bc[node].type))
         ps->node_bc[node] = new_bc;
 }
 static void decompose_velocity(double v_n, double v_t, double nx, double ny,
@@ -435,8 +437,9 @@ void apply_boundary_conditions(PointStructure* myPointStruct, FieldVariables* fi
                     break;
                 }
 
+                case BC_FAR_FIELD:
                 case BC_SYMMETRY:
-                    /* Zero normal velocity and gradients handled in solver */
+                    /* Homogeneous Neumann conditions are enforced in the solver. */
                     break;
 
                 case BC_SUPERSONIC_INLET:

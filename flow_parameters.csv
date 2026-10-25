@@ -13,7 +13,7 @@ use_hyperviscosity,0
 iter_momentum,5
 iter_timple,0
 num_time_steps,50000
-Re,200
+Re,50
 time_step,0.1
 courant_number,0.1
 steady_tolerance,1e-08
@@ -39,9 +39,9 @@ num_colors,1
 gamma_hyper,1e-06
 
 // Read and Write controls
-write_interval,5000
+write_interval,1000
 write_processed_grid_data,0
-restart,1
+restart,0
 restart_filename,Solution_000001.vtk
 
 // Monitors (monitor_interval 0 = off)

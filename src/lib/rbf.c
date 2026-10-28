@@ -416,6 +416,7 @@ void create_laplacian_Poisson_vectorised(PointStructure* myPointStruct) {
             if (myPointStruct->node_bc[i].type == BC_VELOCITY_INLET ||
                 myPointStruct->node_bc[i].type == BC_VELOCITY_OUTLET ||
                 myPointStruct->node_bc[i].type == BC_WALL ||
+                myPointStruct->node_bc[i].type == BC_SYMMETRY ||
                 myPointStruct->node_bc[i].type == BC_FAR_FIELD) // Neumann BC
                 for (int j = 0; j < n; j++) {
                     myPointStruct->lap_Poison[i*n +j] = myPointStruct->Dx[i*n +j] * myPointStruct->x_normal[i] + myPointStruct->Dy[i*n +j] * myPointStruct->y_normal[i];

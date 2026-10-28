@@ -49,10 +49,5 @@ restart_filename,Solution_000001.vtk
 U_ref, 1.0
 L_ref, 1.0
 // monitor options - monitor_max_velocity(1/0), monitor_forces, cd/cl, name of bounndary
-monitor_interval,1
-monitor_max_velocity,1
-monitor_forces, cd, wall
-monitor_forces, cl, wall
-monitor_probe, -10.5,  0.5
-monitor_probe, -10.5,  0.0
-monitor_probe, -10.5, -0.5
+monitor_interval,0
+monitor_max_velocity,0

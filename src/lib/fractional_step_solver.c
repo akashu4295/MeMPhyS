@@ -7,6 +7,85 @@
 // Fractional Step Explicit Solver Modules
 /////////////////////////////////////////////////////////////////////////////
 
+static void enforce_symmetry_velocity(PointStructure* myPointStruct,
+                                      double* u, double* v, double* w,
+                                      double* scratch_u, double* scratch_v,
+                                      double* scratch_w, int dimension)
+{
+    int num_nodes = myPointStruct->num_nodes;
+    int num_cloud_points = myPointStruct->num_cloud_points;
+
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < num_nodes; i++) {
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_SYMMETRY) {
+            int base = i * num_cloud_points;
+            double nx = myPointStruct->x_normal[i];
+            double ny = myPointStruct->y_normal[i];
+            double nz = (dimension == 3) ? myPointStruct->z_normal[i] : 0.0;
+            double normal_squared = nx * nx + ny * ny + nz * nz;
+            double normal_diag = myPointStruct->Dx[base] * nx
+                               + myPointStruct->Dy[base] * ny;
+            if (dimension == 3)
+                normal_diag += myPointStruct->Dz[base] * nz;
+
+            double normal_sum_u = 0.0;
+            double normal_sum_v = 0.0;
+            double normal_sum_w = 0.0;
+            for (int j = 1; j < num_cloud_points; j++) {
+                int k = base + j;
+                int neighbor = myPointStruct->cloud_index[k];
+                double normal_weight = myPointStruct->Dx[k] * nx
+                                     + myPointStruct->Dy[k] * ny;
+                if (dimension == 3)
+                    normal_weight += myPointStruct->Dz[k] * nz;
+                normal_sum_u += normal_weight * u[neighbor];
+                normal_sum_v += normal_weight * v[neighbor];
+                if (dimension == 3)
+                    normal_sum_w += normal_weight * w[neighbor];
+            }
+
+            double boundary_u = u[i];
+            double boundary_v = v[i];
+            double boundary_w = (dimension == 3) ? w[i] : 0.0;
+            if (normal_squared > 1e-14 && fabs(normal_diag) > 1e-14) {
+                double normal_sum_projection =
+                    (normal_sum_u * nx + normal_sum_v * ny
+                     + normal_sum_w * nz) / normal_squared;
+                boundary_u = -(normal_sum_u - normal_sum_projection * nx) / normal_diag;
+                boundary_v = -(normal_sum_v - normal_sum_projection * ny) / normal_diag;
+                if (dimension == 3)
+                    boundary_w = -(normal_sum_w - normal_sum_projection * nz) / normal_diag;
+            }
+
+            if (normal_squared > 1e-14) {
+                double normal_velocity =
+                    (boundary_u * nx + boundary_v * ny + boundary_w * nz) /
+                    normal_squared;
+                boundary_u -= normal_velocity * nx;
+                boundary_v -= normal_velocity * ny;
+                if (dimension == 3)
+                    boundary_w -= normal_velocity * nz;
+            }
+            scratch_u[i] = boundary_u;
+            scratch_v[i] = boundary_v;
+            if (dimension == 3)
+                scratch_w[i] = boundary_w;
+        }
+    }
+
+    #pragma acc parallel loop gang vector default(present)
+    for (int i = 0; i < num_nodes; i++) {
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
+            myPointStruct->node_bc[i].type == BC_SYMMETRY) {
+            u[i] = scratch_u[i];
+            v[i] = scratch_v[i];
+            if (dimension == 3)
+                w[i] = scratch_w[i];
+        }
+    }
+}
+
 double fractional_step_explicit_vectorised(PointStructure* myPointStruct, FieldVariables* field){   
     # pragma acc parallel loop default(present)
     for (int i = 0; i < myPointStruct[0].num_nodes; i++){
@@ -136,6 +215,9 @@ void FS_calculate_intermediate_velocity_vectorised(PointStructure* myPointStruct
             }
         }
     }
+    enforce_symmetry_velocity(myPointStruct, field->u_new, field->v_new,
+                              field->w_new, field->res, field->source,
+                              field->dpdn, 3);
 
     /* Apply zero normal gradients to the intermediate far-field velocity. */
         #pragma acc parallel loop gang vector default(present)
@@ -356,6 +438,9 @@ void FS_calculate_intermediate_velocity_vectorised_2d(PointStructure* myPointStr
             fabs(myPointStruct->Dx[i * num_cloud_points] * myPointStruct->x_normal[i]
                + myPointStruct->Dy[i * num_cloud_points] * myPointStruct->y_normal[i]) > 1e-14)
             field->v_new[i] = field->res[i];
+    enforce_symmetry_velocity(myPointStruct, field->u_new, field->v_new,
+                              field->w_new, field->res, field->source,
+                              field->dpdn, 2);
 }
 
 void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldVariables* field)
@@ -377,7 +462,8 @@ void FS_calculate_mass_residual_vectorised(PointStructure* myPointStruct, FieldV
             field->source[i] = parameters.rho*(field->dudx[i]+field->dvdy[i]+field->dwdz[i])/parameters.dt;
         else if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET) // pressure outlet boundary nodes
             field->source[i] = myPointStruct->node_bc[i].p;
-        else if (myPointStruct->node_bc[i].type == BC_FAR_FIELD)
+        else if (myPointStruct->node_bc[i].type == BC_FAR_FIELD ||
+                 myPointStruct->node_bc[i].type == BC_SYMMETRY)
             field->source[i] = 0.0;
         else
             field->source[i] = parameters.rho*((field->u_new[i] - field->u[i])*myPointStruct->x_normal[i] + (field->v_new[i] - field->v[i])*myPointStruct->y_normal[i] + (field->w_new[i] - field->w[i])*myPointStruct->z_normal[i])/parameters.dt;
@@ -402,7 +488,8 @@ void FS_calculate_mass_residual_vectorised_2d(PointStructure* myPointStruct, Fie
             field->source[i] = parameters.rho*(field->dudx[i]+field->dvdy[i])/parameters.dt;
         else if (myPointStruct->node_bc[i].type == BC_PRESSURE_OUTLET) // pressure outlet boundary nodes
             field->source[i] = myPointStruct->node_bc[i].p;
-        else if (myPointStruct->node_bc[i].type == BC_FAR_FIELD)
+        else if (myPointStruct->node_bc[i].type == BC_FAR_FIELD ||
+                 myPointStruct->node_bc[i].type == BC_SYMMETRY)
             field->source[i] = 0.0;
         else
             field->source[i] = parameters.rho*((field->u_new[i] - field->u[i])*myPointStruct->x_normal[i] + (field->v_new[i] - field->v[i])*myPointStruct->y_normal[i])/parameters.dt;
@@ -742,6 +829,9 @@ void FS_update_velocity_vectorised(PointStructure* myPointStruct, FieldVariables
                + myPointStruct->Dz[i * myPointStruct->num_cloud_points] * myPointStruct->z_normal[i]) > 1e-14)
             field->w[i] = field->w_new[i];
 
+    enforce_symmetry_velocity(myPointStruct, field->u, field->v, field->w,
+                              field->res, field->source, field->dpdn, 3);
+
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 4);
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 5);
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dz, field->w, field->dwdz, myPointStruct->cloud_index, myPointStruct->num_nodes, myPointStruct->num_cloud_points, 6);
@@ -796,9 +886,10 @@ double FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVari
     // Update nodes
     # pragma acc parallel loop gang vector default(present)
     for (int i = 0; i < myPointStruct->num_nodes; i++){
-        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] && 
+        if (myPointStruct->boundary_tag[i] && !myPointStruct->corner_tag[i] &&
             myPointStruct->node_bc[i].type != BC_PRESSURE_OUTLET &&
-            myPointStruct->node_bc[i].type != BC_FAR_FIELD){
+            myPointStruct->node_bc[i].type != BC_FAR_FIELD &&
+            myPointStruct->node_bc[i].type != BC_SYMMETRY){
             // Bypass projection for fixed boundaries (Inlets/Walls) to prevent float drift
             field->u[i] = myPointStruct->node_bc[i].u;
             field->v[i] = myPointStruct->node_bc[i].v;
@@ -864,6 +955,9 @@ double FS_update_velocity_vectorised_2d(PointStructure* myPointStruct, FieldVari
             fabs(myPointStruct->Dx[i * num_cloud_points] * myPointStruct->x_normal[i]
                + myPointStruct->Dy[i * num_cloud_points] * myPointStruct->y_normal[i]) > 1e-14)
             field->v[i] = field->v_new[i];
+
+    enforce_symmetry_velocity(myPointStruct, field->u, field->v, field->w,
+                              field->res, field->source, field->dpdn, 2);
 
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dx, field->u, field->dudx, myPointStruct->cloud_index, num_nodes, num_cloud_points, 3);
     multiply_sparse_matrix_vector_vectorised_gpu_async(myPointStruct->Dy, field->v, field->dvdy,  myPointStruct->cloud_index, num_nodes, num_cloud_points, 4);
